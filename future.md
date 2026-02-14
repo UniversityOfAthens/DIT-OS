@@ -28,7 +28,7 @@ This document outlines the roadmap for replacing the GRUB bootloader with a full
 - `boot/grub/grub.cfg` → `bootloader/stage2/config.cpp`
 - `boot/grub/themes/dit/theme.txt` → Custom theme parser
 - `boot/grub/themes/dit/fonts/*.pf2` → Custom font loader/renderer
-- `boot/grub/themes/dit/assets/delis.png` → Custom image loader
+- `boot/grub/themes/dit/assets/background.png` → Custom image loader
 
 ---
 
@@ -42,7 +42,7 @@ This document outlines the roadmap for replacing the GRUB bootloader with a full
 - MBR partition table support
 - Load Stage 2 from disk
 - Basic error messages (text mode)
-- **Location**: `bootloader/src/stage1/boot.asm`
+- **Location**: `bootloader/src/stage1/stage1.asm`
 
 ### Stage 2 Bootloader (Basic)
 - Real-mode initialization
