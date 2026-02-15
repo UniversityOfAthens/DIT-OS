@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up GNU Make
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Build bootloader and ISO
+        run: |
+          make -C bootloader iso
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: DIT-OS-iso
+          path: bootloader/build/DIT-OS.iso

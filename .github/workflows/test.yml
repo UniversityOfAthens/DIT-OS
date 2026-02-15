@@ -1,0 +1,26 @@
+name: Test
+
+on:
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up build environment
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Build project for testing
+        run: make -C bootloader
+
+      - name: Run tests
+        run: |
+          # If you have a test target, use it here
+          if make -C bootloader test; then echo "Tests passed"; else echo "No test target or tests failed"; exit 1; fi
