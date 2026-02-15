@@ -68,7 +68,6 @@ int selected = 0;
 const int max_options = 2;
 
 void draw() {
-    vga::write("\n");
     vga::write("======================================\n");
     vga::write("         DIT-OS Bootloader\n");
     vga::write("======================================\n");
@@ -76,9 +75,9 @@ void draw() {
 
     for (int i = 0; i <= max_options; i++) {
         if (i == selected) {
-            vga::write("  > ");
+            vga::write("    >");
         } else {
-            vga::write("    ");
+            vga::write("     ");
         }
 
         switch (i) {

@@ -2,6 +2,7 @@
 ; DIT-OS Stage 2 - Core Functions (ELF Build)
 ; This file provides all core functions needed by other modules
 ; =============================================================================
+bits 16
 %include "constants.inc"
 
 SECTION .text

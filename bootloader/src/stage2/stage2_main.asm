@@ -1,6 +1,7 @@
 ; =============================================================================
 ; DIT-OS Stage 2 - Main Entry Point (ELF Build)
 ; =============================================================================
+bits 16
 %include "constants.inc"
 
 ; External functions from stage2_core
@@ -34,12 +35,9 @@ _start:
     mov sp, 0x9000
     sti
     
-    mov [boot_drive], dl
-    
-    ; Check for VESA support
-    call check_vesa
-    
-    call clear_screen
+s2_hang:
+    hlt
+    jmp s2_hang
     
     mov si, msg_stage2
     call print_string
@@ -247,6 +245,7 @@ boot_kernel:
 ; =============================================================================
 ; Messages
 ; =============================================================================
+msg_stage2_start: db "S2START", 13, 10, 0
 msg_stage2: db "DIT-OS Stage2...", 13, 10, 0
 msg_loadcfg: db "Loading config...", 13, 10, 0
 msg_defaults: db "Using defaults", 13, 10, 0
