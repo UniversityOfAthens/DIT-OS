@@ -8,7 +8,7 @@ ORG 0x7C00
 
 ; Constants
 stage2_load_addr equ 0x7E00
-stage2_sectors equ 32
+stage2_sectors equ 40
 
 ; -----------------------------------------------------------------------------
 ; Boot sector entry point

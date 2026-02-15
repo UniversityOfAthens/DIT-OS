@@ -1,2 +1,9 @@
 # Bootloader files
 bootloader/build/
+
+# Object files
+*.o
+*.bin
+
+# Build directory
+build/
