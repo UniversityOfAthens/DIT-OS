@@ -3,6 +3,13 @@
 ; Loaded at 0x1000:0x0000 (physical 0x10000) by bootloader
 ; =============================================================================
 
+COM1     equ 0x3F8
+COM_LSR  equ 5
+COM_DATA equ 0
+COM_LCR  equ 3
+COM_DLL  equ 0
+COM_DLH  equ 1
+
 [bits 16]
 [org 0x0000]
 
@@ -14,11 +21,16 @@ _start:
     mov ss, ax
     mov sp, 0xF000
 
+    ; Init serial (so -nographic shows output)
+    call serial_init_16
+    mov si, msg_welcome
+    call print_serial_16
+
     ; Clear screen
     mov ax, 0x0003
     int 0x10
 
-    ; Print welcome
+    ; Print welcome (VGA/BIOS)
     mov si, msg_welcome
     call print_string
     
@@ -43,6 +55,8 @@ _start:
     out 0x92, al
 
     ; Debug: print 'E' (entering)
+    mov si, msg_pm_enter
+    call print_serial_16
     mov ax, 0x0E45
     int 0x10
     
@@ -74,6 +88,65 @@ print_string:
     pop ax
     ret
 
+serial_init_16:
+    pusha
+    mov dx, COM1 + COM_LCR
+    mov al, 0x80
+    out dx, al
+    mov dx, COM1 + COM_DLL
+    mov al, 1
+    out dx, al
+    mov dx, COM1 + COM_DLH
+    xor al, al
+    out dx, al
+    mov dx, COM1 + COM_LCR
+    mov al, 0x03
+    out dx, al
+    popa
+    ret
+
+print_serial_16:
+    pusha
+.ps16_loop:
+    lodsb
+    test al, al
+    jz .ps16_done
+    mov bl, al
+    mov dx, COM1 + COM_LSR
+.ps16_wait:
+    in al, dx
+    test al, 0x20
+    jz .ps16_wait
+    mov dx, COM1 + COM_DATA
+    mov al, bl
+    out dx, al
+    jmp .ps16_loop
+.ps16_done:
+    popa
+    ret
+
+[bits 32]
+print_serial_32_pm:
+    pusha
+    mov esi, msg_pm_ok
+.ps32_loop:
+    lodsb
+    test al, al
+    jz .ps32_done
+    mov bl, al
+    mov dx, COM1 + COM_LSR
+.ps32_wait:
+    in al, dx
+    test al, 0x20
+    jz .ps32_wait
+    mov dx, COM1 + COM_DATA
+    mov al, bl
+    out dx, al
+    jmp .ps32_loop
+.ps32_done:
+    popa
+    ret
+
 [bits 32]
 pm_entry:
     ; Set up data segments
@@ -85,7 +158,9 @@ pm_entry:
     mov ss, ax
     mov esp, 0x90000
 
-    ; Print success message directly
+    ; Print to serial (visible with -nographic)
+    call print_serial_32_pm
+    ; Print success to VGA
     mov byte [0xB8000], 'P'
     mov byte [0xB8001], 0x0F
     mov byte [0xB8002], 'M'
@@ -113,10 +188,11 @@ print_string_pm:
     ret
 
 [bits 16]
-msg_welcome: db "DIT-OS Kernel loaded!", 13, 10, 0
+msg_welcome:  db "Kernel at 0x10000: DIT-OS loaded!", 13, 10, 0
+msg_pm_enter: db "  Entering protected mode...", 13, 10, 0
 
 [bits 32]
-msg_pm_ok: db "Protected mode active!", 0
+msg_pm_ok: db 13, 10, "  Protected mode active. PM!", 13, 10, 0
 
 [bits 16]
 align 4

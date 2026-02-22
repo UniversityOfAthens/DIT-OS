@@ -1,21 +1,90 @@
 ; =============================================================================
 ; DIT-OS Kernel - Interrupt Descriptor Table (IDT)
+; 256 interrupt gates; each stub pushes vector (and 0 for error_code if none)
+; then jumps to common handler which calls C.
 ; =============================================================================
 
-section .data
-
-idt_start:
-    ; 32 exception handlers (each is 8 bytes)
-    times 256 dq 0
-idt_end:
-
-idt_descriptor:
-    dw idt_end - idt_start - 1
-    dd idt_start
+BITS 32
 
 section .text
 
+; Common handler: vector and error_code are on stack. Call C then iret.
+extern interrupt_dispatch
+
+%macro isr_noerr 1
+isr_%1:
+    push dword 0
+    push dword %1
+    jmp isr_common
+%endmacro
+
+%macro isr_err 1
+isr_%1:
+    push dword %1
+    jmp isr_common
+%endmacro
+
+; Exceptions 8, 10, 11, 12, 13, 14, 17 push error code; others don't
+%assign vec 0
+%rep 8
+    isr_noerr vec
+    %assign vec vec+1
+%endrep
+isr_err 8
+isr_noerr 9
+isr_err 10
+isr_err 11
+isr_err 12
+isr_err 13
+isr_err 14
+isr_noerr 15
+isr_noerr 16
+isr_err 17
+%assign vec 18
+%rep 238
+    isr_noerr vec
+    %assign vec vec+1
+%endrep
+
+isr_common:
+    pusha
+    push ds
+    push es
+    push fs
+    push gs
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov eax, [esp + 52]
+    mov ebx, [esp + 56]
+    push ebx
+    push eax
+    call interrupt_dispatch
+    add esp, 8
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popa
+    add esp, 8
+    iret
+
+; Array of ISR handler addresses for C to build IDT
+section .data
+global idt_stub_addrs
+idt_stub_addrs:
+%assign vec 0
+%rep 256
+    dd isr_ %+ vec
+    %assign vec vec+1
+%endrep
+
+section .text
+; void load_idt(void *descriptor); descriptor is 6 bytes: limit(2), base(4)
 global load_idt
 load_idt:
-    lidt [idt_descriptor]
+    mov eax, [esp + 4]
+    lidt [eax]
     ret

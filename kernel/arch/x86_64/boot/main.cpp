@@ -83,10 +83,20 @@ void print_hex(uint32_t val) {
     print(buf);
 }
 
-extern "C" void load_gdt();
-extern "C" void load_idt();
+namespace boot { void early_init(); }
+namespace arch { void cpu_early_init(); void tss_set_kernel_stack(uint32_t esp0); void pic_unmask(uint8_t); }
+#include "dev/serial.hpp"
+#include "dev/keyboard.hpp"
+#include "dev/mouse.hpp"
+#include "dev/timer.hpp"
+#include "dev/rtc.hpp"
+#include "arch/x86_64/idt.hpp"
+
+extern "C" uint32_t kernel_stack_top;
 
 extern "C" void kernel_main() {
+    boot::early_init();
+
     for (int y = 0; y < VGA_HEIGHT; y++) {
         for (int x = 0; x < VGA_WIDTH; x++) {
             vga_buffer[y * VGA_WIDTH + x] = vga_entry(
@@ -104,39 +114,68 @@ extern "C" void kernel_main() {
     print("\n");
     print("======================================\n\n");
 
-    print("[*] Loading GDT...\n");
-    load_gdt();
-    print("[OK] GDT loaded\n\n");
-
-    print("[*] Loading IDT...\n");
-    load_idt();
-    print("[OK] IDT loaded\n\n");
+    print("[*] CPU init (GDT, IDT, TSS, PIC)...\n");
+    arch::cpu_early_init();
+    arch::tss_set_kernel_stack(kernel_stack_top);
+    print("[OK] CPU management ready\n\n");
 
     print("[*] Memory Info:\n");
     print("    Kernel at: 0x00100000\n");
     print("    VGA buffer: 0x000B8000\n\n");
+
+    print("[*] Serial/Input drivers...\n");
+    dev::serial_init();
+    dev::serial_puts("  Serial (COM1) OK\n");
+    dev::keyboard_init();
+    dev::mouse_init();
+    dev::timer_init();
+    dev::rtc_init();
+    dev::RtcTime rtc;
+    dev::rtc_read(&rtc);
+    print("  RTC: 20");
+    char db[16];
+    db[0] = '0' + (rtc.year % 100 / 10);
+    db[1] = '0' + (rtc.year % 10);
+    db[2] = '-';
+    db[3] = '0' + (rtc.month / 10);
+    db[4] = '0' + (rtc.month % 10);
+    db[5] = '-';
+    db[6] = '0' + (rtc.day / 10);
+    db[7] = '0' + (rtc.day % 10);
+    db[8] = ' ';
+    db[9] = '0' + (rtc.hour / 10);
+    db[10] = '0' + (rtc.hour % 10);
+    db[11] = ':';
+    db[12] = '0' + (rtc.minute / 10);
+    db[13] = '0' + (rtc.minute % 10);
+    db[14] = '\0';
+    print(db);
+    print("\n");
+    arch::pic_unmask(0);
+    print("[OK] Serial, keyboard, mouse, timer, RTC ready\n\n");
 
     print("======================================\n");
     print("  Kernel initialized successfully!\n");
     print("  System is now running...\n");
     print("======================================\n");
 
+    asm volatile("sti");
     while (1) {
         asm volatile("hlt");
     }
 }
 
 extern "C" void interrupt_handler(uint32_t vector) {
+    if (vector == arch::IRQ_BASE + 0) {
+        dev::timer_tick();
+        return;
+    }
     print("\n[ERROR] Interrupt! Vector: ");
-
     char buf[4];
     buf[0] = '0' + (vector / 10);
     buf[1] = '0' + (vector % 10);
     buf[2] = '\0';
     print(buf);
     print("\n");
-
-    while (1) {
-        asm volatile("hlt");
-    }
+    while (1) asm volatile("hlt");
 }
