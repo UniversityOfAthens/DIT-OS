@@ -1,0 +1,12 @@
+---
+description: Scripts and tools conventions
+globs: scripts/**/*,tools/**/*
+alwaysApply: false
+---
+
+# Scripts and Tools
+
+- **Shell**: Prefer bash; use `set -e` for build scripts. Use `#!/usr/bin/env bash` shebang.
+- **Paths**: Prefer resolving project root from script location (e.g. `SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`, then `BOOTLOADER_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"`). Avoid hardcoding absolute paths.
+- **Invoking build**: Scripts in `scripts/` should call the main or bootloader Makefile as appropriate (e.g. `make -C bootloader all` or `make -f Makefile all`). Run QEMU with the custom bootloader disk image (e.g. `bootloader/build/disk.img` as floppy).
+- **New scripts**: Add corresponding entries to TODO.md if they are part of PROJECT_STRUCTURE (e.g. run-qemu.sh, create-disk.sh).

@@ -1,0 +1,20 @@
+---
+description: Kernel C++ and header conventions
+globs: kernel/**/*.cpp,kernel/**/*.hpp,kernel/**/*.h
+alwaysApply: false
+---
+
+# Kernel C++ Standards
+
+- **C++ version**: Use C++17. Flags: `-ffreestanding -fno-rtti -fno-exceptions -Wall -Wextra -m32` for kernel (32-bit) or appropriate arch.
+- **Includes**: Prefer `<stdint.h>`, `<stddef.h>`, `<stdbool.h>` for types. Use project headers from `kernel/include/` or `arch/.../`; avoid assuming a host libc.
+- **Linking with asm**: Export C entry points as `extern "C"`; use leading underscore in asm only when the toolchain expects it (ELF kernel uses no leading underscore for C symbols from asm).
+- **No exceptions/RTTI**: Do not use exceptions or dynamic_cast in kernel code.
+- **Naming**: snake_case for functions/variables; PascalCase or CamelCase for types if the rest of the file uses it. Match existing file style (e.g. kernel main uses snake_case).
+
+```cpp
+// ✅ GOOD - kernel main
+extern "C" void kernel_main() { ... }
+#include <stdint.h>
+volatile uint16_t *vga_buffer = (uint16_t *)0xB8000;
+```
