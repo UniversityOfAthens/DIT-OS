@@ -2,11 +2,13 @@
 
 Comprehensive task list for building the DIT Operating System based on PROJECT_STRUCTURE.md.
 
-**Current Progress: ~0.5% complete** (8 of ~1,500-2,000 estimated files)
+**Current Progress: ~7% complete** (131 of ~1,500-2,000 estimated files)
+
+**Boot path:** We use the **custom bootloader** (stage1 + stage2). GRUB is **not** used for booting; GRUB/boot/ entries below are optional (e.g. for ISO or alternate setups).
 
 ---
 
-## COMPLETED (8 files)
+## COMPLETED (131 files)
 
 ### Project Root
 - [x] `README.md`
@@ -15,8 +17,8 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [x] `Makefile`
 - [x] `CMakeLists.txt`
 
-### Boot Configuration
-- [x] `boot/grub/grub.cfg` - Basic GRUB configuration (needs entries)
+### Boot Configuration (optional / legacy)
+- [x] `boot/grub/grub.cfg` - Basic GRUB configuration (not used for boot)
 - [x] `boot/grub/themes/dit/theme.txt` - Theme configuration
 - [x] `boot/grub/grubenv` - GRUB environment file
 
@@ -24,60 +26,128 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 
 ## TODO: BOOT SYSTEM
 
-### Bootloader (Alternative to GRUB)
-- [ ] `bootloader/src/stage1/boot.asm` - Stage 1 bootloader (512 bytes)
-- [ ] `bootloader/src/stage1/boot.hpp` - Boot sector header definitions
-- [ ] `bootloader/src/stage1/Makefile`
+### Bootloader (Primary - Custom)
+- [x] `bootloader/src/stage1/stage1.asm` - Stage 1 bootloader (512 bytes) _(was boot.asm)_
+- [x] `bootloader/src/stage1/boot.hpp` - Boot sector header definitions
+- [x] `bootloader/src/stage1/Makefile`
 
 #### Stage 2 Bootloader
-- [ ] `bootloader/src/stage2/stage2.asm` - Stage 2 bootloader (real mode)
-- [ ] `bootloader/src/stage2/stage2.cpp` - C wrapper for stage 2
-- [ ] `bootloader/src/stage2/protected_mode.asm` - Switch to protected mode
-- [ ] `bootloader/src/stage2/long_mode.asm` - Switch to long mode
-- [ ] `bootloader/src/stage2/a20.asm` - A20 line enable
-- [ ] `bootloader/src/stage2/disk.cpp` - Disk I/O operations
-- [ ] `bootloader/src/stage2/disk.asm` - Disk I/O assembly routines
-- [ ] `bootloader/src/stage2/fs.cpp` - Simple filesystem reader
-- [ ] `bootloader/src/stage2/fat.cpp` - FAT12/16/32 reader
-- [ ] `bootloader/src/stage2/ext2.cpp` - EXT2 reader
-- [ ] `bootloader/src/stage2/iso9660.cpp` - ISO9660 reader
-- [ ] `bootloader/src/stage2/memory.cpp` - Memory map detection
-- [ ] `bootloader/src/stage2/memory.asm` - E820 memory map
-- [ ] `bootloader/src/stage2/video.cpp` - Video mode setup
-- [ ] `bootloader/src/stage2/video.asm` - VESA/VGA video modes
-- [ ] `bootloader/src/stage2/console.cpp` - Boot console output
-- [ ] `bootloader/src/stage2/elf.cpp` - ELF loader
-- [ ] `bootloader/src/stage2/gdt.cpp` - Global Descriptor Table setup
-- [ ] `bootloader/src/stage2/gdt.asm`
-- [ ] `bootloader/src/stage2/paging.cpp` - Early paging setup
-- [ ] `bootloader/src/stage2/Makefile`
+- [x] `bootloader/src/stage2/stage2.asm` - Stage 2 bootloader (real mode)
+- [x] `bootloader/src/stage2/stage2.cpp` - C wrapper for stage 2
+- [x] `bootloader/src/stage2/pmode.asm` - Switch to protected mode _(was protected_mode.asm)_
+- [x] `bootloader/src/stage2/long_mode.asm` - Switch to long mode
+- [x] `bootloader/src/stage2/a20.asm` - A20 line enable
+- [x] `bootloader/src/stage2/disk.cpp` - Disk I/O operations
+- [x] `bootloader/src/stage2/disk.asm` - Disk I/O assembly routines
+- [x] `bootloader/src/stage2/fs.cpp` - Simple filesystem reader
+- [x] `bootloader/src/stage2/fat.cpp` - FAT12/16/32 reader
+- [x] `bootloader/src/stage2/ext2.cpp` - EXT2 reader
+- [x] `bootloader/src/stage2/iso9660.cpp` - ISO9660 reader
+- [x] `bootloader/src/stage2/memory.cpp` - Memory map detection
+- [x] `bootloader/src/stage2/memory.asm` - E820 memory map
+- [x] `bootloader/src/stage2/video.cpp` - Video mode setup
+- [x] `bootloader/src/stage2/video.asm` - VESA/VGA video modes
+- [x] `bootloader/src/stage2/console.cpp` - Boot console output
+- [x] `bootloader/src/stage2/elf.cpp` - ELF loader
+- [x] `bootloader/src/stage2/gdt.cpp` - Global Descriptor Table setup
+- [x] `bootloader/src/stage2/gdt.asm`
+- [x] `bootloader/src/stage2/paging.cpp` - Early paging setup
+- [x] `bootloader/src/stage2/Makefile`
 
 #### Bootloader Headers
-- [ ] `bootloader/include/boot.hpp`
-- [ ] `bootloader/include/disk.hpp`
-- [ ] `bootloader/include/fs.hpp`
-- [ ] `bootloader/include/memory.hpp`
-- [ ] `bootloader/include/video.hpp`
-- [ ] `bootloader/include/elf.hpp`
-- [ ] `bootloader/include/types.hpp`
+- [x] `bootloader/include/boot.hpp`
+- [x] `bootloader/include/disk.hpp`
+- [x] `bootloader/include/fs.hpp`
+- [x] `bootloader/include/memory.hpp`
+- [x] `bootloader/include/video.hpp`
+- [x] `bootloader/include/elf.hpp`
+- [x] `bootloader/include/types.hpp`
 
 #### Bootloader Scripts
-- [ ] `bootloader/scripts/build.sh`
-- [ ] `bootloader/scripts/sign.sh` - Boot sector signing
-- [ ] `bootloader/build/` - Build directory
+- [x] `bootloader/scripts/build.sh`
+- [x] `bootloader/scripts/sign.sh` - Boot sector signing
+- [x] `bootloader/build/` - Build directory (created by Makefile)
 
-### GRUB Configuration (Primary Bootloader)
-- [ ] Add boot entries to `grub.cfg` - Missing actual OS menu entries
-- [ ] Fix `GRUB_THEME` path - Currently "TBD"
-- [ ] Add kernel binary path
-- [ ] `boot/grub/themes/dit/assets/delis.png` - Background image
-- [ ] `boot/grub/themes/dit/fonts/ubuntu-regular.pf2` - Converted font
-- [ ] `boot/grub/themes/dit/fonts/ubuntu-bold.pf2` - Converted font
-- [ ] Complete `theme.txt` styling
+#### Bootloader (optional in structure)
+- [ ] `bootloader/src/grub/grub.cfg` - GRUB config under bootloader (optional; we use custom boot)
+
+### Optional: GRUB / boot/ (not used - custom bootloader is primary)
+- [ ] Add boot entries to `boot/grub/grub.cfg` - Only if adding GRUB for ISO
+- [ ] Fix `GRUB_THEME` path - Only if using GRUB
+- [ ] `boot/grub/themes/dit/assets/delis.png` - Only if using GRUB theme
+- [ ] `boot/grub/themes/dit/fonts/ubuntu-regular.pf2` - Only if using GRUB
+- [ ] `boot/grub/themes/dit/fonts/ubuntu-bold.pf2` - Only if using GRUB
+- [ ] Complete `boot/grub/themes/dit/theme.txt` styling - Only if using GRUB
 
 ### Boot Directory
-- [ ] `boot/boot.asm` - Empty file, remove or implement custom boot sector
-- [ ] `boot/Makefile`
+- [ ] `boot/boot.asm` - Remove or repurpose (custom boot is in bootloader/)
+- [ ] `boot/Makefile` - Build boot assets if needed
+
+### Scripts (from PROJECT_STRUCTURE)
+- [ ] `scripts/build.sh` - Main build script
+- [ ] `scripts/build-kernel.sh` - Build kernel only
+- [ ] `scripts/build-userland.sh` - Build userland only
+- [ ] `scripts/clean.sh` - Clean build
+- [ ] `scripts/config.sh` - Configure build
+- [ ] `scripts/menuconfig.sh` - Interactive config
+- [ ] `scripts/run-qemu.sh` - Run in QEMU (custom bootloader disk/floppy)
+- [ ] `scripts/run-qemu-bios.sh` - QEMU BIOS boot
+- [ ] `scripts/run-qemu-uefi.sh` - QEMU UEFI boot
+- [ ] `scripts/run-qemu-debug.sh` - QEMU debug mode
+- [ ] `scripts/run-vbox.sh` - Run in VirtualBox
+- [ ] `scripts/run-vbox/create-vm.sh` - Create VM
+- [ ] `scripts/run-vbox/start-vm.sh` - Start VM
+- [ ] `scripts/run-vbox/stop-vm.sh` - Stop VM
+- [ ] `scripts/run-vbox/delete-vm.sh` - Delete VM
+- [ ] `scripts/run-bochs.sh` - Run in Bochs
+- [ ] `scripts/create-iso.sh` - ISO creation
+- [ ] `scripts/create-disk.sh` - Create disk image
+- [ ] `scripts/install-toolchain.sh` - Install cross-compiler
+- [ ] `scripts/check-toolchain.sh` - Verify toolchain
+- [ ] `scripts/debug.sh` - Debug script
+- [ ] `scripts/gdb.sh` - GDB wrapper
+- [ ] `scripts/symbolize.sh` - Symbolize stack traces
+- [ ] `scripts/checkpatch.pl` - Check coding style
+- [ ] `scripts/checkstack.pl` - Check stack usage
+- [ ] `scripts/tags.sh` - Generate ctags
+- [ ] `scripts/cscope.sh` - Generate cscope
+- [ ] `scripts/Makefile`
+
+### Tools (from PROJECT_STRUCTURE)
+- [ ] `tools/cross-compiler/build-binutils.sh`
+- [ ] `tools/cross-compiler/build-gcc.sh`
+- [ ] `tools/cross-compiler/build-gdb.sh`
+- [ ] `tools/cross-compiler/download.sh`
+- [ ] `tools/cross-compiler/config.sh`
+- [ ] `tools/cross-compiler/README.md`
+- [ ] `tools/build-iso/mkiso.sh`
+- [ ] `tools/build-iso/mkiso.py`
+- [ ] `tools/build-iso/isohybrid.cpp`
+- [ ] `tools/build-iso/Makefile`
+- [ ] `tools/mkinitrd/mkinitrd.cpp`
+- [ ] `tools/mkinitrd/mkinitrd.sh`
+- [ ] `tools/mkinitrd/cpio.cpp`
+- [ ] `tools/mkinitrd/Makefile`
+- [ ] `tools/font-converter/fontconv.cpp`
+- [ ] `tools/font-converter/psf2c.cpp`
+- [ ] `tools/font-converter/bdf2c.cpp`
+- [ ] `tools/font-converter/Makefile`
+- [ ] `tools/debug/gdb-init`
+- [ ] `tools/debug/bochsrc`
+- [ ] `tools/debug/bochs-debugger.sh`
+- [ ] `tools/debug/qemu-gdb.sh`
+- [ ] `tools/debug/trace.py`
+- [ ] `tools/debug/README.md`
+- [ ] `tools/kconfig/mconf.cpp`
+- [ ] `tools/kconfig/conf.cpp`
+- [ ] `tools/kconfig/Makefile`
+- [ ] `tools/Makefile`
+
+### Build / ISO layout (custom bootloader)
+- [ ] `build/boot/stage1.bin` - Produced by bootloader Makefile
+- [ ] `build/boot/stage2.bin` - Produced by bootloader Makefile
+- [ ] `build/iso/` - ISO output (when using create-iso with custom boot)
+- [ ] `iso/` - ISO source layout (kernel.bin, initrd.img, etc.) for custom or hybrid boot
 
 ---
 
@@ -86,72 +156,72 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 ### Architecture: x86_64
 
 #### Boot Components
-- [ ] `kernel/arch/x86_64/boot/multiboot.asm` - Multiboot header
-- [ ] `kernel/arch/x86_64/boot/multiboot2.asm` - Multiboot2 header
-- [ ] `kernel/arch/x86_64/boot/entry.asm` - Kernel entry point
-- [ ] `kernel/arch/x86_64/boot/init.cpp` - Early initialization
-- [ ] `kernel/arch/x86_64/boot/main.cpp` - Kernel main
-- [ ] `kernel/arch/x86_64/boot/trampoline.asm` - SMP trampoline
-- [ ] `kernel/arch/x86_64/boot/linker.ld` - Linker script
-- [ ] `kernel/arch/x86_64/boot/Makefile`
+- [x] `kernel/arch/x86_64/boot/multiboot.asm` - Multiboot header
+- [x] `kernel/arch/x86_64/boot/multiboot2.asm` - Multiboot2 header
+- [x] `kernel/arch/x86_64/boot/entry.asm` - Kernel entry point
+- [x] `kernel/arch/x86_64/boot/init.cpp` - Early initialization
+- [x] `kernel/arch/x86_64/boot/main.cpp` - Kernel main
+- [x] `kernel/arch/x86_64/boot/trampoline.asm` - SMP trampoline
+- [x] `kernel/arch/x86_64/boot/linker.ld` - Linker script
+- [x] `kernel/arch/x86_64/boot/Makefile`
 
 #### CPU Management
-- [ ] `kernel/arch/x86_64/cpu/gdt.asm` - Global Descriptor Table
-- [ ] `kernel/arch/x86_64/cpu/gdt.cpp`
-- [ ] `kernel/arch/x86_64/cpu/idt.asm` - Interrupt Descriptor Table
-- [ ] `kernel/arch/x86_64/cpu/idt.cpp`
-- [ ] `kernel/arch/x86_64/cpu/tss.cpp` - Task State Segment
-- [ ] `kernel/arch/x86_64/cpu/tss.asm`
-- [ ] `kernel/arch/x86_64/cpu/cpuid.cpp` - CPU feature detection
-- [ ] `kernel/arch/x86_64/cpu/msr.cpp` - Model Specific Registers
-- [ ] `kernel/arch/x86_64/cpu/msr.asm`
-- [ ] `kernel/arch/x86_64/cpu/pic.cpp` - Programmable Interrupt Controller
-- [ ] `kernel/arch/x86_64/cpu/pic.asm`
-- [ ] `kernel/arch/x86_64/cpu/apic.cpp` - Advanced PIC
-- [ ] `kernel/arch/x86_64/cpu/ioapic.cpp` - I/O APIC
-- [ ] `kernel/arch/x86_64/cpu/smp.cpp` - Symmetric Multi-Processing
-- [ ] `kernel/arch/x86_64/cpu/smp.asm`
-- [ ] `kernel/arch/x86_64/cpu/lapic.cpp` - Local APIC
-- [ ] `kernel/arch/x86_64/cpu/cpuid.asm`
-- [ ] `kernel/arch/x86_64/cpu/control.cpp` - Control registers
-- [ ] `kernel/arch/x86_64/cpu/control.asm`
-- [ ] `kernel/arch/x86_64/cpu/mtrr.cpp` - Memory Type Range Registers
-- [ ] `kernel/arch/x86_64/cpu/pat.cpp` - Page Attribute Table
-- [ ] `kernel/arch/x86_64/cpu/cpufeatures.cpp`
+- [x] `kernel/arch/x86_64/cpu/gdt.asm` - Global Descriptor Table
+- [x] `kernel/arch/x86_64/cpu/gdt.cpp`
+- [x] `kernel/arch/x86_64/cpu/idt.asm` - Interrupt Descriptor Table
+- [x] `kernel/arch/x86_64/cpu/idt.cpp`
+- [x] `kernel/arch/x86_64/cpu/tss.cpp` - Task State Segment
+- [x] `kernel/arch/x86_64/cpu/tss.asm`
+- [x] `kernel/arch/x86_64/cpu/cpuid.cpp` - CPU feature detection
+- [x] `kernel/arch/x86_64/cpu/msr.cpp` - Model Specific Registers
+- [x] `kernel/arch/x86_64/cpu/msr.asm`
+- [x] `kernel/arch/x86_64/cpu/pic.cpp` - Programmable Interrupt Controller
+- [x] `kernel/arch/x86_64/cpu/pic.asm`
+- [x] `kernel/arch/x86_64/cpu/apic.cpp` - Advanced PIC (stub)
+- [x] `kernel/arch/x86_64/cpu/ioapic.cpp` - I/O APIC (stub)
+- [x] `kernel/arch/x86_64/cpu/smp.cpp` - Symmetric Multi-Processing (stub)
+- [x] `kernel/arch/x86_64/cpu/smp.asm`
+- [x] `kernel/arch/x86_64/cpu/lapic.cpp` - Local APIC (stub)
+- [x] `kernel/arch/x86_64/cpu/cpuid.asm`
+- [x] `kernel/arch/x86_64/cpu/control.cpp` - Control registers
+- [x] `kernel/arch/x86_64/cpu/control.asm`
+- [x] `kernel/arch/x86_64/cpu/mtrr.cpp` - Memory Type Range Registers (stub)
+- [x] `kernel/arch/x86_64/cpu/pat.cpp` - Page Attribute Table (stub)
+- [x] `kernel/arch/x86_64/cpu/cpufeatures.cpp`
 
 #### Memory Management (MM)
-- [ ] `kernel/arch/x86_64/mm/paging.asm` - Page table management
-- [ ] `kernel/arch/x86_64/mm/paging.cpp`
-- [ ] `kernel/arch/x86_64/mm/pmm.cpp` - Physical Memory Manager
-- [ ] `kernel/arch/x86_64/mm/vmm.cpp` - Virtual Memory Manager
-- [ ] `kernel/arch/x86_64/mm/heap.cpp` - Kernel heap allocator
-- [ ] `kernel/arch/x86_64/mm/dma.cpp` - Direct Memory Access
-- [ ] `kernel/arch/x86_64/mm/mtrr.asm`
-- [ ] `kernel/arch/x86_64/mm/tlb.asm` - TLB management
+- [x] `kernel/arch/x86_64/mm/paging.asm` - Page table management
+- [x] `kernel/arch/x86_64/mm/paging.cpp`
+- [x] `kernel/arch/x86_64/mm/pmm.cpp` - Physical Memory Manager
+- [x] `kernel/arch/x86_64/mm/vmm.cpp` - Virtual Memory Manager
+- [x] `kernel/arch/x86_64/mm/heap.cpp` - Kernel heap allocator
+- [x] `kernel/arch/x86_64/mm/dma.cpp` - Direct Memory Access
+- [x] `kernel/arch/x86_64/mm/mtrr.asm`
+- [x] `kernel/arch/x86_64/mm/tlb.asm` - TLB management
 
 #### Device Drivers (Dev)
 ##### Serial/Input
-- [ ] `kernel/arch/x86_64/dev/serial.cpp` - Serial port (COM1/COM2)
-- [ ] `kernel/arch/x86_64/dev/serial.hpp`
-- [ ] `kernel/arch/x86_64/dev/keyboard.cpp` - PS/2 keyboard driver
-- [ ] `kernel/arch/x86_64/dev/keyboard.hpp`
-- [ ] `kernel/arch/x86_64/dev/mouse.cpp` - PS/2 mouse driver
-- [ ] `kernel/arch/x86_64/dev/mouse.hpp`
-- [ ] `kernel/arch/x86_64/dev/timer.cpp` - PIT timer
-- [ ] `kernel/arch/x86_64/dev/timer.hpp`
-- [ ] `kernel/arch/x86_64/dev/rtc.cpp` - Real-Time Clock
-- [ ] `kernel/arch/x86_64/dev/rtc.hpp`
+- [x] `kernel/arch/x86_64/dev/serial.cpp` - Serial port (COM1/COM2)
+- [x] `kernel/arch/x86_64/dev/serial.hpp`
+- [x] `kernel/arch/x86_64/dev/keyboard.cpp` - PS/2 keyboard driver
+- [x] `kernel/arch/x86_64/dev/keyboard.hpp`
+- [x] `kernel/arch/x86_64/dev/mouse.cpp` - PS/2 mouse driver
+- [x] `kernel/arch/x86_64/dev/mouse.hpp`
+- [x] `kernel/arch/x86_64/dev/timer.cpp` - PIT timer
+- [x] `kernel/arch/x86_64/dev/timer.hpp`
+- [x] `kernel/arch/x86_64/dev/rtc.cpp` - Real-Time Clock
+- [x] `kernel/arch/x86_64/dev/rtc.hpp`
 
 ##### Storage/Bus
-- [ ] `kernel/arch/x86_64/dev/pci.cpp` - PCI bus enumeration
-- [ ] `kernel/arch/x86_64/dev/pci_ids.hpp` - PCI device IDs
-- [ ] `kernel/arch/x86_64/dev/ata.cpp` - ATA/IDE controller
-- [ ] `kernel/arch/x86_64/dev/ata.hpp`
-- [ ] `kernel/arch/x86_64/dev/ahci.cpp` - AHCI/SATA controller
-- [ ] `kernel/arch/x86_64/dev/ahci.hpp`
-- [ ] `kernel/arch/x86_64/dev/nvme.cpp` - NVMe controller
-- [ ] `kernel/arch/x86_64/dev/nvme.hpp`
-- [ ] `kernel/arch/x86_64/dev/floppy.cpp` - Floppy disk driver
+- [x] `kernel/arch/x86_64/dev/pci.cpp` - PCI bus enumeration
+- [x] `kernel/arch/x86_64/dev/pci_ids.hpp` - PCI device IDs
+- [x] `kernel/arch/x86_64/dev/ata.cpp` - ATA/IDE controller
+- [x] `kernel/arch/x86_64/dev/ata.hpp`
+- [x] `kernel/arch/x86_64/dev/ahci.cpp` - AHCI/SATA controller
+- [x] `kernel/arch/x86_64/dev/ahci.hpp`
+- [x] `kernel/arch/x86_64/dev/nvme.cpp` - NVMe controller
+- [x] `kernel/arch/x86_64/dev/nvme.hpp`
+- [x] `kernel/arch/x86_64/dev/floppy.cpp` - Floppy disk driver
 
 ##### USB Subsystem
 - [ ] `kernel/arch/x86_64/dev/usb/uhci.cpp` - USB UHCI controller
@@ -196,31 +266,31 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 
 ### Core Kernel Components
 
-- [ ] `kernel/core/kernel.cpp` - Kernel main entry
-- [ ] `kernel/core/panic.cpp` - Kernel panic handler
-- [ ] `kernel/core/panic.hpp`
-- [ ] `kernel/core/printk.cpp` - Kernel printf implementation
-- [ ] `kernel/core/printk.hpp`
-- [ ] `kernel/core/console.cpp` - Kernel console system
-- [ ] `kernel/core/console.hpp`
-- [ ] `kernel/core/kassert.cpp` - Kernel assertions
-- [ ] `kernel/core/kassert.hpp`
-- [ ] `kernel/core/cmdline.cpp` - Kernel command line parsing
-- [ ] `kernel/core/cmdline.hpp`
-- [ ] `kernel/core/version.cpp` - Version information
-- [ ] `kernel/core/version.hpp`
-- [ ] `kernel/core/logo.cpp` - Kernel boot logo
-- [ ] `kernel/core/logo.hpp`
-- [ ] `kernel/core/config.cpp` - Kernel configuration
-- [ ] `kernel/core/config.hpp`
-- [ ] `kernel/core/modules.cpp` - Kernel module support
-- [ ] `kernel/core/modules.hpp`
-- [ ] `kernel/core/symbols.cpp` - Kernel symbol table
-- [ ] `kernel/core/symbols.hpp`
-- [ ] `kernel/core/compiler.hpp` - Compiler attributes
-- [ ] `kernel/core/compiler_gcc.hpp`
-- [ ] `kernel/core/compiler_clang.hpp`
-- [ ] `kernel/core/Makefile`
+- [x] `kernel/core/kernel.cpp` - Kernel main entry
+- [x] `kernel/core/panic.cpp` - Kernel panic handler
+- [x] `kernel/core/panic.hpp`
+- [x] `kernel/core/printk.cpp` - Kernel printf implementation
+- [x] `kernel/core/printk.hpp`
+- [x] `kernel/core/console.cpp` - Kernel console system
+- [x] `kernel/core/console.hpp`
+- [x] `kernel/core/kassert.cpp` - Kernel assertions
+- [x] `kernel/core/kassert.hpp`
+- [x] `kernel/core/cmdline.cpp` - Kernel command line parsing
+- [x] `kernel/core/cmdline.hpp`
+- [x] `kernel/core/version.cpp` - Version information
+- [x] `kernel/core/version.hpp`
+- [x] `kernel/core/logo.cpp` - Kernel boot logo
+- [x] `kernel/core/logo.hpp`
+- [x] `kernel/core/config.cpp` - Kernel configuration
+- [x] `kernel/core/config.hpp`
+- [x] `kernel/core/modules.cpp` - Kernel module support
+- [x] `kernel/core/modules.hpp`
+- [x] `kernel/core/symbols.cpp` - Kernel symbol table
+- [x] `kernel/core/symbols.hpp`
+- [x] `kernel/core/compiler.hpp` - Compiler attributes
+- [x] `kernel/core/compiler_gcc.hpp`
+- [x] `kernel/core/compiler_clang.hpp`
+- [x] `kernel/core/Makefile`
 
 ### Include Headers
 
@@ -242,47 +312,47 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/include/config.hpp` - Auto-generated config
 
 #### Architecture Headers
-- [ ] `kernel/include/arch/x86_64/cpu.hpp`
-- [ ] `kernel/include/arch/x86_64/gdt.hpp`
-- [ ] `kernel/include/arch/x86_64/idt.hpp`
-- [ ] `kernel/include/arch/x86_64/tss.hpp`
-- [ ] `kernel/include/arch/x86_64/io.hpp`
-- [ ] `kernel/include/arch/x86_64/paging.hpp`
-- [ ] `kernel/include/arch/x86_64/msr.hpp`
-- [ ] `kernel/include/arch/x86_64/cpuid.hpp`
-- [ ] `kernel/include/arch/x86_64/control.hpp`
-- [ ] `kernel/include/arch/x86_64/apic.hpp`
-- [ ] `kernel/include/arch/x86_64/pic.hpp`
-- [ ] `kernel/include/arch/x86_64/smp.hpp`
-- [ ] `kernel/include/arch/x86_64/lapic.hpp`
-- [ ] `kernel/include/arch/x86_64/ioapic.hpp`
-- [ ] `kernel/include/arch/x86_64/arch.hpp`
+- [x] `kernel/include/arch/x86_64/cpu.hpp`
+- [x] `kernel/include/arch/x86_64/gdt.hpp`
+- [x] `kernel/include/arch/x86_64/idt.hpp`
+- [x] `kernel/include/arch/x86_64/tss.hpp`
+- [x] `kernel/include/arch/x86_64/io.hpp`
+- [x] `kernel/include/arch/x86_64/paging.hpp`
+- [x] `kernel/include/arch/x86_64/msr.hpp`
+- [x] `kernel/include/arch/x86_64/cpuid.hpp`
+- [x] `kernel/include/arch/x86_64/control.hpp`
+- [x] `kernel/include/arch/x86_64/apic.hpp`
+- [x] `kernel/include/arch/x86_64/pic.hpp`
+- [x] `kernel/include/arch/x86_64/smp.hpp`
+- [x] `kernel/include/arch/x86_64/lapic.hpp`
+- [x] `kernel/include/arch/x86_64/ioapic.hpp`
+- [x] `kernel/include/arch/x86_64/arch.hpp`
 
 #### Memory Management Headers
-- [ ] `kernel/include/mm/pmm.hpp`
-- [ ] `kernel/include/mm/vmm.hpp`
-- [ ] `kernel/include/mm/kmalloc.hpp`
-- [ ] `kernel/include/mm/slab.hpp`
-- [ ] `kernel/include/mm/page.hpp`
-- [ ] `kernel/include/mm/page-flags.hpp`
-- [ ] `kernel/include/mm/page-defs.hpp`
-- [ ] `kernel/include/mm/memblock.hpp`
-- [ ] `kernel/include/mm/early_mm.hpp`
-- [ ] `kernel/include/mm/mmu.hpp`
+- [x] `kernel/include/mm/pmm.hpp`
+- [x] `kernel/include/mm/vmm.hpp`
+- [x] `kernel/include/mm/kmalloc.hpp`
+- [x] `kernel/include/mm/slab.hpp`
+- [x] `kernel/include/mm/page.hpp`
+- [x] `kernel/include/mm/page-flags.hpp`
+- [x] `kernel/include/mm/page-defs.hpp`
+- [x] `kernel/include/mm/memblock.hpp`
+- [x] `kernel/include/mm/early_mm.hpp`
+- [x] `kernel/include/mm/mmu.hpp`
 
 #### Device Headers
 - [ ] `kernel/include/dev/device.hpp`
 - [ ] `kernel/include/dev/driver.hpp`
 - [ ] `kernel/include/dev/bus.hpp`
 - [ ] `kernel/include/dev/class.hpp`
-- [ ] `kernel/include/dev/serial.hpp`
-- [ ] `kernel/include/dev/keyboard.hpp`
+- [x] `kernel/include/dev/serial.hpp`
+- [x] `kernel/include/dev/keyboard.hpp`
 - [ ] `kernel/include/dev/keycodes.hpp`
-- [ ] `kernel/include/dev/timer.hpp`
-- [ ] `kernel/include/dev/rtc.hpp`
-- [ ] `kernel/include/dev/pci.hpp`
-- [ ] `kernel/include/dev/pci_ids.hpp`
-- [ ] `kernel/include/dev/ata.hpp`
+- [x] `kernel/include/dev/timer.hpp`
+- [x] `kernel/include/dev/rtc.hpp`
+- [x] `kernel/include/dev/pci.hpp`
+- [x] `kernel/include/dev/pci_ids.hpp`
+- [x] `kernel/include/dev/ata.hpp`
 - [ ] `kernel/include/dev/usb.hpp`
 - [ ] `kernel/include/dev/usb_spec.hpp`
 - [ ] `kernel/include/dev/blockdev.hpp`
@@ -1538,8 +1608,8 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 ## STATISTICS
 
 **Estimated Total Files**: ~1,500-2,000  
-**Currently Completed**: ~8 files (~0.5%)  
-**Remaining**: ~1,492-1,992 files
+**Currently Completed**: 131 files (~7%)  
+**Remaining**: ~1,369-1,869 files
 
 ### By Category:
 - **Source Files** (.cpp, .hpp, .c, .h): ~800-1,000 needed
@@ -1554,16 +1624,16 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 
 ## NEXT STEPS (Recommended Priority)
 
-1. **Boot System** - Complete GRUB theme and add kernel entries
-2. **Kernel Core** - Start with entry point, basic printk, panic handler
-3. **Memory Management** - Physical memory manager (essential)
-4. **Build System** - Get a working Makefile that builds the kernel
-5. **Hello World** - Boot to a working kernel that prints "Hello World"
+1. **Boot System** - GRUB theme optional; custom bootloader is primary and working
+2. **Kernel Core** - Entry point, GDT/IDT/TSS/PIC, VGA print, interrupt handler done
+3. **Memory Management** - PMM, VMM, heap, paging, TLB, DMA stubs done
+4. **Build System** - Kernel Makefile builds kernel.bin; bootloader builds disk image
+5. **Device drivers** - Serial, keyboard, mouse, timer, RTC, PCI, ATA, AHCI, NVMe, floppy done
 6. **Userland libc** - Basic C library for user programs
 7. **Shell** - Basic command interpreter
 8. **Filesystem** - RAM filesystem (ramfs) for testing
 
 ---
 
-*Last Updated: 2026-02-14*  
+*Last Updated: 2026-02-22*  
 *Based on PROJECT_STRUCTURE.md*
