@@ -162,25 +162,26 @@ boot_selection:
 .boot_normal:
     mov si, msg_loading
     call print_both
-    mov bx, 0x1000
-    mov es, bx
-    xor bx, bx
-    mov ah, 0x02
-    mov al, 64
-    mov ch, 0
-    mov cl, 6
-    mov dh, 1
-    mov dl, [boot_drive]
-    int 0x13
+    ; Load loader (2 sectors from LBA 11) to 0x1000:0 = 0x10000
+    mov word [dap_count], 2
+    mov word [dap_offset], 0x0000
+    mov word [dap_segment], 0x1000
+    mov dword [dap_lba], 11
+    call read_lba
     jc .error
-    
+    ; Load kernel ELF (110 sectors from LBA 37) to 0x2000:0 = 0x20000
+    mov word [dap_count], 110
+    mov word [dap_offset], 0x0000
+    mov word [dap_segment], 0x2000
+    mov dword [dap_lba], 37
+    call read_lba
+    jc .error
     mov si, msg_read_ok
     call print_both
     mov si, msg_booting
     call print_both
     mov si, msg_jump_kernel
     call print_both
-    
     popa
     mov dl, [boot_drive]
     mov bx, 0x1000
@@ -400,6 +401,64 @@ read_key:
     int 0x16
     ret
 
+; =============================================================================
+; read_lba - Read sectors from LBA using CHS, one sector at a time
+; Uses dap_* variables for parameters. Sets CF on error.
+; =============================================================================
+read_lba:
+    pusha
+    mov cx, [dap_count]
+.rl_loop:
+    test cx, cx
+    jz .rl_done
+    push cx
+    ; LBA -> CHS  (18 sectors/track, 2 heads/cylinder)
+    mov eax, [dap_lba]
+    xor edx, edx
+    mov ebx, 18
+    div ebx                   ; eax = track, edx = sector-in-track
+    inc dx                    ; sectors are 1-based
+    mov cl, dl                ; CL = sector
+    xor edx, edx
+    mov ebx, 2
+    div ebx                   ; eax = cylinder, edx = head
+    mov ch, al                ; CH = cylinder
+    mov dh, dl                ; DH = head
+    ; Read 1 sector
+    mov ax, [dap_segment]
+    mov es, ax
+    mov bx, [dap_offset]
+    mov ah, 0x02
+    mov al, 1
+    mov dl, [boot_drive]
+    int 0x13
+    jc .rl_err
+    ; Advance LBA and buffer offset
+    inc dword [dap_lba]
+    add word [dap_offset], 512
+    ; If offset wrapped past 0xFFFF, advance segment
+    jnc .rl_no_wrap
+    add word [dap_segment], 0x1000
+.rl_no_wrap:
+    pop cx
+    dec cx
+    jmp .rl_loop
+.rl_done:
+    popa
+    clc
+    ret
+.rl_err:
+    pop cx
+    popa
+    stc
+    ret
+
+; read_lba parameter block
+dap_count:   dw 0
+dap_offset:  dw 0
+dap_segment: dw 0
+dap_lba:     dd 0
+
 boot_drive: db 0
 selection: db 0
 
@@ -417,7 +476,7 @@ msg_opt2: db "Reboot", 13, 10, 0
 msg_hint: db "Up/Down or 1/2/3, Enter to select", 13, 10, 0
 msg_vt100_clear: db 27, "[2J", 27, "[H", 0
 
-msg_loading:     db "[3/3] Loading kernel (64 sectors from sector 23)...", 13, 10, 0
+msg_loading:     db "[3/3] Loading loader+kernel...", 13, 10, 0
 msg_read_ok:     db "      Read OK.", 13, 10, 0
 msg_booting:     db "      Booting...", 13, 10, 0
 msg_jump_kernel: db "      Jump to 0x10000.", 13, 10, 0

@@ -2,7 +2,7 @@
 
 Comprehensive task list for building the DIT Operating System based on PROJECT_STRUCTURE.md.
 
-**Current Progress: ~7% complete** (131 of ~1,500-2,000 estimated files)
+**Current Progress: ~7% complete** (154 of ~1,500-2,000 estimated files)
 
 **Boot path:** We use the **custom bootloader** (stage1 + stage2). GRUB is **not** used for booting; GRUB/boot/ entries below are optional (e.g. for ISO or alternate setups).
 
@@ -68,6 +68,12 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [x] `bootloader/scripts/sign.sh` - Boot sector signing
 - [x] `bootloader/build/` - Build directory (created by Makefile)
 
+#### Boot C++ kernel (full boot path)
+- [x] `bootloader/src/loader/loader.asm` - ELF loader + multiboot launcher (runs at 0x10000)
+- [x] `bootloader/src/loader/Makefile` - Build loader.bin
+- [x] Bootloader top-level Makefile - Use kernel from kernel/Makefile (ELF); disk layout: stage1, stage2, loader, kernel
+- [x] `bootloader/src/stage2/stage2.asm` - Load loader + kernel then jump to loader (not raw kernel)
+
 #### Bootloader (optional in structure)
 - [ ] `bootloader/src/grub/grub.cfg` - GRUB config under bootloader (optional; we use custom boot)
 
@@ -84,13 +90,13 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `boot/Makefile` - Build boot assets if needed
 
 ### Scripts (from PROJECT_STRUCTURE)
-- [ ] `scripts/build.sh` - Main build script
+- [x] `scripts/build.sh` - Main build script (kernel + bootloader + disk)
 - [ ] `scripts/build-kernel.sh` - Build kernel only
 - [ ] `scripts/build-userland.sh` - Build userland only
 - [ ] `scripts/clean.sh` - Clean build
 - [ ] `scripts/config.sh` - Configure build
 - [ ] `scripts/menuconfig.sh` - Interactive config
-- [ ] `scripts/run-qemu.sh` - Run in QEMU (custom bootloader disk/floppy)
+- [x] `scripts/run-qemu.sh` - Run in QEMU (custom bootloader disk/floppy)
 - [ ] `scripts/run-qemu-bios.sh` - QEMU BIOS boot
 - [ ] `scripts/run-qemu-uefi.sh` - QEMU UEFI boot
 - [ ] `scripts/run-qemu-debug.sh` - QEMU debug mode
@@ -101,7 +107,7 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `scripts/run-vbox/delete-vm.sh` - Delete VM
 - [ ] `scripts/run-bochs.sh` - Run in Bochs
 - [ ] `scripts/create-iso.sh` - ISO creation
-- [ ] `scripts/create-disk.sh` - Create disk image
+- [x] `scripts/create-disk.sh` - Create disk image (stage1, stage2, loader, kernel)
 - [ ] `scripts/install-toolchain.sh` - Install cross-compiler
 - [ ] `scripts/check-toolchain.sh` - Verify toolchain
 - [ ] `scripts/debug.sh` - Debug script
@@ -294,22 +300,22 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 
 ### Include Headers
 
-- [ ] `kernel/include/kernel.hpp`
-- [ ] `kernel/include/types.hpp`
-- [ ] `kernel/include/stddef.hpp`
-- [ ] `kernel/include/stdint.hpp`
-- [ ] `kernel/include/stdbool.hpp`
-- [ ] `kernel/include/string.hpp`
-- [ ] `kernel/include/stdlib.hpp`
-- [ ] `kernel/include/errno.hpp`
-- [ ] `kernel/include/errno_defs.hpp` - Error code definitions
-- [ ] `kernel/include/limits.hpp`
-- [ ] `kernel/include/ctype.hpp`
-- [ ] `kernel/include/math.hpp`
-- [ ] `kernel/include/assert.hpp`
-- [ ] `kernel/include/kconfig.hpp` - Kernel configuration header
-- [ ] `kernel/include/kconfig_defaults.hpp` - Default config values
-- [ ] `kernel/include/config.hpp` - Auto-generated config
+- [x] `kernel/include/kernel.hpp`
+- [x] `kernel/include/types.hpp`
+- [x] `kernel/include/stddef.hpp`
+- [x] `kernel/include/stdint.hpp`
+- [x] `kernel/include/stdbool.hpp`
+- [x] `kernel/include/string.hpp`
+- [x] `kernel/include/stdlib.hpp`
+- [x] `kernel/include/errno.hpp`
+- [x] `kernel/include/errno_defs.hpp` - Error code definitions
+- [x] `kernel/include/limits.hpp`
+- [x] `kernel/include/ctype.hpp`
+- [x] `kernel/include/math.hpp`
+- [x] `kernel/include/assert.hpp`
+- [x] `kernel/include/kconfig.hpp` - Kernel configuration header
+- [x] `kernel/include/kconfig_defaults.hpp` - Default config values
+- [x] `kernel/include/config.hpp` - Auto-generated config
 
 #### Architecture Headers
 - [x] `kernel/include/arch/x86_64/cpu.hpp`
@@ -1512,7 +1518,7 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `scripts/delete-vm.sh` - Delete VM
 - [ ] `scripts/run-bochs.sh` - Run in Bochs
 - [ ] `scripts/create-iso.sh` - ISO creation
-- [ ] `scripts/create-disk.sh` - Create disk image
+- [x] `scripts/create-disk.sh` - Create disk image (stage1, stage2, loader, kernel)
 - [ ] `scripts/install-toolchain.sh` - Install cross-compiler
 - [ ] `scripts/check-toolchain.sh` - Verify toolchain
 - [ ] `scripts/debug.sh` - Debug script

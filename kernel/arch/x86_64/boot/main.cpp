@@ -97,6 +97,10 @@ extern "C" uint32_t kernel_stack_top;
 extern "C" void kernel_main() {
     boot::early_init();
 
+    /* Early serial so something appears with QEMU -display none -serial mon:stdio */
+    dev::serial_init();
+    dev::serial_puts("\r\nDIT-OS Kernel starting...\r\n");
+
     for (int y = 0; y < VGA_HEIGHT; y++) {
         for (int x = 0; x < VGA_WIDTH; x++) {
             vga_buffer[y * VGA_WIDTH + x] = vga_entry(

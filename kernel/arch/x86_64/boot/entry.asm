@@ -7,15 +7,25 @@
 section .text
 
 global _start
+extern __bss_start
+extern __bss_end
+
 _start:
-    ; Multiboot magic in EAX, boot info in EBX
+    ; Save multiboot regs immediately
     mov [boot_magic], eax
     mov [boot_info], ebx
-    
-    ; Set up stack
+
+    ; Clear BSS BEFORE setting up stack (stack is in BSS!)
+    mov edi, __bss_start
+    mov ecx, __bss_end
+    sub ecx, edi
+    xor al, al
+    cld
+    rep stosb
+
+    ; Set up stack (now safe, BSS is cleared)
     mov esp, kernel_stack_top
-    
-    ; GDT/IDT loaded in arch::cpu_early_init()
+
     ; Jump to C++ kernel
     extern kernel_main
     call kernel_main

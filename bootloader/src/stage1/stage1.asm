@@ -33,14 +33,14 @@ start:
     int 0x13
     jc disk_error
     
-    ; Read stage2 (9 sectors from sector 2)
+    ; Read stage2 (9 sectors from LBA 2; CHS sector is 1-based so cl=3 = LBA 2)
     mov si, msg_read
     call print_both
     mov bx, 0x7E00
     mov ah, 0x02
     mov al, 9
     mov ch, 0
-    mov cl, 2
+    mov cl, 3                 ; CHS sector 3 = LBA 2 (first sector of stage2)
     mov dh, 0
     mov dl, [boot_drive]
     int 0x13

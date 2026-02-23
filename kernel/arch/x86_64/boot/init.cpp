@@ -41,9 +41,9 @@ static uint32_t check_multiboot() {
 }
 
 // Public: call from kernel_main first
+// BSS is already cleared by entry.asm (must happen before stack setup)
 void early_init() {
-    clear_bss();
-    (void)check_multiboot();  // Can be used later for parsing boot info
+    (void)check_multiboot();
 }
 
 // Optional: get multiboot boot info pointer (Multiboot1: physical address in EBX)
