@@ -73,10 +73,10 @@ C_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.c,%.o,$(C_SOURCES)))
 
 # Flags
 NASM_FLAGS = -f elf32 -g
-CXX_FLAGS = -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -fno-stack-protector -Wall -Wextra -m32
+CXX_FLAGS = -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -fno-stack-protector -fno-pie -fno-pic -Wall -Wextra -m32
 CXX_FLAGS += -I$(KERNEL_DIR)/include -I../include
 
-C_FLAGS = -std=c11 -ffreestanding -fno-stack-protector -Wall -Wextra -m32
+C_FLAGS = -std=c11 -ffreestanding -fno-stack-protector -fno-pie -fno-pic -Wall -Wextra -m32
 C_FLAGS += -I$(KERNEL_DIR)/include -I../include
 C_FLAGS += -I../userland/include -I../userland/libc/include
 
@@ -95,19 +95,19 @@ $(KERNEL_OUT): $(ASM_OBJECTS) $(CPP_OBJECTS) $(C_OBJECTS)
 	@echo "Kernel built: $@"
 
 # Assemble .asm files (obj dir avoids circular dependency)
-$(OBJDIR)/%.asm.o: %.asm
+$(OBJDIR)/%.asm.o: %.asm Makefile
 	@mkdir -p $(dir $@)
 	@echo "Assembling $<..."
 	$(NASM) $(NASM_FLAGS) -o $@ $<
 
 # Compile .cpp files
-$(OBJDIR)/%.o: %.cpp
+$(OBJDIR)/%.o: %.cpp Makefile
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<..."
 	$(CXX) $(CXX_FLAGS) -c -o $@ $<
 
 # Compile .c files
-$(OBJDIR)/%.o: %.c
+$(OBJDIR)/%.o: %.c Makefile
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<..."
 	$(CC) $(C_FLAGS) -c -o $@ $<

@@ -16,4 +16,5 @@ fi
 echo "Starting QEMU (menu: arrows or 1/2/3 + Enter; exit: Ctrl+A then X)..."
 exec qemu-system-i386 -accel tcg,thread=single \
     -drive format=raw,file="$DISK",index=0,if=floppy,snapshot=on \
-    -display none -serial mon:stdio "$@"
+    -display none -serial mon:stdio \
+    -no-reboot -no-shutdown -m 32M "$@"

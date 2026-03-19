@@ -27,7 +27,7 @@ STAGE1_SRC = $(STAGE1_DIR)/stage1.asm
 STAGE2_SRC = $(STAGE2_DIR)/stage2.asm
 NASM_BIN = -f bin -I$(SRC_DIR)/common -I$(STAGE2_DIR)
 
-.PHONY: all clean run debug disk dirs kernel loader
+.PHONY: all clean run debug disk dirs kernel loader FORCE
 
 all: dirs $(DISK_IMAGE)
 	@echo "=========================================="
@@ -50,8 +50,10 @@ $(LOADER_OUT): dirs
 	cp $(LOADER_DIR)/loader.bin $@
 
 # Kernel ELF from kernel/Makefile
-$(KERNEL_OUT):
+$(KERNEL_OUT): FORCE
 	$(MAKE) -C $(KERNEL_DIR) all
+
+FORCE:
 
 $(DISK_IMAGE): $(STAGE1_OUT) $(STAGE2_OUT) $(LOADER_OUT) $(KERNEL_OUT)
 	@dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null
@@ -65,11 +67,11 @@ disk: dirs $(DISK_IMAGE)
 
 run: disk
 	@echo "Running DIT-OS in QEMU..."
-	qemu-system-i386 -accel tcg,thread=single -drive format=raw,file=$(DISK_IMAGE),index=0,if=floppy -display none -serial mon:stdio
+	qemu-system-i386 -accel tcg,thread=single -drive format=raw,file=$(DISK_IMAGE),index=0,if=floppy -display none -serial mon:stdio -no-reboot -no-shutdown -m 32M
 
 debug: disk
 	@echo "Running DIT-OS in QEMU with GDB..."
-	qemu-system-i386 -accel tcg,thread=single -drive format=raw,file=$(DISK_IMAGE),index=0,if=floppy -display none -serial mon:stdio -s -S
+	qemu-system-i386 -accel tcg,thread=single -drive format=raw,file=$(DISK_IMAGE),index=0,if=floppy -display none -serial mon:stdio -no-reboot -no-shutdown -m 32M -s -S
 
 dirs:
 	@mkdir -p $(BUILD_DIR)
