@@ -73,10 +73,10 @@ C_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.c,%.o,$(C_SOURCES)))
 
 # Flags
 NASM_FLAGS = -f elf32 -g
-CXX_FLAGS = -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -Wall -Wextra -m32
+CXX_FLAGS = -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -fno-stack-protector -Wall -Wextra -m32
 CXX_FLAGS += -I$(KERNEL_DIR)/include -I../include
 
-C_FLAGS = -std=c11 -ffreestanding -Wall -Wextra -m32
+C_FLAGS = -std=c11 -ffreestanding -fno-stack-protector -Wall -Wextra -m32
 C_FLAGS += -I$(KERNEL_DIR)/include -I../include
 C_FLAGS += -I../userland/include -I../userland/libc/include
 
