@@ -1,28 +1,32 @@
 name: Build
 
 on:
-  # push:
-  #   branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up GNU Make
-        run: sudo apt-get update && sudo apt-get install -y build-essential
-
-      - name: Build bootloader and ISO
+      - name: Install build dependencies
         run: |
-          make -C bootloader iso
+          sudo apt-get update
+          sudo apt-get install -y build-essential make nasm qemu-system-x86
 
-      - name: Upload ISO artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: DIT-OS-iso
-          path: bootloader/build/DIT-OS.iso
+      - name: Build kernel
+        run: make -C kernel -j"$(nproc)"
+
+      - name: Build bootloader disk image
+        run: make -C bootloader all
+
+      - name: QEMU smoke boot (menu -> boot option 1)
+        run: |
+          set -euo pipefail
+          (printf "1\n"; sleep 1) | timeout 20 make -C bootloader run

@@ -2,13 +2,13 @@
 
 Comprehensive task list for building the DIT Operating System based on PROJECT_STRUCTURE.md.
 
-**Current Progress: ~7% complete** (154 of ~1,500-2,000 estimated files)
+**Current Progress: ~12-16% complete** (248 of ~1,500-2,000 estimated files)
 
 **Boot path:** We use the **custom bootloader** (stage1 + stage2). GRUB is **not** used for booting; GRUB/boot/ entries below are optional (e.g. for ISO or alternate setups).
 
 ---
 
-## COMPLETED (131 files)
+## COMPLETED (248 files)
 
 ### Project Root
 - [x] `README.md`
@@ -93,26 +93,26 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [x] `scripts/build.sh` - Main build script (kernel + bootloader + disk)
 - [ ] `scripts/build-kernel.sh` - Build kernel only
 - [ ] `scripts/build-userland.sh` - Build userland only
-- [ ] `scripts/clean.sh` - Clean build
-- [ ] `scripts/config.sh` - Configure build
-- [ ] `scripts/menuconfig.sh` - Interactive config
+- [ ] `scripts/clean.sh` - Clean build artifacts (bootloader/build/, kernel/build/, build/)
+- [ ] `scripts/config.sh` - Configure build options
+- [ ] `scripts/menuconfig.sh` - Interactive config (wraps tools/kconfig)
 - [x] `scripts/run-qemu.sh` - Run in QEMU (custom bootloader disk/floppy)
 - [ ] `scripts/run-qemu-bios.sh` - QEMU BIOS boot
 - [ ] `scripts/run-qemu-uefi.sh` - QEMU UEFI boot
-- [ ] `scripts/run-qemu-debug.sh` - QEMU debug mode
+- [ ] `scripts/run-qemu-debug.sh` - QEMU debug mode (add -s -S flags, wait for GDB)
 - [ ] `scripts/run-vbox.sh` - Run in VirtualBox
 - [ ] `scripts/run-vbox/create-vm.sh` - Create VM
 - [ ] `scripts/run-vbox/start-vm.sh` - Start VM
 - [ ] `scripts/run-vbox/stop-vm.sh` - Stop VM
 - [ ] `scripts/run-vbox/delete-vm.sh` - Delete VM
 - [ ] `scripts/run-bochs.sh` - Run in Bochs
-- [ ] `scripts/create-iso.sh` - ISO creation
+- [ ] `scripts/create-iso.sh` - ISO creation (uses custom bootloader, not GRUB)
 - [x] `scripts/create-disk.sh` - Create disk image (stage1, stage2, loader, kernel)
-- [ ] `scripts/install-toolchain.sh` - Install cross-compiler
-- [ ] `scripts/check-toolchain.sh` - Verify toolchain
-- [ ] `scripts/debug.sh` - Debug script
-- [ ] `scripts/gdb.sh` - GDB wrapper
-- [ ] `scripts/symbolize.sh` - Symbolize stack traces
+- [ ] `scripts/install-toolchain.sh` - Install cross-compiler (calls tools/cross-compiler scripts)
+- [ ] `scripts/check-toolchain.sh` - Verify toolchain (i686-elf-gcc, nasm, ld)
+- [ ] `scripts/debug.sh` - Debug script (launch QEMU + GDB together)
+- [ ] `scripts/gdb.sh` - GDB wrapper (load kernel.sym, connect to :1234)
+- [ ] `scripts/symbolize.sh` - Symbolize stack traces using kernel.sym
 - [ ] `scripts/checkpatch.pl` - Check coding style
 - [ ] `scripts/checkstack.pl` - Check stack usage
 - [ ] `scripts/tags.sh` - Generate ctags
@@ -244,11 +244,11 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/arch/x86_64/dev/network/virtio_net.cpp` - VirtIO network
 
 #### Graphics
-- [ ] `kernel/arch/x86_64/graphics/vga.cpp` - VGA text mode
+- [x] `kernel/arch/x86_64/graphics/vga.cpp` - VGA text mode
 - [ ] `kernel/arch/x86_64/graphics/vga.hpp`
 - [ ] `kernel/arch/x86_64/graphics/vbe.cpp` - VESA BIOS Extensions
 - [ ] `kernel/arch/x86_64/graphics/vbe.hpp`
-- [ ] `kernel/arch/x86_64/graphics/framebuffer.cpp` - Linear framebuffer
+- [x] `kernel/arch/x86_64/graphics/framebuffer.cpp` - Linear framebuffer
 - [ ] `kernel/arch/x86_64/graphics/bochs_vbe.cpp` - Bochs VBE extensions
 
 ##### Fonts
@@ -347,49 +347,49 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [x] `kernel/include/mm/mmu.hpp`
 
 #### Device Headers
-- [ ] `kernel/include/dev/device.hpp`
-- [ ] `kernel/include/dev/driver.hpp`
-- [ ] `kernel/include/dev/bus.hpp`
-- [ ] `kernel/include/dev/class.hpp`
+- [x] `kernel/include/dev/device.hpp`
+- [x] `kernel/include/dev/driver.hpp`
+- [x] `kernel/include/dev/bus.hpp`
+- [x] `kernel/include/dev/class.hpp`
 - [x] `kernel/include/dev/serial.hpp`
 - [x] `kernel/include/dev/keyboard.hpp`
-- [ ] `kernel/include/dev/keycodes.hpp`
+- [x] `kernel/include/dev/keycodes.hpp`
 - [x] `kernel/include/dev/timer.hpp`
 - [x] `kernel/include/dev/rtc.hpp`
 - [x] `kernel/include/dev/pci.hpp`
 - [x] `kernel/include/dev/pci_ids.hpp`
 - [x] `kernel/include/dev/ata.hpp`
-- [ ] `kernel/include/dev/usb.hpp`
-- [ ] `kernel/include/dev/usb_spec.hpp`
-- [ ] `kernel/include/dev/blockdev.hpp`
-- [ ] `kernel/include/dev/chardev.hpp`
+- [x] `kernel/include/dev/usb.hpp`
+- [x] `kernel/include/dev/usb_spec.hpp`
+- [x] `kernel/include/dev/blockdev.hpp`
+- [x] `kernel/include/dev/chardev.hpp`
 
 #### Filesystem Headers
-- [ ] `kernel/include/fs/vfs.hpp`
-- [ ] `kernel/include/fs/inode.hpp`
-- [ ] `kernel/include/fs/dentry.hpp`
-- [ ] `kernel/include/fs/superblock.hpp`
-- [ ] `kernel/include/fs/file.hpp`
-- [ ] `kernel/include/fs/mount.hpp`
-- [ ] `kernel/include/fs/fs.hpp`
-- [ ] `kernel/include/fs/namei.hpp`
-- [ ] `kernel/include/fs/stat.hpp`
-- [ ] `kernel/include/fs/fcntl.hpp`
-- [ ] `kernel/include/fs/ioctl.hpp`
-- [ ] `kernel/include/fs/dirent.hpp`
-- [ ] `kernel/include/fs/poll.hpp`
-- [ ] `kernel/include/fs/select.hpp`
-- [ ] `kernel/include/fs/buffer.hpp`
+- [x] `kernel/include/fs/vfs.hpp`
+- [x] `kernel/include/fs/inode.hpp`
+- [x] `kernel/include/fs/dentry.hpp`
+- [x] `kernel/include/fs/superblock.hpp`
+- [x] `kernel/include/fs/file.hpp`
+- [x] `kernel/include/fs/mount.hpp`
+- [x] `kernel/include/fs/fs.hpp`
+- [x] `kernel/include/fs/namei.hpp`
+- [x] `kernel/include/fs/stat.hpp`
+- [x] `kernel/include/fs/fcntl.hpp`
+- [x] `kernel/include/fs/ioctl.hpp`
+- [x] `kernel/include/fs/dirent.hpp`
+- [x] `kernel/include/fs/poll.hpp`
+- [x] `kernel/include/fs/select.hpp`
+- [x] `kernel/include/fs/buffer.hpp`
 
 #### Graphics Headers
-- [ ] `kernel/include/graphics/vga.hpp`
-- [ ] `kernel/include/graphics/framebuffer.hpp`
-- [ ] `kernel/include/graphics/font.hpp`
-- [ ] `kernel/include/graphics/color.hpp`
-- [ ] `kernel/include/graphics/drawing.hpp`
-- [ ] `kernel/include/graphics/cursor.hpp`
-- [ ] `kernel/include/graphics/terminal.hpp`
-- [ ] `kernel/include/graphics/terminal-buffer.hpp`
+- [x] `kernel/include/graphics/vga.hpp`
+- [x] `kernel/include/graphics/framebuffer.hpp`
+- [x] `kernel/include/graphics/font.hpp`
+- [x] `kernel/include/graphics/color.hpp`
+- [x] `kernel/include/graphics/drawing.hpp`
+- [x] `kernel/include/graphics/cursor.hpp`
+- [x] `kernel/include/graphics/terminal.hpp`
+- [x] `kernel/include/graphics/terminal-buffer.hpp`
 
 #### Network Headers
 - [ ] `kernel/include/net/socket.hpp`
@@ -415,15 +415,15 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/include/net/netfilter.hpp`
 
 #### Syscall Headers
-- [ ] `kernel/include/syscall/syscall.hpp`
-- [ ] `kernel/include/syscall/syscall_table.hpp`
-- [ ] `kernel/include/syscall/syscall_numbers.hpp`
-- [ ] `kernel/include/syscall/syscall_defs.hpp`
-- [ ] `kernel/include/syscall/syscall_trace.hpp`
+- [x] `kernel/include/syscall/syscall.hpp`
+- [x] `kernel/include/syscall/syscall_table.hpp`
+- [x] `kernel/include/syscall/syscall_numbers.hpp`
+- [x] `kernel/include/syscall/syscall_defs.hpp`
+- [x] `kernel/include/syscall/syscall_trace.hpp`
 
 #### Scheduler Headers
-- [ ] `kernel/include/sched/sched.hpp`
-- [ ] `kernel/include/sched/task.hpp`
+- [x] `kernel/include/sched/sched.hpp` - Scheduler header (exists)
+- [x] `kernel/include/sched/task.hpp` - Task struct header (exists)
 - [ ] `kernel/include/sched/process.hpp`
 - [ ] `kernel/include/sched/thread.hpp`
 - [ ] `kernel/include/sched/signal.hpp`
@@ -493,32 +493,38 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/mm/Makefile`
 
 ### Scheduler (Sched)
-- [ ] `kernel/sched/sched.cpp` - Main scheduler
-- [ ] `kernel/sched/task.cpp` - Task/thread management
-- [ ] `kernel/sched/fork.cpp` - Process creation
-- [ ] `kernel/sched/exec.cpp` - Program execution
-- [ ] `kernel/sched/exit.cpp` - Process termination
-- [ ] `kernel/sched/wait.cpp` - Wait for child processes
-- [ ] `kernel/sched/signal.cpp` - Signal handling
+
+> **⚠ NOTE FOR CURSOR**: `kernel/sched/sched.cpp`, `task.cpp`, `shell.cpp`, `init_task.cpp`, `idle.cpp` already exist and are partially implemented. Do NOT recreate them from scratch — only fill in missing pieces. The existing sched uses `sched/sched.hpp` and `sched/task.hpp` headers from `kernel/include/`. This must stay consistent.
+
+- [x] `kernel/sched/sched.cpp` - Round-robin scheduler (implemented, basic)
+- [x] `kernel/sched/task.cpp` - Task creation (implemented)
+- [x] `kernel/sched/shell.cpp` - Init/shell task (implemented, minimal)
+- [x] `kernel/sched/init_task.cpp` - Init task entry (implemented)
+- [x] `kernel/sched/idle.cpp` - Idle task (implemented)
+- [x] `kernel/sched/context.asm` - Context switch (implemented, uses `sched_switch`)
+- [x] `kernel/include/sched/sched.hpp` - Scheduler header (exists, used by all sched/*.cpp)
+- [x] `kernel/include/sched/task.hpp` - Task struct header (exists)
+- [x] `kernel/sched/fork.cpp` - Process creation (clone task, copy address space)
+- [ ] `kernel/sched/exec.cpp` - Program execution (load ELF into process)
+- [x] `kernel/sched/exit.cpp` - Process termination (cleanup, notify parent)
+- [ ] `kernel/sched/wait.cpp` - Wait for child processes (waitpid)
+- [ ] `kernel/sched/signal.cpp` - Signal handling (kill, sigaction, etc.)
 - [ ] `kernel/sched/signal.hpp`
-- [ ] `kernel/sched/timer.cpp` - Timer/scheduling
-- [ ] `kernel/sched/context.asm` - Context switching
-- [ ] `kernel/sched/swtch.asm` - Context switch
-- [ ] `kernel/sched/entry.asm` - Task entry points
-- [ ] `kernel/sched/mutex.cpp` - Mutex implementation
+- [ ] `kernel/sched/timer.cpp` - Per-task timers and sleeping (sleep, nanosleep)
+- [ ] `kernel/sched/entry.asm` - Task entry points (usermode return trampoline)
+- [x] `kernel/sched/mutex.cpp` - Mutex implementation
 - [ ] `kernel/sched/semaphore.cpp` - Semaphore implementation
 - [ ] `kernel/sched/rwlock.cpp` - Read-write locks
 - [ ] `kernel/sched/condvar.cpp` - Condition variables
 - [ ] `kernel/sched/futex.cpp` - Fast userspace mutex
-- [ ] `kernel/sched/process.cpp` - Process management
-- [ ] `kernel/sched/thread.cpp` - Thread management
-- [ ] `kernel/sched/pid.cpp` - PID allocation
+- [ ] `kernel/sched/process.cpp` - Process management (address space, pid table)
+- [ ] `kernel/sched/thread.cpp` - Thread management (kernel threads)
+- [x] `kernel/sched/pid.cpp` - PID allocation (bitmap or radix tree)
 - [ ] `kernel/sched/loadavg.cpp` - Load average calculation
 - [ ] `kernel/sched/clock.cpp` - Scheduling clock
 - [ ] `kernel/sched/deadline.cpp` - Deadline scheduler
-- [ ] `kernel/sched/fair.cpp` - CFS scheduler
+- [ ] `kernel/sched/fair.cpp` - CFS scheduler (replace round-robin eventually)
 - [ ] `kernel/sched/rt.cpp` - Real-time scheduler
-- [ ] `kernel/sched/idle.cpp` - Idle task
 - [ ] `kernel/sched/stop_task.cpp` - Stop task
 - [ ] `kernel/sched/cgroup.cpp` - Control groups
 - [ ] `kernel/sched/namespace.cpp` - Namespaces
@@ -529,9 +535,8 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/sched/smp.cpp` - SMP scheduling
 - [ ] `kernel/sched/cpuidle.cpp` - CPU idle management
 - [ ] `kernel/sched/cpufreq.cpp` - CPU frequency scaling
-- [ ] `kernel/sched/sched.hpp` - Internal scheduler headers
-- [ ] `kernel/sched/sched_api.hpp`
-- [ ] `kernel/sched/Makefile`
+- [ ] `kernel/sched/sched_api.hpp` - Public scheduler API (expose run_queue_add, task_create, etc.)
+- [ ] `kernel/sched/Makefile` - **⚠ Must include existing files: sched.cpp, task.cpp, shell.cpp, init_task.cpp, idle.cpp, context.asm**
 
 ### Filesystem (FS)
 - [ ] `kernel/fs/vfs.cpp` - Virtual File System
@@ -571,11 +576,11 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/fs/devfs/devfs.hpp`
 - [ ] `kernel/fs/devfs/Makefile`
 
-#### ramfs (RAM Filesystem)
-- [ ] `kernel/fs/ramfs/ramfs.cpp`
-- [ ] `kernel/fs/ramfs/ramfs.hpp`
-- [ ] `kernel/fs/ramfs/inode.cpp`
-- [ ] `kernel/fs/ramfs/Makefile`
+#### ramfs (RAM Filesystem) — **Priority: implement first for userland testing**
+- [x] `kernel/fs/ramfs/ramfs.cpp`
+- [x] `kernel/fs/ramfs/ramfs.hpp`
+- [x] `kernel/fs/ramfs/inode.cpp`
+- [x] `kernel/fs/ramfs/Makefile`
 
 #### ext2 (EXT2 Filesystem)
 - [ ] `kernel/fs/ext2/ext2.cpp`
@@ -628,6 +633,29 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/fs/procfs/modules.cpp`
 - [ ] `kernel/fs/procfs/mounts.cpp`
 - [ ] `kernel/fs/procfs/Makefile`
+
+### Syscall Layer
+
+> **NOTE FOR CURSOR**: Syscall numbers must be consistent between `userland/include/syscall.h` and `kernel/include/syscall/syscall_numbers.hpp` (e.g. `SYS_exit = 6`). The syscall ABI is: `int 0x80`, EAX=number, return in EAX (negative = -errno).
+
+- [x] `kernel/syscall/syscall.cpp` - Syscall dispatcher (int 0x80 handler → table lookup)
+- [ ] `kernel/syscall/syscall.hpp` - **⚠ Must match `kernel/include/syscall/syscall.hpp`; do not duplicate — pick one location**
+- [ ] `kernel/syscall/syscall_table.cpp` - Syscall function pointer table
+- [ ] `kernel/syscall/sys_read.cpp` - read() syscall
+- [ ] `kernel/syscall/sys_write.cpp` - write() syscall
+- [x] `kernel/syscall/sys_exit.cpp` - exit() syscall
+- [x] `kernel/syscall/sys_fork.cpp` - fork() syscall
+- [ ] `kernel/syscall/sys_exec.cpp` - execve() syscall
+- [ ] `kernel/syscall/sys_open.cpp` - open() syscall
+- [ ] `kernel/syscall/sys_close.cpp` - close() syscall
+- [ ] `kernel/syscall/sys_mmap.cpp` - mmap() syscall
+- [ ] `kernel/syscall/sys_brk.cpp` - brk() syscall
+- [ ] `kernel/syscall/sys_wait.cpp` - waitpid() syscall
+- [x] `kernel/syscall/sys_getpid.cpp` - getpid() syscall
+- [ ] `kernel/syscall/sys_kill.cpp` - kill() / signal delivery syscall
+- [ ] `kernel/syscall/sys_stat.cpp` - stat() / fstat() syscall
+- [ ] `kernel/syscall/sys_ioctl.cpp` - ioctl() syscall
+- [ ] `kernel/syscall/Makefile`
 
 ### Drivers
 
@@ -698,755 +726,120 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 - [ ] `kernel/drivers/input/input.hpp`
 - [ ] `kernel/drivers/input/event.cpp` - Input event system
 - [ ] `kernel/drivers/input/evdev.cpp` - Event device
-- [ ] `kernel/drivers/input/serio.cpp` - Serial I/O
 - [ ] `kernel/drivers/input/Makefile`
+
+#### Network Drivers
+- [ ] `kernel/drivers/net/e1000.cpp`
+- [ ] `kernel/drivers/net/rtl8139.cpp`
+- [ ] `kernel/drivers/net/virtio_net.cpp`
+- [ ] `kernel/drivers/net/loopback.cpp` - Loopback interface
+- [ ] `kernel/drivers/net/Makefile`
 
 #### Graphics Drivers
 - [ ] `kernel/drivers/graphics/vga.cpp`
-- [ ] `kernel/drivers/graphics/vga.hpp`
-- [ ] `kernel/drivers/graphics/vbe.cpp`
-- [ ] `kernel/drivers/graphics/vbe.hpp`
-- [ ] `kernel/drivers/graphics/fb.cpp` - Framebuffer
-- [ ] `kernel/drivers/graphics/fb.hpp`
-- [ ] `kernel/drivers/graphics/fbmem.cpp` - Framebuffer memory
-- [ ] `kernel/drivers/graphics/fbcmap.cpp` - Framebuffer colormap
-- [ ] `kernel/drivers/graphics/fbsysfs.cpp` - Framebuffer sysfs
-
-##### DRM (Direct Rendering Manager)
-- [ ] `kernel/drivers/graphics/drm/drm.cpp`
-- [ ] `kernel/drivers/graphics/drm/drm.hpp`
-- [ ] `kernel/drivers/graphics/drm/Makefile`
+- [ ] `kernel/drivers/graphics/framebuffer.cpp`
+- [ ] `kernel/drivers/graphics/bochs_vbe.cpp`
+- [ ] `kernel/drivers/graphics/vmware_svga.cpp`
+- [ ] `kernel/drivers/graphics/virtio_gpu.cpp`
 - [ ] `kernel/drivers/graphics/Makefile`
 
-#### Network Drivers
-- [ ] `kernel/drivers/net/network.cpp` - Network stack core
-- [ ] `kernel/drivers/net/network.hpp`
-- [ ] `kernel/drivers/net/arp.cpp`
-- [ ] `kernel/drivers/net/ip.cpp`
-- [ ] `kernel/drivers/net/ip_input.cpp`
-- [ ] `kernel/drivers/net/ip_output.cpp`
-- [ ] `kernel/drivers/net/ip_fragment.cpp`
-- [ ] `kernel/drivers/net/ip_options.cpp`
-- [ ] `kernel/drivers/net/icmp.cpp`
-- [ ] `kernel/drivers/net/tcp.cpp`
-- [ ] `kernel/drivers/net/tcp_input.cpp`
-- [ ] `kernel/drivers/net/tcp_output.cpp`
-- [ ] `kernel/drivers/net/tcp_timer.cpp`
-- [ ] `kernel/drivers/net/tcp_cong.cpp` - TCP congestion control
-- [ ] `kernel/drivers/net/udp.cpp`
-- [ ] `kernel/drivers/net/socket.cpp`
-- [ ] `kernel/drivers/net/socket.hpp`
-- [ ] `kernel/drivers/net/af_inet.cpp` - INET address family
-- [ ] `kernel/drivers/net/netdev.cpp` - Network devices
-- [ ] `kernel/drivers/net/netdev.hpp`
-- [ ] `kernel/drivers/net/packet.cpp` - Packet buffer
-- [ ] `kernel/drivers/net/route.cpp` - Routing table
-- [ ] `kernel/drivers/net/fib.cpp` - Forwarding Information Base
-- [ ] `kernel/drivers/net/checksum.cpp`
-- [ ] `kernel/drivers/net/ethernet.cpp`
-- [ ] `kernel/drivers/net/etherdevice.cpp`
-- [ ] `kernel/drivers/net/Makefile`
-- [ ] `kernel/drivers/Makefile`
+#### Sound Drivers
+- [ ] `kernel/drivers/sound/sb16.cpp` - Sound Blaster 16
+- [ ] `kernel/drivers/sound/ac97.cpp` - AC'97 audio
+- [ ] `kernel/drivers/sound/hda.cpp` - Intel HDA
+- [ ] `kernel/drivers/sound/Makefile`
 
-### Syscalls
-- [ ] `kernel/syscall/syscall.cpp` - System call dispatcher
-- [ ] `kernel/syscall/syscall.hpp`
-- [ ] `kernel/syscall/syscall_table.cpp` - System call table
-- [ ] `kernel/syscall/syscall_table.hpp`
-- [ ] `kernel/syscall/entry.asm` - System call entry
-- [ ] `kernel/syscall/sys_exit.cpp`
-- [ ] `kernel/syscall/sys_fork.cpp`
-- [ ] `kernel/syscall/sys_exec.cpp`
-- [ ] `kernel/syscall/sys_wait.cpp`
-- [ ] `kernel/syscall/sys_open.cpp`
-- [ ] `kernel/syscall/sys_read.cpp`
-- [ ] `kernel/syscall/sys_write.cpp`
-- [ ] `kernel/syscall/sys_close.cpp`
-- [ ] `kernel/syscall/sys_mmap.cpp`
-- [ ] `kernel/syscall/sys_munmap.cpp`
-- [ ] `kernel/syscall/sys_ioctl.cpp`
-- [ ] `kernel/syscall/sys_stat.cpp`
-- [ ] `kernel/syscall/sys_fstat.cpp`
-- [ ] `kernel/syscall/sys_lstat.cpp`
-- [ ] `kernel/syscall/sys_access.cpp`
-- [ ] `kernel/syscall/sys_chmod.cpp`
-- [ ] `kernel/syscall/sys_chown.cpp`
-- [ ] `kernel/syscall/sys_link.cpp`
-- [ ] `kernel/syscall/sys_unlink.cpp`
-- [ ] `kernel/syscall/sys_rename.cpp`
-- [ ] `kernel/syscall/sys_mkdir.cpp`
-- [ ] `kernel/syscall/sys_rmdir.cpp`
-- [ ] `kernel/syscall/sys_dup.cpp`
-- [ ] `kernel/syscall/sys_dup2.cpp`
-- [ ] `kernel/syscall/sys_pipe.cpp`
-- [ ] `kernel/syscall/sys_getpid.cpp`
-- [ ] `kernel/syscall/sys_getppid.cpp`
-- [ ] `kernel/syscall/sys_getuid.cpp`
-- [ ] `kernel/syscall/sys_setuid.cpp`
-- [ ] `kernel/syscall/sys_getgid.cpp`
-- [ ] `kernel/syscall/sys_setgid.cpp`
-- [ ] `kernel/syscall/sys_geteuid.cpp`
-- [ ] `kernel/syscall/sys_getegid.cpp`
-- [ ] `kernel/syscall/sys_kill.cpp`
-- [ ] `kernel/syscall/sys_signal.cpp`
-- [ ] `kernel/syscall/sys_sigaction.cpp`
-- [ ] `kernel/syscall/sys_sigsuspend.cpp`
-- [ ] `kernel/syscall/sys_sigpending.cpp`
-- [ ] `kernel/syscall/sys_alarm.cpp`
-- [ ] `kernel/syscall/sys_nanosleep.cpp`
-- [ ] `kernel/syscall/sys_gettimeofday.cpp`
-- [ ] `kernel/syscall/sys_settimeofday.cpp`
-- [ ] `kernel/syscall/sys_times.cpp`
-- [ ] `kernel/syscall/sys_brk.cpp`
-- [ ] `kernel/syscall/sys_sbrk.cpp`
-- [ ] `kernel/syscall/sys_clone.cpp`
-- [ ] `kernel/syscall/sys_mount.cpp`
-- [ ] `kernel/syscall/sys_umount.cpp`
-- [ ] `kernel/syscall/sys_sync.cpp`
-- [ ] `kernel/syscall/sys_reboot.cpp`
-- [ ] `kernel/syscall/sys_sysinfo.cpp`
-- [ ] `kernel/syscall/sys_uname.cpp`
-- [ ] `kernel/syscall/sys_getcwd.cpp`
-- [ ] `kernel/syscall/sys_chdir.cpp`
-- [ ] `kernel/syscall/sys_fchdir.cpp`
-- [ ] `kernel/syscall/sys_readlink.cpp`
-- [ ] `kernel/syscall/sys_getdents.cpp`
-- [ ] `kernel/syscall/sys_lseek.cpp`
-- [ ] `kernel/syscall/sys_fcntl.cpp`
-- [ ] `kernel/syscall/sys_select.cpp`
-- [ ] `kernel/syscall/sys_poll.cpp`
-- [ ] `kernel/syscall/sys_epoll.cpp`
-- [ ] `kernel/syscall/sys_socket.cpp`
-- [ ] `kernel/syscall/sys_bind.cpp`
-- [ ] `kernel/syscall/sys_listen.cpp`
-- [ ] `kernel/syscall/sys_accept.cpp`
-- [ ] `kernel/syscall/sys_connect.cpp`
-- [ ] `kernel/syscall/sys_sendto.cpp`
-- [ ] `kernel/syscall/sys_recvfrom.cpp`
-- [ ] `kernel/syscall/sys_shutdown.cpp`
-- [ ] `kernel/syscall/sys_setsockopt.cpp`
-- [ ] `kernel/syscall/sys_getsockopt.cpp`
-- [ ] `kernel/syscall/sys_mprotect.cpp`
-- [ ] `kernel/syscall/sys_msync.cpp`
-- [ ] `kernel/syscall/sys_mlock.cpp`
-- [ ] `kernel/syscall/sys_munlock.cpp`
-- [ ] `kernel/syscall/sys_mlockall.cpp`
-- [ ] `kernel/syscall/sys_munlockall.cpp`
-- [ ] `kernel/syscall/sys_ptrace.cpp`
-- [ ] `kernel/syscall/sys_fsync.cpp`
-- [ ] `kernel/syscall/sys_fdatasync.cpp`
-- [ ] `kernel/syscall/sys_truncate.cpp`
-- [ ] `kernel/syscall/sys_ftruncate.cpp`
-- [ ] `kernel/syscall/sys_umask.cpp`
-- [ ] `kernel/syscall/sys_chroot.cpp`
-- [ ] `kernel/syscall/sys_mknod.cpp`
-- [ ] `kernel/syscall/sys_symlink.cpp`
-- [ ] `kernel/syscall/sys_lseek64.cpp`
-- [ ] `kernel/syscall/sys_pread.cpp`
-- [ ] `kernel/syscall/sys_pwrite.cpp`
-- [ ] `kernel/syscall/sys_getrlimit.cpp`
-- [ ] `kernel/syscall/sys_setrlimit.cpp`
-- [ ] `kernel/syscall/sys_getrusage.cpp`
-- [ ] `kernel/syscall/sys_syslog.cpp`
-- [ ] `kernel/syscall/sys_ioperm.cpp`
-- [ ] `kernel/syscall/sys_iopl.cpp`
-- [ ] `kernel/syscall/Makefile`
+### Network Stack
+- [ ] `kernel/net/net.cpp` - Network core
+- [ ] `kernel/net/socket.cpp` - Socket API
+- [ ] `kernel/net/skbuff.cpp` - Socket buffer
+- [ ] `kernel/net/eth.cpp` - Ethernet layer
+- [ ] `kernel/net/arp.cpp` - ARP protocol
+- [ ] `kernel/net/ip.cpp` - IPv4
+- [ ] `kernel/net/tcp.cpp` - TCP
+- [ ] `kernel/net/udp.cpp` - UDP
+- [ ] `kernel/net/icmp.cpp` - ICMP
+- [ ] `kernel/net/route.cpp` - Routing table
+- [ ] `kernel/net/checksum.cpp` - Checksum utilities
+- [ ] `kernel/net/Makefile`
 
-### Kernel Library
+### Library (lib)
 - [ ] `kernel/lib/string.cpp` - String operations
-- [ ] `kernel/lib/string.hpp`
-- [ ] `kernel/lib/memory.cpp` - Memory operations
-- [ ] `kernel/lib/memory.hpp`
-- [ ] `kernel/lib/vsprintf.cpp` - Format printing
-- [ ] `kernel/lib/vsprintf.hpp`
-- [ ] `kernel/lib/ctype.cpp` - Character classification
-- [ ] `kernel/lib/ctype.hpp`
-- [ ] `kernel/lib/list.cpp` - Linked lists
-- [ ] `kernel/lib/queue.cpp` - Queues
-- [ ] `kernel/lib/queue.hpp`
-- [ ] `kernel/lib/hash.cpp` - Hash tables
-- [ ] `kernel/lib/hash.hpp`
+- [ ] `kernel/lib/list.cpp` - Linked list
+- [ ] `kernel/lib/rbtree.cpp` - Red-black tree
 - [ ] `kernel/lib/bitmap.cpp` - Bitmap operations
-- [ ] `kernel/lib/bitmap.hpp`
-- [ ] `kernel/lib/rbtree.cpp` - Red-black trees
-- [ ] `kernel/lib/rbtree.hpp`
-- [ ] `kernel/lib/sort.cpp` - Sorting algorithms
-- [ ] `kernel/lib/sort.hpp`
-- [ ] `kernel/lib/math.cpp` - Math functions
-- [ ] `kernel/lib/math.hpp`
-- [ ] `kernel/lib/rand.cpp` - Random number generation
-- [ ] `kernel/lib/rand.hpp`
-- [ ] `kernel/lib/time.cpp` - Time utilities
-- [ ] `kernel/lib/time.hpp`
-- [ ] `kernel/lib/uuid.cpp` - UUID generation
-- [ ] `kernel/lib/uuid.hpp`
-- [ ] `kernel/lib/base64.cpp` - Base64 encoding
-- [ ] `kernel/lib/base64.hpp`
-- [ ] `kernel/lib/printf.cpp` - printf implementation
-- [ ] `kernel/lib/kstrtox.cpp` - String to number conversion
-- [ ] `kernel/lib/kstrtox.hpp`
-- [ ] `kernel/lib/hexdump.cpp` - Hex dump utility
-- [ ] `kernel/lib/hexdump.hpp`
-- [ ] `kernel/lib/scatterlist.cpp` - Scatter-gather list
-- [ ] `kernel/lib/scatterlist.hpp`
-- [ ] `kernel/lib/checksum.cpp` - Checksum utilities
-- [ ] `kernel/lib/checksum.hpp`
-- [ ] `kernel/lib/crc32.cpp` - CRC32 implementation
-- [ ] `kernel/lib/crc32.hpp`
-- [ ] `kernel/lib/crc16.cpp` - CRC16 implementation
-- [ ] `kernel/lib/crc16.hpp`
-- [ ] `kernel/lib/crc7.cpp` - CRC7 implementation
-- [ ] `kernel/lib/crc7.hpp`
-- [ ] `kernel/lib/crc-ccitt.cpp` - CRC-CCITT
-- [ ] `kernel/lib/bsearch.cpp` - Binary search
-- [ ] `kernel/lib/bsearch.hpp`
-- [ ] `kernel/lib/llist.cpp` - Lock-less lists
-- [ ] `kernel/lib/llist.hpp`
-- [ ] `kernel/lib/kfifo.cpp` - Kernel FIFO
-- [ ] `kernel/lib/kfifo.hpp`
-- [ ] `kernel/lib/percpu-refcount.cpp` - Per-CPU reference counting
-- [ ] `kernel/lib/percpu-refcount.hpp`
-- [ ] `kernel/lib/siphash.cpp` - SipHash
-- [ ] `kernel/lib/siphash.hpp`
-- [ ] `kernel/lib/chacha.cpp` - ChaCha
-- [ ] `kernel/lib/chacha.hpp`
+- [ ] `kernel/lib/sort.cpp` - Sorting utilities
+- [ ] `kernel/lib/crc32.cpp` - CRC32
 - [ ] `kernel/lib/Makefile`
-- [ ] `kernel/Makefile`
 
 ---
 
 ## TODO: USERLAND
 
-### libc (C Library)
-
-#### Include Headers
-- [ ] `userland/libc/include/stdio.hpp`
-- [ ] `userland/libc/include/stdlib.hpp`
-- [ ] `userland/libc/include/string.hpp`
-- [ ] `userland/libc/include/unistd.hpp`
-- [ ] `userland/libc/include/fcntl.hpp`
-- [ ] `userland/libc/include/dirent.hpp`
-- [ ] `userland/libc/include/ctype.hpp`
-- [ ] `userland/libc/include/time.hpp`
-- [ ] `userland/libc/include/signal.hpp`
-- [ ] `userland/libc/include/setjmp.hpp`
-- [ ] `userland/libc/include/stdint.hpp`
-- [ ] `userland/libc/include/stddef.hpp`
-- [ ] `userland/libc/include/stdbool.hpp`
-- [ ] `userland/libc/include/limits.hpp`
-- [ ] `userland/libc/include/float.hpp`
-- [ ] `userland/libc/include/math.hpp`
-- [ ] `userland/libc/include/assert.hpp`
-- [ ] `userland/libc/include/errno.hpp`
-- [ ] `userland/libc/include/pwd.hpp`
-- [ ] `userland/libc/include/grp.hpp`
-- [ ] `userland/libc/include/utsname.hpp`
-- [ ] `userland/libc/include/syslog.hpp`
-- [ ] `userland/libc/include/termios.hpp`
-- [ ] `userland/libc/include/ioctl.hpp`
-- [ ] `userland/libc/include/poll.hpp`
-- [ ] `userland/libc/include/select.hpp`
-
-##### sys/ Headers
-- [ ] `userland/libc/include/sys/types.hpp`
-- [ ] `userland/libc/include/sys/stat.hpp`
-- [ ] `userland/libc/include/sys/statfs.hpp`
-- [ ] `userland/libc/include/sys/wait.hpp`
-- [ ] `userland/libc/include/sys/mman.hpp`
-- [ ] `userland/libc/include/sys/syscall.hpp`
-- [ ] `userland/libc/include/sys/time.hpp`
-- [ ] `userland/libc/include/sys/resource.hpp`
-- [ ] `userland/libc/include/sys/uio.hpp`
-- [ ] `userland/libc/include/sys/socket.hpp`
-- [ ] `userland/libc/include/sys/un.hpp`
-- [ ] `userland/libc/include/sys/ioctl.hpp`
-- [ ] `userland/libc/include/sys/reboot.hpp`
-
-##### bits/ Headers
-- [ ] `userland/libc/include/bits/types.hpp`
-- [ ] `userland/libc/include/bits/stat.hpp`
-- [ ] `userland/libc/include/bits/fcntl.hpp`
-
-#### Source Implementation
-
-##### stdio/
-- [ ] `userland/libc/src/stdio/fopen.cpp`
-- [ ] `userland/libc/src/stdio/fclose.cpp`
-- [ ] `userland/libc/src/stdio/fread.cpp`
-- [ ] `userland/libc/src/stdio/fwrite.cpp`
-- [ ] `userland/libc/src/stdio/fgetc.cpp`
-- [ ] `userland/libc/src/stdio/fputc.cpp`
-- [ ] `userland/libc/src/stdio/fgets.cpp`
-- [ ] `userland/libc/src/stdio/fputs.cpp`
-- [ ] `userland/libc/src/stdio/fprintf.cpp`
-- [ ] `userland/libc/src/stdio/fscanf.cpp`
-- [ ] `userland/libc/src/stdio/printf.cpp`
-- [ ] `userland/libc/src/stdio/scanf.cpp`
-- [ ] `userland/libc/src/stdio/sprintf.cpp`
-- [ ] `userland/libc/src/stdio/sscanf.cpp`
-- [ ] `userland/libc/src/stdio/snprintf.cpp`
-- [ ] `userland/libc/src/stdio/vprintf.cpp`
-- [ ] `userland/libc/src/stdio/vfprintf.cpp`
-- [ ] `userland/libc/src/stdio/vsprintf.cpp`
-- [ ] `userland/libc/src/stdio/vsnprintf.cpp`
-- [ ] `userland/libc/src/stdio/perror.cpp`
-- [ ] `userland/libc/src/stdio/fflush.cpp`
-- [ ] `userland/libc/src/stdio/fseek.cpp`
-- [ ] `userland/libc/src/stdio/ftell.cpp`
-- [ ] `userland/libc/src/stdio/rewind.cpp`
-- [ ] `userland/libc/src/stdio/setbuf.cpp`
-- [ ] `userland/libc/src/stdio/setvbuf.cpp`
-- [ ] `userland/libc/src/stdio/getc.cpp`
-- [ ] `userland/libc/src/stdio/putc.cpp`
-- [ ] `userland/libc/src/stdio/getchar.cpp`
-- [ ] `userland/libc/src/stdio/putchar.cpp`
-- [ ] `userland/libc/src/stdio/gets.cpp`
-- [ ] `userland/libc/src/stdio/puts.cpp`
-- [ ] `userland/libc/src/stdio/ungetc.cpp`
-- [ ] `userland/libc/src/stdio/feof.cpp`
-- [ ] `userland/libc/src/stdio/ferror.cpp`
-- [ ] `userland/libc/src/stdio/clearerr.cpp`
-- [ ] `userland/libc/src/stdio/fileno.cpp`
-- [ ] `userland/libc/src/stdio/tmpfile.cpp`
-- [ ] `userland/libc/src/stdio/tmpnam.cpp`
-- [ ] `userland/libc/src/stdio/remove.cpp`
-- [ ] `userland/libc/src/stdio/rename.cpp`
-- [ ] `userland/libc/src/stdio/Makefile`
-
-##### stdlib/
-- [ ] `userland/libc/src/stdlib/malloc.cpp`
-- [ ] `userland/libc/src/stdlib/calloc.cpp`
-- [ ] `userland/libc/src/stdlib/realloc.cpp`
-- [ ] `userland/libc/src/stdlib/free.cpp`
-- [ ] `userland/libc/src/stdlib/abort.cpp`
-- [ ] `userland/libc/src/stdlib/exit.cpp`
-- [ ] `userland/libc/src/stdlib/atexit.cpp`
-- [ ] `userland/libc/src/stdlib/system.cpp`
-- [ ] `userland/libc/src/stdlib/getenv.cpp`
-- [ ] `userland/libc/src/stdlib/putenv.cpp`
-- [ ] `userland/libc/src/stdlib/setenv.cpp`
-- [ ] `userland/libc/src/stdlib/unsetenv.cpp`
-- [ ] `userland/libc/src/stdlib/clearenv.cpp`
-- [ ] `userland/libc/src/stdlib/abs.cpp`
-- [ ] `userland/libc/src/stdlib/labs.cpp`
-- [ ] `userland/libc/src/stdlib/llabs.cpp`
-- [ ] `userland/libc/src/stdlib/div.cpp`
-- [ ] `userland/libc/src/stdlib/ldiv.cpp`
-- [ ] `userland/libc/src/stdlib/lldiv.cpp`
-- [ ] `userland/libc/src/stdlib/atoi.cpp`
-- [ ] `userland/libc/src/stdlib/atol.cpp`
-- [ ] `userland/libc/src/stdlib/atoll.cpp`
-- [ ] `userland/libc/src/stdlib/strtol.cpp`
-- [ ] `userland/libc/src/stdlib/strtoll.cpp`
-- [ ] `userland/libc/src/stdlib/strtoul.cpp`
-- [ ] `userland/libc/src/stdlib/strtoull.cpp`
-- [ ] `userland/libc/src/stdlib/strtof.cpp`
-- [ ] `userland/libc/src/stdlib/strtod.cpp`
-- [ ] `userland/libc/src/stdlib/strtold.cpp`
-- [ ] `userland/libc/src/stdlib/rand.cpp`
-- [ ] `userland/libc/src/stdlib/srand.cpp`
-- [ ] `userland/libc/src/stdlib/rand_r.cpp`
-- [ ] `userland/libc/src/stdlib/qsort.cpp`
-- [ ] `userland/libc/src/stdlib/bsearch.cpp`
-- [ ] `userland/libc/src/stdlib/mbtowc.cpp`
-- [ ] `userland/libc/src/stdlib/wctomb.cpp`
-- [ ] `userland/libc/src/stdlib/mbstowcs.cpp`
-- [ ] `userland/libc/src/stdlib/wcstombs.cpp`
-- [ ] `userland/libc/src/stdlib/mblen.cpp`
-- [ ] `userland/libc/src/stdlib/realpath.cpp`
-- [ ] `userland/libc/src/stdlib/mkstemp.cpp`
-- [ ] `userland/libc/src/stdlib/mktemp.cpp`
-- [ ] `userland/libc/src/stdlib/Makefile`
-
-##### string/
-- [ ] `userland/libc/src/string/memcpy.cpp`
-- [ ] `userland/libc/src/string/memmove.cpp`
-- [ ] `userland/libc/src/string/memset.cpp`
-- [ ] `userland/libc/src/string/memcmp.cpp`
-- [ ] `userland/libc/src/string/memchr.cpp`
-- [ ] `userland/libc/src/string/strcpy.cpp`
-- [ ] `userland/libc/src/string/strncpy.cpp`
-- [ ] `userland/libc/src/string/strcat.cpp`
-- [ ] `userland/libc/src/string/strncat.cpp`
-- [ ] `userland/libc/src/string/strcmp.cpp`
-- [ ] `userland/libc/src/string/strncmp.cpp`
-- [ ] `userland/libc/src/string/strlen.cpp`
-- [ ] `userland/libc/src/string/strchr.cpp`
-- [ ] `userland/libc/src/string/strrchr.cpp`
-- [ ] `userland/libc/src/string/strstr.cpp`
-- [ ] `userland/libc/src/string/strpbrk.cpp`
-- [ ] `userland/libc/src/string/strspn.cpp`
-- [ ] `userland/libc/src/string/strcspn.cpp`
-- [ ] `userland/libc/src/string/strtok.cpp`
-- [ ] `userland/libc/src/string/strtok_r.cpp`
-- [ ] `userland/libc/src/string/strerror.cpp`
-- [ ] `userland/libc/src/string/strerror_r.cpp`
-- [ ] `userland/libc/src/string/strdup.cpp`
-- [ ] `userland/libc/src/string/strndup.cpp`
-- [ ] `userland/libc/src/string/strcasecmp.cpp`
-- [ ] `userland/libc/src/string/strncasecmp.cpp`
-- [ ] `userland/libc/src/string/strcoll.cpp`
-- [ ] `userland/libc/src/string/strxfrm.cpp`
-- [ ] `userland/libc/src/string/Makefile`
-
-##### unistd/
-- [ ] `userland/libc/src/unistd/access.cpp`
-- [ ] `userland/libc/src/unistd/alarm.cpp`
-- [ ] `userland/libc/src/unistd/brk.cpp`
-- [ ] `userland/libc/src/unistd/chdir.cpp`
-- [ ] `userland/libc/src/unistd/chown.cpp`
-- [ ] `userland/libc/src/unistd/close.cpp`
-- [ ] `userland/libc/src/unistd/dup.cpp`
-- [ ] `userland/libc/src/unistd/dup2.cpp`
-- [ ] `userland/libc/src/unistd/execl.cpp`
-- [ ] `userland/libc/src/unistd/execv.cpp`
-- [ ] `userland/libc/src/unistd/execve.cpp`
-- [ ] `userland/libc/src/unistd/execvp.cpp`
-- [ ] `userland/libc/src/unistd/_exit.cpp`
-- [ ] `userland/libc/src/unistd/fork.cpp`
-- [ ] `userland/libc/src/unistd/getcwd.cpp`
-- [ ] `userland/libc/src/unistd/getegid.cpp`
-- [ ] `userland/libc/src/unistd/geteuid.cpp`
-- [ ] `userland/libc/src/unistd/getgid.cpp`
-- [ ] `userland/libc/src/unistd/getgroups.cpp`
-- [ ] `userland/libc/src/unistd/getlogin.cpp`
-- [ ] `userland/libc/src/unistd/getpgid.cpp`
-- [ ] `userland/libc/src/unistd/getpgrp.cpp`
-- [ ] `userland/libc/src/unistd/getpid.cpp`
-- [ ] `userland/libc/src/unistd/getppid.cpp`
-- [ ] `userland/libc/src/unistd/getuid.cpp`
-- [ ] `userland/libc/src/unistd/isatty.cpp`
-- [ ] `userland/libc/src/unistd/link.cpp`
-- [ ] `userland/libc/src/unistd/lseek.cpp`
-- [ ] `userland/libc/src/unistd/pipe.cpp`
-- [ ] `userland/libc/src/unistd/read.cpp`
-- [ ] `userland/libc/src/unistd/rmdir.cpp`
-- [ ] `userland/libc/src/unistd/setgid.cpp`
-- [ ] `userland/libc/src/unistd/setpgid.cpp`
-- [ ] `userland/libc/src/unistd/setsid.cpp`
-- [ ] `userland/libc/src/unistd/setuid.cpp`
-- [ ] `userland/libc/src/unistd/sleep.cpp`
-- [ ] `userland/libc/src/unistd/symlink.cpp`
-- [ ] `userland/libc/src/unistd/sysconf.cpp`
-- [ ] `userland/libc/src/unistd/tcgetpgrp.cpp`
-- [ ] `userland/libc/src/unistd/tcsetpgrp.cpp`
-- [ ] `userland/libc/src/unistd/ttyname.cpp`
-- [ ] `userland/libc/src/unistd/ualarm.cpp`
-- [ ] `userland/libc/src/unistd/unlink.cpp`
-- [ ] `userland/libc/src/unistd/usleep.cpp`
-- [ ] `userland/libc/src/unistd/write.cpp`
-- [ ] `userland/libc/src/unistd/Makefile`
-
-##### syscall/
-- [ ] `userland/libc/src/syscall/syscall.cpp` - Syscall wrapper
-- [ ] `userland/libc/src/syscall/syscall.S` - Assembly syscall entry
-- [ ] `userland/libc/src/syscall/Makefile`
-
-##### ctype/
-- [ ] `userland/libc/src/ctype/isalnum.cpp`
-- [ ] `userland/libc/src/ctype/isalpha.cpp`
-- [ ] `userland/libc/src/ctype/isascii.cpp`
-- [ ] `userland/libc/src/ctype/isblank.cpp`
-- [ ] `userland/libc/src/ctype/iscntrl.cpp`
-- [ ] `userland/libc/src/ctype/isdigit.cpp`
-- [ ] `userland/libc/src/ctype/isgraph.cpp`
-- [ ] `userland/libc/src/ctype/islower.cpp`
-- [ ] `userland/libc/src/ctype/isprint.cpp`
-- [ ] `userland/libc/src/ctype/ispunct.cpp`
-- [ ] `userland/libc/src/ctype/isspace.cpp`
-- [ ] `userland/libc/src/ctype/isupper.cpp`
-- [ ] `userland/libc/src/ctype/isxdigit.cpp`
-- [ ] `userland/libc/src/ctype/tolower.cpp`
-- [ ] `userland/libc/src/ctype/toupper.cpp`
-- [ ] `userland/libc/src/ctype/Makefile`
-
-#### Library & Startup
-- [ ] `userland/libc/src/crt0.asm` - C runtime startup
-- [ ] `userland/libc/lib/libc.a` - Static library (generated)
+### libc
+- [x] `userland/libc/include/stdio.h`
+- [x] `userland/libc/include/stdlib.h`
+- [ ] `userland/libc/include/string.h`
+- [ ] `userland/libc/include/unistd.h`
+- [ ] `userland/libc/include/fcntl.h`
+- [ ] `userland/libc/include/errno.h`
+- [ ] `userland/libc/include/sys/types.h`
+- [ ] `userland/libc/include/sys/stat.h`
+- [x] `userland/libc/src/stdio/printf.c`
+- [ ] `userland/libc/src/stdio/puts.c`
+- [ ] `userland/libc/src/stdio/getchar.c`
+- [x] `userland/libc/src/stdlib/malloc.c`
+- [ ] `userland/libc/src/stdlib/free.c`
+- [x] `userland/libc/src/stdlib/exit.c`
+- [ ] `userland/libc/src/string/memcpy.c`
+- [ ] `userland/libc/src/string/memset.c`
+- [ ] `userland/libc/src/string/strlen.c`
+- [ ] `userland/libc/src/string/strcmp.c`
+- [ ] `userland/libc/src/string/strcpy.c`
+- [ ] `userland/libc/src/unistd/read.c`
+- [ ] `userland/libc/src/unistd/write.c`
+- [ ] `userland/libc/src/crt/crt0.asm` - C runtime start (calls main, then exit)
 - [ ] `userland/libc/Makefile`
 
+> **NOTE FOR CURSOR**: `userland/include/syscall.h` already exists with `SYS_read=0`, `SYS_write=1`, `SYS_exit=6`. New libc wrappers must use these numbers. Do NOT redefine them in libc sources — include the existing header.
+
 ### Shell
-- [ ] `userland/shell/src/main.cpp`
-- [ ] `userland/shell/src/parser.cpp`
-- [ ] `userland/shell/src/parser.hpp`
-- [ ] `userland/shell/src/lexer.cpp`
-- [ ] `userland/shell/src/lexer.hpp`
-- [ ] `userland/shell/src/builtin.cpp` - Built-in commands
-- [ ] `userland/shell/src/builtin.hpp`
-- [ ] `userland/shell/src/exec.cpp`
-- [ ] `userland/shell/src/exec.hpp`
-- [ ] `userland/shell/src/job.cpp` - Job control
-- [ ] `userland/shell/src/job.hpp`
-- [ ] `userland/shell/src/env.cpp` - Environment variables
-- [ ] `userland/shell/src/env.hpp`
-- [ ] `userland/shell/src/history.cpp` - Command history
-- [ ] `userland/shell/src/history.hpp`
-- [ ] `userland/shell/src/prompt.cpp` - Shell prompt
-- [ ] `userland/shell/src/prompt.hpp`
-- [ ] `userland/shell/src/signal.cpp` - Signal handling
-- [ ] `userland/shell/src/signal.hpp`
-- [ ] `userland/shell/src/redirection.cpp` - I/O redirection
-- [ ] `userland/shell/src/redirection.hpp`
-- [ ] `userland/shell/src/pipe.cpp` - Pipe handling
-- [ ] `userland/shell/src/pipe.hpp`
-- [ ] `userland/shell/src/wildcard.cpp` - Glob patterns
-- [ ] `userland/shell/src/wildcard.hpp`
-- [ ] `userland/shell/src/variables.cpp` - Shell variables
-- [ ] `userland/shell/src/variables.hpp`
-- [ ] `userland/shell/src/complete.cpp` - Tab completion
-- [ ] `userland/shell/src/complete.hpp`
-- [ ] `userland/shell/include/shell.hpp`
+- [x] `userland/shell/main.c` - Shell entry point (uses libc, not kernel serial directly)
+- [ ] `userland/shell/parse.c` - Command parser (tokenize input)
+- [ ] `userland/shell/exec.c` - Execute commands (fork+exec)
+- [ ] `userland/shell/builtins.c` - Built-in commands (cd, echo, exit, help)
 - [ ] `userland/shell/Makefile`
 
-### User Binaries (bin/)
-- [ ] `userland/bin/init/init.cpp` - Init process
-- [ ] `userland/bin/init/Makefile`
-- [ ] `userland/bin/ls/ls.cpp`
-- [ ] `userland/bin/ls/Makefile`
-- [ ] `userland/bin/cat/cat.cpp`
-- [ ] `userland/bin/cat/Makefile`
-- [ ] `userland/bin/echo/echo.cpp`
-- [ ] `userland/bin/echo/Makefile`
-- [ ] `userland/bin/mkdir/mkdir.cpp`
-- [ ] `userland/bin/mkdir/Makefile`
-- [ ] `userland/bin/rm/rm.cpp`
-- [ ] `userland/bin/rm/Makefile`
-- [ ] `userland/bin/cp/cp.cpp`
-- [ ] `userland/bin/cp/Makefile`
-- [ ] `userland/bin/mv/mv.cpp`
-- [ ] `userland/bin/mv/Makefile`
-- [ ] `userland/bin/ps/ps.cpp`
-- [ ] `userland/bin/ps/Makefile`
-- [ ] `userland/bin/kill/kill.cpp`
-- [ ] `userland/bin/kill/Makefile`
-- [ ] `userland/bin/clear/clear.cpp`
-- [ ] `userland/bin/clear/Makefile`
-- [ ] `userland/bin/date/date.cpp`
-- [ ] `userland/bin/date/Makefile`
-- [ ] `userland/bin/pwd/pwd.cpp`
-- [ ] `userland/bin/pwd/Makefile`
-- [ ] `userland/bin/cd/Makefile` - Built into shell
-- [ ] `userland/bin/mount/mount.cpp`
-- [ ] `userland/bin/mount/Makefile`
-- [ ] `userland/bin/umount/umount.cpp`
-- [ ] `userland/bin/umount/Makefile`
-- [ ] `userland/bin/df/df.cpp`
-- [ ] `userland/bin/df/Makefile`
-- [ ] `userland/bin/du/du.cpp`
-- [ ] `userland/bin/du/Makefile`
-- [ ] `userland/bin/grep/grep.cpp`
-- [ ] `userland/bin/grep/Makefile`
-- [ ] `userland/bin/test/test.cpp`
-- [ ] `userland/bin/test/Makefile`
-- [ ] `userland/bin/chmod/chmod.cpp`
-- [ ] `userland/bin/chmod/Makefile`
-- [ ] `userland/bin/chown/chown.cpp`
-- [ ] `userland/bin/chown/Makefile`
-- [ ] `userland/bin/ln/ln.cpp`
-- [ ] `userland/bin/ln/Makefile`
-- [ ] `userland/bin/touch/touch.cpp`
-- [ ] `userland/bin/touch/Makefile`
-- [ ] `userland/bin/head/head.cpp`
-- [ ] `userland/bin/head/Makefile`
-- [ ] `userland/bin/tail/tail.cpp`
-- [ ] `userland/bin/tail/Makefile`
-- [ ] `userland/bin/wc/wc.cpp`
-- [ ] `userland/bin/wc/Makefile`
-- [ ] `userland/bin/sort/sort.cpp`
-- [ ] `userland/bin/sort/Makefile`
-- [ ] `userland/bin/uniq/uniq.cpp`
-- [ ] `userland/bin/uniq/Makefile`
-- [ ] `userland/bin/tr/tr.cpp`
-- [ ] `userland/bin/tr/Makefile`
-- [ ] `userland/bin/tee/tee.cpp`
-- [ ] `userland/bin/tee/Makefile`
-- [ ] `userland/bin/more/more.cpp`
-- [ ] `userland/bin/more/Makefile`
-- [ ] `userland/bin/less/less.cpp`
-- [ ] `userland/bin/less/Makefile`
-- [ ] `userland/bin/find/find.cpp`
-- [ ] `userland/bin/find/Makefile`
-- [ ] `userland/bin/xargs/xargs.cpp`
-- [ ] `userland/bin/xargs/Makefile`
-- [ ] `userland/bin/whoami/whoami.cpp`
-- [ ] `userland/bin/whoami/Makefile`
-- [ ] `userland/bin/id/id.cpp`
-- [ ] `userland/bin/id/Makefile`
-- [ ] `userland/bin/hostname/hostname.cpp`
-- [ ] `userland/bin/hostname/Makefile`
-- [ ] `userland/bin/uname/uname.cpp`
-- [ ] `userland/bin/uname/Makefile`
-- [ ] `userland/bin/uptime/uptime.cpp`
-- [ ] `userland/bin/uptime/Makefile`
-- [ ] `userland/bin/sleep/sleep.cpp`
-- [ ] `userland/bin/sleep/Makefile`
-- [ ] `userland/bin/sync/sync.cpp`
-- [ ] `userland/bin/sync/Makefile`
-- [ ] `userland/bin/reboot/reboot.cpp`
-- [ ] `userland/bin/reboot/Makefile`
+### Core Utilities
+- [x] `userland/bin/init.c` - PID 1 init process (mounts fs, starts shell)
+- [ ] `userland/bin/sh.c` - Minimal sh (if shell is separate from init)
+- [ ] `userland/bin/ls.c`
+- [ ] `userland/bin/cat.c`
+- [ ] `userland/bin/echo.c`
+- [ ] `userland/bin/cp.c`
+- [ ] `userland/bin/mv.c`
+- [ ] `userland/bin/rm.c`
+- [ ] `userland/bin/mkdir.c`
+- [ ] `userland/bin/pwd.c`
 - [ ] `userland/bin/Makefile`
-
-### System Binaries (sbin/)
-- [ ] `userland/sbin/login/login.cpp`
-- [ ] `userland/sbin/login/Makefile`
-- [ ] `userland/sbin/getty/getty.cpp`
-- [ ] `userland/sbin/getty/Makefile`
-- [ ] `userland/sbin/fdisk/fdisk.cpp`
-- [ ] `userland/sbin/fdisk/Makefile`
-- [ ] `userland/sbin/mkfs/mkfs.cpp`
-- [ ] `userland/sbin/mkfs/mkfs_ext2.cpp`
-- [ ] `userland/sbin/mkfs/mkfs_fat.cpp`
-- [ ] `userland/sbin/mkfs/Makefile`
-- [ ] `userland/sbin/fsck/fsck.cpp`
-- [ ] `userland/sbin/fsck/fsck_ext2.cpp`
-- [ ] `userland/sbin/fsck/Makefile`
-- [ ] `userland/sbin/ifconfig/ifconfig.cpp`
-- [ ] `userland/sbin/ifconfig/Makefile`
-- [ ] `userland/sbin/route/route.cpp`
-- [ ] `userland/sbin/route/Makefile`
-- [ ] `userland/sbin/ping/ping.cpp`
-- [ ] `userland/sbin/ping/Makefile`
-- [ ] `userland/sbin/dhcp/dhcp.cpp`
-- [ ] `userland/sbin/dhcp/Makefile`
-- [ ] `userland/sbin/Makefile`
-
-### Libraries (lib/)
-- [ ] `userland/lib/ld.so` - Dynamic linker
-- [ ] `userland/lib/libc.so` - Shared C library
-- [ ] `userland/lib/libm.so` - Math library
-- [ ] `userland/lib/Makefile`
-
-### Configuration (etc/)
-- [ ] `userland/etc/passwd`
-- [ ] `userland/etc/shadow`
-- [ ] `userland/etc/group`
-- [ ] `userland/etc/motd`
-- [ ] `userland/etc/fstab`
-- [ ] `userland/etc/hostname`
-- [ ] `userland/etc/hosts`
-- [ ] `userland/etc/resolv.conf`
-- [ ] `userland/etc/inittab`
-- [ ] `userland/etc/profile`
-- [ ] `userland/etc/shells`
-- [ ] `userland/etc/termcap`
-- [ ] `userland/etc/timezone`
-- [ ] `userland/etc/services`
-- [ ] `userland/etc/protocols`
-- [ ] `userland/etc/networks`
-- [ ] `userland/etc/Makefile`
-
-### Share (share/)
-- [ ] `userland/share/doc/` - Documentation directory
-- [ ] `userland/share/man/` - Man pages directory
-- [ ] `userland/share/locale/` - Localization directory
-- [ ] `userland/share/Makefile`
-- [ ] `userland/Makefile`
-
----
-
-## TODO: INITRD (Initial RAM Disk)
-- [ ] `initrd/init` - Init script
-- [ ] `initrd/bin/` - Essential binaries (links to userland)
-- [ ] `initrd/sbin/` - System binaries
-- [ ] `initrd/lib/` - Shared libraries
-- [ ] `initrd/etc/inittab`
-- [ ] `initrd/etc/fstab.initrd`
-- [ ] `initrd/etc/profile`
-- [ ] `initrd/dev/` - Device files (created at runtime)
-- [ ] `initrd/proc/` - Proc mount point
-- [ ] `initrd/sys/` - Sys mount point
-- [ ] `initrd/tmp/` - Temp directory
-- [ ] `initrd/Makefile`
-
----
-
-## TODO: TOOLS
-
-### Cross-Compiler
-- [ ] `tools/cross-compiler/build-binutils.sh`
-- [ ] `tools/cross-compiler/build-gcc.sh`
-- [ ] `tools/cross-compiler/build-gdb.sh`
-- [ ] `tools/cross-compiler/download.sh`
-- [ ] `tools/cross-compiler/config.sh`
-- [ ] `tools/cross-compiler/patches/` - Patch directory
-- [ ] `tools/cross-compiler/README.md`
-
-### Build ISO
-- [ ] `tools/build-iso/mkiso.sh`
-- [ ] `tools/build-iso/mkiso.py`
-- [ ] `tools/build-iso/isohybrid.cpp` - Make ISO bootable from USB
-- [ ] `tools/build-iso/Makefile`
-
-### Initrd Creation
-- [ ] `tools/mkinitrd/mkinitrd.cpp`
-- [ ] `tools/mkinitrd/mkinitrd.sh`
-- [ ] `tools/mkinitrd/cpio.cpp` - CPIO archive format
-- [ ] `tools/mkinitrd/Makefile`
-
-### Font Converter
-- [ ] `tools/font-converter/fontconv.cpp`
-- [ ] `tools/font-converter/psf2c.cpp` - PSF to C array
-- [ ] `tools/font-converter/bdf2c.cpp` - BDF to C array
-- [ ] `tools/font-converter/Makefile`
-
-### Debug Tools
-- [ ] `tools/debug/gdb-init` - GDB configuration
-- [ ] `tools/debug/bochsrc` - Bochs emulator config
-- [ ] `tools/debug/bochs-debugger.sh`
-- [ ] `tools/debug/qemu-gdb.sh`
-- [ ] `tools/debug/trace.py` - Kernel tracing script
-- [ ] `tools/debug/README.md`
-
-### Kconfig (Kernel Config)
-- [ ] `tools/kconfig/mconf.cpp` - Menuconfig
-- [ ] `tools/kconfig/conf.cpp` - Config
-- [ ] `tools/kconfig/qconf.cpp` - Qt config (optional)
-- [ ] `tools/kconfig/gconf.cpp` - GTK config (optional)
-- [ ] `tools/kconfig/Makefile`
-- [ ] `tools/Makefile`
 
 ---
 
 ## TODO: DOCS
-
-### Architecture
-- [ ] `docs/architecture/overview.md`
-- [ ] `docs/architecture/boot-process.md`
-- [ ] `docs/architecture/memory-management.md`
-- [ ] `docs/architecture/process-scheduling.md`
-- [ ] `docs/architecture/filesystem.md`
-- [ ] `docs/architecture/networking.md`
-- [ ] `docs/architecture/drivers.md`
-- [ ] `docs/architecture/smp.md`
-
-### API Documentation
-- [ ] `docs/api/kernel-api.md`
-- [ ] `docs/api/syscalls.md`
-- [ ] `docs/api/vfs.md`
-- [ ] `docs/api/driver-api.md`
-
-### Driver Development
-- [ ] `docs/drivers/writing-drivers.md`
-- [ ] `docs/drivers/pci.md`
-- [ ] `docs/drivers/usb.md`
+- [ ] `docs/arch/memory-map.md` - Physical and virtual memory layout
+- [ ] `docs/arch/boot-sequence.md` - Full boot path (stage1 → stage2 → loader → kernel)
+- [ ] `docs/arch/syscall-abi.md` - Syscall numbers and calling convention
+- [ ] `docs/arch/scheduling.md` - Scheduler design and task lifecycle
 - [ ] `docs/drivers/network.md`
-
-### Boot Documentation
 - [ ] `docs/boot/bootloader.md`
 - [ ] `docs/boot/multiboot.md`
 - [ ] `docs/boot/grub-setup.md`
-
-### Porting Guide
 - [ ] `docs/porting/porting-guide.md`
 - [ ] `docs/porting/new-architecture.md`
-
-### User Guide
 - [ ] `docs/user/installation.md`
 - [ ] `docs/user/virtualbox.md`
 - [ ] `docs/user/qemu.md`
 - [ ] `docs/user/getting-started.md`
-
-### Development
 - [ ] `docs/development/coding-style.md`
 - [ ] `docs/development/debugging.md`
 - [ ] `docs/development/testing.md`
@@ -1500,38 +893,6 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 
 ---
 
-## TODO: SCRIPTS
-- [ ] `scripts/build.sh` - Main build script
-- [ ] `scripts/build-kernel.sh` - Build kernel only
-- [ ] `scripts/build-userland.sh` - Build userland only
-- [ ] `scripts/clean.sh` - Clean build
-- [ ] `scripts/config.sh` - Configure build
-- [ ] `scripts/menuconfig.sh` - Interactive config
-- [ ] `scripts/run-qemu.sh` - Run in QEMU
-- [ ] `scripts/run-qemu-bios.sh` - BIOS boot
-- [ ] `scripts/run-qemu-uefi.sh` - UEFI boot
-- [ ] `scripts/run-qemu-debug.sh` - Debug mode
-- [ ] `scripts/run-vbox.sh` - Run in VirtualBox
-- [ ] `scripts/create-vm.sh` - Create VM
-- [ ] `scripts/start-vm.sh` - Start VM
-- [ ] `scripts/stop-vm.sh` - Stop VM
-- [ ] `scripts/delete-vm.sh` - Delete VM
-- [ ] `scripts/run-bochs.sh` - Run in Bochs
-- [ ] `scripts/create-iso.sh` - ISO creation
-- [x] `scripts/create-disk.sh` - Create disk image (stage1, stage2, loader, kernel)
-- [ ] `scripts/install-toolchain.sh` - Install cross-compiler
-- [ ] `scripts/check-toolchain.sh` - Verify toolchain
-- [ ] `scripts/debug.sh` - Debug script
-- [ ] `scripts/gdb.sh` - GDB wrapper
-- [ ] `scripts/symbolize.sh` - Symbolize stack traces
-- [ ] `scripts/checkpatch.pl` - Check coding style
-- [ ] `scripts/checkstack.pl` - Check stack usage
-- [ ] `scripts/tags.sh` - Generate ctags
-- [ ] `scripts/cscope.sh` - Generate cscope
-- [ ] `scripts/Makefile`
-
----
-
 ## TODO: CONFIGURATION
 - [ ] `config/Kconfig` - Top-level Kconfig
 - [ ] `config/Kconfig.debug`
@@ -1555,13 +916,12 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 ## TODO: PROJECT ROOT FILES
 - [ ] `Kbuild` - Kernel build system
 - [ ] `Kconfig` - Kernel configuration menu
-- [ ] `LICENSE` - License file
+- [X] `LICENSE` - License file
 - [ ] `CONTRIBUTING.md` - Contribution guidelines
-- [ ] `AUTHORS` - List of contributors
-- [ ] `.gitignore` - Git ignore rules
+- [X] `AUTHORS` - List of contributors
+- [X] `.gitignore` - Git ignore rules (add build/, *.bin, *.o, *.img)
 - [ ] `.gitattributes` - Git attributes
-- [ ] `.clang-format` - Clang format config
-- [ ] `.editorconfig` - Editor configuration
+- [X] `.clang-format` - Clang format config
 - [ ] `Doxyfile` - Doxygen documentation config
 
 ---
@@ -1595,7 +955,7 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 ---
 
 ## TODO: GITHUB / CI/CD
-- [ ] `.github/workflows/build.yml` - CI/CD build workflow
+- [x] `.github/workflows/build.yml` - CI/CD build workflow
 - [ ] `.github/workflows/test.yml` - Test workflow
 - [ ] `.github/workflows/release.yml` - Release workflow
 - [ ] `.github/ISSUE_TEMPLATE/bug_report.md`
@@ -1607,19 +967,23 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 ## TODO: IDE SUPPORT
 - [ ] `.vscode/settings.json` - VS Code settings
 - [ ] `.vscode/tasks.json` - Build tasks
-- [ ] `.vscode/launch.json` - Debug configuration
+- [ ] `.vscode/launch.json` - Debug configuration (attach GDB to QEMU :1234)
 
+---
+
+## KNOWN BUGS / INCONSISTENCIES
+> None. Addressed the previously listed issues in this section.
 ---
 
 ## STATISTICS
 
-**Estimated Total Files**: ~1,500-2,000  
-**Currently Completed**: 131 files (~7%)  
-**Remaining**: ~1,369-1,869 files
+**Estimated Total Files**: ~1,500-2,000
+**Currently Completed**: ~248 files (~12-16%)
+**Remaining**: ~1,252-1,752 files
 
 ### By Category:
 - **Source Files** (.cpp, .hpp, .c, .h): ~800-1,000 needed
-- **Assembly Files** (.asm, .S): ~50-80 needed  
+- **Assembly Files** (.asm, .S): ~50-80 needed
 - **Build/Make Files**: ~100-150 needed
 - **Documentation**: ~50-80 needed
 - **Configuration**: ~30-50 needed
@@ -1630,16 +994,6 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 
 ## NEXT STEPS (Recommended Priority)
 
-1. **Boot System** - GRUB theme optional; custom bootloader is primary and working
-2. **Kernel Core** - Entry point, GDT/IDT/TSS/PIC, VGA print, interrupt handler done
-3. **Memory Management** - PMM, VMM, heap, paging, TLB, DMA stubs done
-4. **Build System** - Kernel Makefile builds kernel.bin; bootloader builds disk image
-5. **Device drivers** - Serial, keyboard, mouse, timer, RTC, PCI, ATA, AHCI, NVMe, floppy done
-6. **Userland libc** - Basic C library for user programs
-7. **Shell** - Basic command interpreter
-8. **Filesystem** - RAM filesystem (ramfs) for testing
+> None for this section. Added x86_64 graphics module scaffolding and enabled CI build workflow.
 
 ---
-
-*Last Updated: 2026-02-22*  
-*Based on PROJECT_STRUCTURE.md*

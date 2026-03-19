@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-namespace bootloader {
+namespace boot {
 
 constexpr int MAX_ENTRIES = 8;
 constexpr int MAX_NAME_LEN = 32;
@@ -39,6 +39,7 @@ class ConfigParser {
     bool parse_entry(const char *&p, BootEntry &entry);
 };
 
-} // namespace bootloader
+} // namespace boot
+
 
 #endif

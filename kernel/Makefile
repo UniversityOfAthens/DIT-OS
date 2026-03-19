@@ -2,6 +2,7 @@
 
 # Toolchain
 CXX = g++
+CC = gcc
 NASM = nasm
 LD = ld
 
@@ -20,13 +21,18 @@ BOOT_DIR = $(ARCH_DIR)/boot
 CPU_DIR = $(ARCH_DIR)/cpu
 MM_DIR = $(ARCH_DIR)/mm
 DEV_DIR = $(ARCH_DIR)/dev
+GFX_DIR = $(ARCH_DIR)/graphics
 CORE_DIR = core
+SYSCALL_DIR = syscall
+SCHED_DIR = sched
+FS_DIR = fs
 
 # Assembly sources
 ASM_SOURCES = $(BOOT_DIR)/multiboot.asm $(BOOT_DIR)/multiboot2.asm $(BOOT_DIR)/entry.asm \
 	$(CPU_DIR)/gdt.asm $(CPU_DIR)/idt.asm $(CPU_DIR)/tss.asm $(CPU_DIR)/pic.asm \
 	$(CPU_DIR)/msr.asm $(CPU_DIR)/cpuid.asm $(CPU_DIR)/control.asm $(CPU_DIR)/smp.asm \
-	$(MM_DIR)/paging.asm $(MM_DIR)/tlb.asm $(MM_DIR)/mtrr.asm
+	$(MM_DIR)/paging.asm $(MM_DIR)/tlb.asm $(MM_DIR)/mtrr.asm \
+	$(SCHED_DIR)/context.asm
 
 # Core (included from core/Makefile)
 include $(CORE_DIR)/Makefile
@@ -34,6 +40,14 @@ include $(CORE_DIR)/Makefile
 # C++ sources
 CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(CORE_SOURCES) \
+	$(SYSCALL_DIR)/syscall_table.cpp $(SYSCALL_DIR)/syscall.cpp $(SYSCALL_DIR)/syscall_trace.cpp \
+	$(SYSCALL_DIR)/sys_read.cpp $(SYSCALL_DIR)/sys_write.cpp $(SYSCALL_DIR)/sys_exit.cpp \
+	$(SYSCALL_DIR)/sys_getpid.cpp $(SYSCALL_DIR)/sys_fork.cpp \
+	$(SYSCALL_DIR)/syscall_wrappers.cpp \
+	$(SYSCALL_DIR)/userland_syscall_cwrap.cpp \
+	$(FS_DIR)/vfs.cpp $(FS_DIR)/ramfs/ramfs.cpp $(FS_DIR)/ramfs/inode.cpp \
+	$(SCHED_DIR)/sched.cpp $(SCHED_DIR)/task.cpp $(SCHED_DIR)/idle.cpp $(SCHED_DIR)/init_task.cpp $(SCHED_DIR)/shell.cpp \
+	$(SCHED_DIR)/pid.cpp $(SCHED_DIR)/exit.cpp $(SCHED_DIR)/fork.cpp $(SCHED_DIR)/mutex.cpp \
 	$(CPU_DIR)/gdt.cpp $(CPU_DIR)/idt.cpp $(CPU_DIR)/tss.cpp $(CPU_DIR)/pic.cpp \
 	$(CPU_DIR)/msr.cpp $(CPU_DIR)/cpuid.cpp $(CPU_DIR)/control.cpp \
 	$(CPU_DIR)/apic.cpp $(CPU_DIR)/lapic.cpp $(CPU_DIR)/ioapic.cpp $(CPU_DIR)/smp.cpp \
@@ -41,16 +55,30 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(MM_DIR)/paging.cpp $(MM_DIR)/pmm.cpp $(MM_DIR)/vmm.cpp $(MM_DIR)/heap.cpp $(MM_DIR)/dma.cpp \
 	$(MM_DIR)/slab.cpp $(MM_DIR)/memblock.cpp $(MM_DIR)/early_mm.cpp \
 	$(DEV_DIR)/serial.cpp $(DEV_DIR)/keyboard.cpp $(DEV_DIR)/mouse.cpp $(DEV_DIR)/timer.cpp $(DEV_DIR)/rtc.cpp \
-	$(DEV_DIR)/pci.cpp $(DEV_DIR)/ata.cpp $(DEV_DIR)/ahci.cpp $(DEV_DIR)/nvme.cpp $(DEV_DIR)/floppy.cpp
+	$(DEV_DIR)/pci.cpp $(DEV_DIR)/ata.cpp $(DEV_DIR)/ahci.cpp $(DEV_DIR)/nvme.cpp $(DEV_DIR)/floppy.cpp \
+	$(GFX_DIR)/vga.cpp $(GFX_DIR)/framebuffer.cpp
+
+# C sources (userland code built into the kernel for now)
+C_SOURCES = \
+	../userland/bin/init.c \
+	../userland/shell/main.c \
+	../userland/libc/src/stdlib/malloc.c \
+	../userland/libc/src/stdlib/exit.c \
+	../userland/libc/src/stdio/printf.c
 
 # Object files in OBJDIR to avoid circular deps and name clashes
 ASM_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.asm,%.asm.o,$(ASM_SOURCES)))
 CPP_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.cpp,%.o,$(CPP_SOURCES)))
+C_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.c,%.o,$(C_SOURCES)))
 
 # Flags
 NASM_FLAGS = -f elf32 -g
 CXX_FLAGS = -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -Wall -Wextra -m32
 CXX_FLAGS += -I$(KERNEL_DIR)/include -I../include
+
+C_FLAGS = -std=c11 -ffreestanding -Wall -Wextra -m32
+C_FLAGS += -I$(KERNEL_DIR)/include -I../include
+C_FLAGS += -I../userland/include -I../userland/libc/include
 
 # Prevent implicit %.asm: %.asm.o (avoids wrong build when updating .asm prerequisite)
 %.asm: ;
@@ -60,9 +88,9 @@ CXX_FLAGS += -I$(KERNEL_DIR)/include -I../include
 all: $(KERNEL_OUT)
 
 # Build kernel
-$(KERNEL_OUT): $(ASM_OBJECTS) $(CPP_OBJECTS)
+$(KERNEL_OUT): $(ASM_OBJECTS) $(CPP_OBJECTS) $(C_OBJECTS)
 	@echo "Linking kernel..."
-	$(LD) -m elf_i386 -T $(BOOT_DIR)/linker.ld -z noexecstack -o $@ $(ASM_OBJECTS) $(CPP_OBJECTS)
+	$(LD) -m elf_i386 -T $(BOOT_DIR)/linker.ld -z noexecstack -o $@ $(ASM_OBJECTS) $(CPP_OBJECTS) $(C_OBJECTS)
 	@echo "Kernel built: $@"
 
 # Assemble .asm files (obj dir avoids circular dependency)
@@ -76,6 +104,12 @@ $(OBJDIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<..."
 	$(CXX) $(CXX_FLAGS) -c -o $@ $<
+
+# Compile .c files
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@echo "Compiling $<..."
+	$(CC) $(C_FLAGS) -c -o $@ $<
 
 # Clean
 .PHONY: clean

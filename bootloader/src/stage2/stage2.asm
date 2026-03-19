@@ -319,8 +319,10 @@ serial_has_key:
     ret
 
 ; Read key: poll serial and BIOS so we never block on int 0x16 when key is from serial.
-; Returns: ah = scan code (0x48 up, 0x50 down), al = ASCII (13 for Enter)
+; Returns: ah = scan code (0x48 up, 0x50 down), al = ASCII (13 for Enter, '1'/'2'/'3')
+; With -serial mon:stdio, arrow keys come as VT100 ESC [ A / ESC [ B; we parse and return ah=0x48/0x50.
 read_key:
+    jmp .poll
 ; Wait for next serial byte (timeout so we don't hang). Returns ZF=0 if byte in AL.
 .wait_serial_byte:
     push cx
@@ -359,7 +361,9 @@ read_key:
     je .enter
     cmp al, 0x0A
     je .enter
-    jmp .poll
+    ; Normal ASCII (e.g. '1','2','3') from serial: return ah=0, al=byte
+    mov ah, 0
+    ret
 .enter:
     mov ah, 0
     mov al, 13
