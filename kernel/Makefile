@@ -89,6 +89,7 @@ all: $(KERNEL_OUT)
 
 # Build kernel
 $(KERNEL_OUT): $(ASM_OBJECTS) $(CPP_OBJECTS) $(C_OBJECTS)
+	@mkdir -p $(BUILD_DIR)
 	@echo "Linking kernel..."
 	$(LD) -m elf_i386 -T $(BOOT_DIR)/linker.ld -z noexecstack -o $@ $(ASM_OBJECTS) $(CPP_OBJECTS) $(C_OBJECTS)
 	@echo "Kernel built: $@"
