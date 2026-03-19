@@ -1,0 +1,103 @@
+---
+description: Linker scripts, Makefile patterns, cross-compiler flags, and disk image layout
+globs: **/Makefile,**/linker.ld,**/linker*.ld,scripts/**/*.sh,bootloader/scripts/**
+alwaysApply: false
+---
+
+# Linker & Build Conventions
+
+## Cross-Compiler Toolchain
+- **Bootloader (stage1/stage2/loader)**: `i686-elf-gcc`, `i686-elf-ld`, `nasm`
+- **Kernel**: `i686-elf-gcc` (currently 32-bit despite `arch/x86_64/` path — do NOT use `-m64` until explicitly migrated)
+- **Userland**: `i686-elf-gcc` with `-m32`; never use host `gcc` for target code
+- Always verify toolchain with `scripts/check-toolchain.sh` before building
+
+## Compiler Flags
+
+### Kernel flags (all kernel C/C++ files)
+```
+-ffreestanding -fno-rtti -fno-exceptions -fno-stack-protector
+-nostdlib -nostdinc -Wall -Wextra -O2 -m32 -std=c++17
+```
+
+### Bootloader stage2 C++ flags
+```
+-ffreestanding -fno-rtti -fno-exceptions -fno-stack-protector
+-nostdlib -m32 -std=c++17
+-I bootloader/include
+```
+
+### Userland flags
+```
+-m32 -std=c11 -Wall -Wextra -O2
+-I userland/libc/include
+```
+- Userland is NOT `-ffreestanding`; it links against `userland/libc/libc.a` and `userland/libc/crt/crt0.o`
+
+## Linker Scripts
+- **Kernel linker script**: `kernel/arch/x86_64/boot/linker.ld`
+  - Kernel loads at physical `0x100000` (1MB)
+  - Sections order: `.multiboot`, `.text`, `.rodata`, `.data`, `.bss`
+  - Entry symbol: `kernel_entry` (defined in `entry.asm`)
+- **Bootloader**: No linker script for stage1/stage2 (flat binary via `nasm -f bin`)
+- **Loader**: `bootloader/src/loader/Makefile` produces flat binary at `0x10000`
+
+```ld
+/* ✅ GOOD - kernel linker.ld skeleton */
+ENTRY(kernel_entry)
+SECTIONS {
+    . = 0x100000;
+    .multiboot : { *(.multiboot) }
+    .text      : { *(.text*) }
+    .rodata    : { *(.rodata*) }
+    .data      : { *(.data*) }
+    .bss       : { *(COMMON) *(.bss*) }
+}
+```
+
+## Disk Image Layout
+The disk image (`bootloader/build/disk.img`) is assembled with `dd`:
+
+| Offset (sectors) | Content         | Size      | Load Address |
+|------------------|-----------------|-----------|--------------|
+| 0                | stage1.bin      | 512 B     | 0x7C00       |
+| 1                | stage2.bin      | 9 sectors | 0x7E00       |
+| 10               | loader.bin      | variable  | 0x10000      |
+| after loader     | kernel.bin (ELF)| variable  | 0x100000     |
+
+- Sector counts and offsets **must stay in sync** between `bootloader/Makefile`, `common/constants.inc`, and `bootloader/include/boot.hpp`
+- `SECTOR_SIZE = 512` — never hardcode 512 inline; use the constant
+- Use `dd if=/dev/zero` to pad gaps; never leave uninitialized bytes between sections
+
+## Makefile Patterns
+- Top-level `Makefile` calls sub-makes: `make -C bootloader all` then `make -C kernel all`
+- Each subdirectory has its own `Makefile`; never glob-compile (`*.cpp`) — list sources explicitly
+- Object files go in `build/` subdirectory relative to the Makefile, not alongside sources
+- Use `$(MAKE)` not `make` for recursive calls
+- Add `.PHONY: all clean` to every Makefile
+
+```makefile
+# ✅ GOOD - minimal kernel Makefile pattern
+CC      := i686-elf-gcc
+CXX     := i686-elf-g++
+CXXFLAGS := -ffreestanding -fno-rtti -fno-exceptions -m32 -std=c++17 -Wall -Wextra
+
+SRCS := kernel.cpp panic.cpp printk.cpp
+OBJS := $(SRCS:%.cpp=build/%.o)
+
+all: build/kernel.bin
+
+build/%.o: %.cpp | build
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+build:
+	mkdir -p build
+
+.PHONY: all clean
+```
+
+## NASM Output Formats
+- Stage1 / Stage2 / Loader: `nasm -f bin` → flat binary
+- Assembly files that link with C++ objects: `nasm -f elf32`
+- Never mix `elf64` objects with `-m32` C++ objects
+

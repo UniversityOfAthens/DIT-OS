@@ -1,0 +1,104 @@
+---
+description: How to run, write, and verify tests for DIT-OS
+globs: tests/**/*,scripts/run-qemu*.sh,scripts/debug.sh,scripts/gdb.sh
+alwaysApply: false
+---
+
+# Testing Conventions
+
+## Running the OS
+```bash
+# Build everything
+./scripts/build.sh
+
+# Run in QEMU (serial output to terminal)
+./scripts/run-qemu.sh
+
+# Run with GDB attached (QEMU waits for GDB on port 1234)
+./scripts/run-qemu-debug.sh &
+./scripts/gdb.sh
+```
+
+## What "Working" Looks Like (Serial Output Milestones)
+Each stage should print to COM1 (serial). If you see these, that stage is alive:
+1. `[stage1] booting...` — stage1 loaded by BIOS
+2. `[stage2] loaded` — stage2 running in real mode
+3. `[loader] jumping to kernel` — loader about to enter kernel
+4. `kernel_main: started` — kernel C code running
+5. `[init] shell started` — scheduler running, init task reached
+
+If a stage's message is missing, the fault is in the transition *before* that stage.
+
+## QEMU Flags (run-qemu.sh must use these)
+```bash
+qemu-system-i386 \
+  -drive file=bootloader/build/disk.img,format=raw,if=floppy \
+  -serial stdio \
+  -no-reboot \
+  -no-shutdown \
+  -m 32M
+```
+- `-serial stdio` captures serial output in the terminal
+- `-no-reboot -no-shutdown` keeps QEMU open on triple fault so you can see the state
+
+## Debug Mode (run-qemu-debug.sh)
+```bash
+qemu-system-i386 \
+  -drive file=bootloader/build/disk.img,format=raw,if=floppy \
+  -serial stdio \
+  -no-reboot -no-shutdown \
+  -m 32M \
+  -s -S          # -s = GDB server on :1234, -S = pause at start
+```
+
+## GDB Wrapper (gdb.sh)
+```bash
+i686-elf-gdb \
+  -ex "target remote :1234" \
+  -ex "symbol-file bootloader/build/kernel.bin" \
+  -ex "break kernel_main" \
+  -ex "continue"
+```
+- Load `kernel.bin` (ELF with symbols), not `kernel.sym` separately
+- Set breakpoints before `continue`; QEMU is paused at startup
+
+## Unit Tests (tests/unit/)
+- Unit tests run on the **host** (not in QEMU) — they test pure logic
+- Compile with host `g++`, not the cross-compiler
+- No kernel headers allowed in unit tests; extract pure logic into testable functions
+- Run with: `make -C tests/unit && tests/unit/run_all.sh`
+
+## Integration Tests (tests/integration/)
+- Integration tests launch QEMU and check serial output
+- Test script pattern:
+```bash
+#!/usr/bin/env bash
+set -e
+OUTPUT=$(timeout 10 qemu-system-i386 \
+  -drive file=bootloader/build/disk.img,format=raw,if=floppy \
+  -serial stdio -no-reboot -display none 2>&1)
+
+echo "$OUTPUT" | grep -q "[init] shell started" || {
+  echo "FAIL: shell not reached"
+  exit 1
+}
+echo "PASS"
+```
+- Tests must complete within 10 seconds (use `timeout`)
+- Exit 0 = pass, non-zero = fail
+- CI runs these via `.github/workflows/test.yml`
+
+## Bochs (alternative to QEMU)
+- Use `tools/debug/bochsrc` for Bochs configuration
+- Bochs has a built-in debugger (`tools/debug/bochs-debugger.sh`) useful for early boot issues
+- Prefer QEMU+GDB for most debugging; use Bochs when investigating real-mode or BIOS issues
+
+## Common Failure Modes
+| Symptom | Likely Cause |
+|---------|-------------|
+| No serial output at all | stage1 not loaded; check disk image `dd` layout |
+| Hangs after `[stage2]` | A20 or protected mode transition failed |
+| Triple fault immediately | GDT/IDT wrong, or kernel loaded at wrong address |
+| `[init] shell started` then hang | Scheduler not yielding; check `sti; hlt` in idle task |
+| Syscall returns wrong value | EAX clobbered before return, or wrong syscall number |
+
