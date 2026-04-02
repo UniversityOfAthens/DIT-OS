@@ -2,13 +2,13 @@
 
 Comprehensive task list for building the DIT Operating System based on PROJECT_STRUCTURE.md.
 
-**Current Progress: ~12-16% complete** (248 of ~1,500-2,000 estimated files)
+**Current Progress: ~12-16% complete** (254 of ~1,500-2,000 estimated files)
 
 **Boot path:** We use the **custom bootloader** (stage1 + stage2). GRUB is **not** used for booting; GRUB/boot/ entries below are optional (e.g. for ISO or alternate setups).
 
 ---
 
-## COMPLETED (248 files)
+## COMPLETED (254 files)
 
 ### Project Root
 - [x] `README.md`
@@ -424,12 +424,12 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 #### Scheduler Headers
 - [x] `kernel/include/sched/sched.hpp` - Scheduler header (exists)
 - [x] `kernel/include/sched/task.hpp` - Task struct header (exists)
-- [ ] `kernel/include/sched/process.hpp`
-- [ ] `kernel/include/sched/thread.hpp`
-- [ ] `kernel/include/sched/signal.hpp`
-- [ ] `kernel/include/sched/wait.hpp`
-- [ ] `kernel/include/sched/timer.hpp`
-- [ ] `kernel/include/sched/cpumask.hpp`
+- [x] `kernel/include/sched/process.hpp`
+- [x] `kernel/include/sched/thread.hpp`
+- [x] `kernel/include/sched/signal.hpp`
+- [x] `kernel/include/sched/wait.hpp`
+- [x] `kernel/include/sched/timer.hpp`
+- [x] `kernel/include/sched/cpumask.hpp`
 
 #### Library Headers
 - [ ] `kernel/include/lib/list.hpp`
@@ -640,14 +640,17 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 
 - [x] `kernel/syscall/syscall.cpp` - Syscall dispatcher (int 0x80 handler → table lookup)
 - [ ] `kernel/syscall/syscall.hpp` - **⚠ Must match `kernel/include/syscall/syscall.hpp`; do not duplicate — pick one location**
-- [ ] `kernel/syscall/syscall_table.cpp` - Syscall function pointer table
-- [ ] `kernel/syscall/sys_read.cpp` - read() syscall
-- [ ] `kernel/syscall/sys_write.cpp` - write() syscall
+- [x] `kernel/syscall/syscall_table.cpp` - Syscall function pointer table
+- [x] `kernel/syscall/sys_read.cpp` - read() syscall
+- [x] `kernel/syscall/sys_write.cpp` - write() syscall
 - [x] `kernel/syscall/sys_exit.cpp` - exit() syscall
 - [x] `kernel/syscall/sys_fork.cpp` - fork() syscall
 - [ ] `kernel/syscall/sys_exec.cpp` - execve() syscall
-- [ ] `kernel/syscall/sys_open.cpp` - open() syscall
-- [ ] `kernel/syscall/sys_close.cpp` - close() syscall
+- [x] `kernel/syscall/sys_open.cpp` - open() syscall
+- [x] `kernel/syscall/sys_close.cpp` - close() syscall
+- [x] `kernel/syscall/sys_getdents.cpp` - getdents() syscall (directory listing)
+- [x] `kernel/syscall/fd.cpp` - Per-task fd table helpers
+- [x] `kernel/include/syscall/fd.hpp`
 - [ ] `kernel/syscall/sys_mmap.cpp` - mmap() syscall
 - [ ] `kernel/syscall/sys_brk.cpp` - brk() syscall
 - [ ] `kernel/syscall/sys_wait.cpp` - waitpid() syscall
@@ -978,8 +981,8 @@ Comprehensive task list for building the DIT Operating System based on PROJECT_S
 ## STATISTICS
 
 **Estimated Total Files**: ~1,500-2,000
-**Currently Completed**: ~248 files (~12-16%)
-**Remaining**: ~1,252-1,752 files
+**Currently Completed**: ~254 files (~12-16%)
+**Remaining**: ~1,246-1,746 files
 
 ### By Category:
 - **Source Files** (.cpp, .hpp, .c, .h): ~800-1,000 needed

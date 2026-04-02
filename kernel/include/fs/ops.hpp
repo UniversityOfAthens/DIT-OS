@@ -14,9 +14,6 @@ struct superblock;
 
 struct dirent;
 
-/** Callback used for filesystem directory iteration (not wired into syscalls yet). */
-using FillDirFn = int (*)(void* dirent_buf, const dirent* de);
-
 struct SuperblockOps {
     inode* (*alloc_inode)(superblock*);
     void   (*destroy_inode)(inode*);
@@ -50,8 +47,8 @@ struct FileOps {
     /** Optional release hook. */
     int (*release)(inode* ino, file* f);
 
-    /** Optional readdir hook (not yet used). */
-    int (*readdir)(file* f, void* dirent_buf, FillDirFn fn);
+    /** Read one directory entry; returns 1 if @de filled, 0 at EOF, negative errno. */
+    int (*readdir)(file* f, dirent* de);
 };
 
 } // namespace fs

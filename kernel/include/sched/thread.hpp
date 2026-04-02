@@ -1,3 +1,4 @@
+/** DIT-OS Kernel - Thread (schedulable unit bound to a process). */
 #ifndef KERNEL_SCHED_THREAD_HPP
 #define KERNEL_SCHED_THREAD_HPP
 
@@ -7,10 +8,17 @@
 
 namespace sched {
 
-/** Thread = task tied to a process (for now 1:1) */
+/**
+ * Thread: embeds Task for context switch; ties to Process.
+ * Current kernel tasks use standalone Task*; Thread is the multi-threading shape.
+ */
 struct Thread {
-    Task     task;
+    Task task;
+    /** Thread id (main thread often equals process pid). */
+    uint32_t tid;
     Process* process;
+    /** Other threads in the same process. */
+    Thread* next_in_process;
 };
 
 } // namespace sched

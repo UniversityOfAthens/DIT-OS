@@ -9,6 +9,7 @@ This directory contains rulesets and guidelines for AI agents contributing to th
 - `c-userland.md` - C userland development guidelines
 - `nasm-assembly.md` - NASM assembly coding conventions
 - `build-system.md` - Makefile and build system conventions
+- `verify-build.md` - After code changes: clean rebuild + QEMU run (canonical workflow)
 - `git-workflow.md` - Git conventions and commit standards
 - `testing.md` - Testing guidelines and practices
 - `security.md` - Security best practices for OS development

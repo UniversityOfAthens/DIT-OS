@@ -1,0 +1,37 @@
+// DIT-OS Kernel - sys_getdents (read directory entries into user buffer)
+
+#include "syscall/syscall_defs.hpp"
+#include "syscall/fd.hpp"
+#include "fs/vfs.hpp"
+#include "fs/dirent.hpp"
+#include "errno_defs.hpp"
+#include <stdint.h>
+
+namespace syscall {
+
+extern SyscallResult sys_getdents_impl(const SyscallArgs* args);
+
+SyscallResult sys_getdents_impl(const SyscallArgs* args) {
+    int fd = (int)args->args[0];
+    uintptr_t buf = (uintptr_t)args->args[1];
+    uint32_t count = (uint32_t)args->args[2];
+    if (count == 0) return 0;
+
+    fs::file* f = fd_get(fd);
+    if (!f) return -EBADF;
+
+    uint8_t* p = (uint8_t*)buf;
+    uint32_t off = 0;
+    while (off + sizeof(fs::dirent) <= count) {
+        fs::dirent de;
+        int r = fs::vfs_readdir(f, &de);
+        if (r < 0) return r;
+        if (r == 0) break;
+        const uint8_t* src = (const uint8_t*)&de;
+        for (uint32_t i = 0; i < sizeof(fs::dirent); i++) p[off + i] = src[i];
+        off += sizeof(fs::dirent);
+    }
+    return (SyscallResult)off;
+}
+
+} // namespace syscall

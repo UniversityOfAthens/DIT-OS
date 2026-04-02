@@ -2,7 +2,7 @@
 
 #include "syscall.h"
 
-enum { MAX_VAR = 64, MAX_LINE = 128, MAX_PROMPT = 256 };
+enum { MAX_VAR = 64, MAX_LINE = 128, MAX_PROMPT = 256, MAX_PATH = 128 };
 
 static char g_user[MAX_VAR] = "user";
 static char g_host[MAX_VAR] = "dit";
@@ -29,6 +29,15 @@ static int starts_with(const char* s, const char* pfx) {
         if (*s++ != *pfx++) return 0;
     }
     return 1;
+}
+
+/** Exact command word @cmd followed by end or whitespace. */
+static int cmd_is(const char* buf, const char* cmd) {
+    const char* p = buf;
+    while (*cmd) {
+        if (*p++ != *cmd++) return 0;
+    }
+    return *p == '\0' || *p == ' ' || *p == '\t';
 }
 
 static void write_str(const char* s) {
@@ -136,6 +145,121 @@ static void apply_export_line(const char* line) {
     set_var(name, value);
 }
 
+static void skip_ws(const char** p) {
+    while (**p == ' ' || **p == '\t' || **p == '\r' || **p == '\n') (*p)++;
+}
+
+/** Strip CR/LF and trailing spaces from a full input line (serial often ends with \r only). */
+static void trim_input_line(char* buf) {
+    int n = str_len(buf);
+    while (n > 0 && (buf[n - 1] == '\n' || buf[n - 1] == '\r' || buf[n - 1] == ' ' || buf[n - 1] == '\t')) {
+        buf[n - 1] = '\0';
+        n--;
+    }
+}
+
+static void trim_trailing_path(char* s) {
+    int n = str_len(s);
+    while (n > 0 && (s[n - 1] == ' ' || s[n - 1] == '\t' || s[n - 1] == '\r' || s[n - 1] == '\n')) {
+        s[n - 1] = '\0';
+        n--;
+    }
+}
+
+/** Absolute path under ramfs root (leading slash). */
+static void normalize_path(char* out, int cap, const char* path) {
+    if (!path || !path[0]) {
+        if (cap > 1) {
+            out[0] = '/';
+            out[1] = '\0';
+        }
+        return;
+    }
+    while (*path == ' ' || *path == '\t' || *path == '\r' || *path == '\n') path++;
+    if (!path[0]) {
+        if (cap > 1) {
+            out[0] = '/';
+            out[1] = '\0';
+        }
+        return;
+    }
+    /* Relative paths: strip leading "./" segments (./hello -> hello under /). */
+    while (path[0] == '.' && path[1] == '/') path += 2;
+    if (!path[0]) {
+        if (cap > 1) {
+            out[0] = '/';
+            out[1] = '\0';
+        }
+        return;
+    }
+    if (path[0] == '/') {
+        int i = 0;
+        while (path[i] && i < cap - 1) {
+            out[i] = path[i];
+            i++;
+        }
+        out[i] = '\0';
+        trim_trailing_path(out);
+        return;
+    }
+    if (cap < 2) return;
+    out[0] = '/';
+    int i = 1;
+    int j = 0;
+    while (path[j] && i < cap - 1) out[i++] = path[j++];
+    out[i] = '\0';
+    trim_trailing_path(out);
+}
+
+static void cmd_ls(const char* arg) {
+    char pathbuf[MAX_PATH];
+    if (!arg || !arg[0])
+        normalize_path(pathbuf, sizeof(pathbuf), "");
+    else
+        normalize_path(pathbuf, sizeof(pathbuf), arg);
+
+    int fd = open(pathbuf, 0);
+    if (fd < 0) {
+        write_str("ls: cannot open directory\r\n");
+        return;
+    }
+    char buf[512];
+    for (;;) {
+        int n = getdents(fd, buf, sizeof(buf));
+        if (n <= 0) break;
+        int off = 0;
+        while (off + (int)sizeof(struct dit_dirent) <= n) {
+            const struct dit_dirent* de = (const struct dit_dirent*)(buf + off);
+            write_str(de->d_name);
+            write_str("\r\n");
+            off += (int)sizeof(struct dit_dirent);
+        }
+    }
+    (void)close(fd);
+}
+
+static void cmd_cat(const char* arg) {
+    if (!arg || !arg[0]) {
+        write_str("cat: missing operand\r\n");
+        return;
+    }
+    char pathbuf[MAX_PATH];
+    normalize_path(pathbuf, sizeof(pathbuf), arg);
+
+    int fd = open(pathbuf, 0);
+    if (fd < 0) {
+        write_str("cat: cannot open file\r\n");
+        return;
+    }
+    char chunk[256];
+    for (;;) {
+        int n = read(fd, chunk, sizeof(chunk));
+        if (n <= 0) break;
+        (void)write(1, chunk, (unsigned)n);
+    }
+    (void)close(fd);
+}
+
 static void load_ditrc_defaults(void) {
     /* Fallback .ditrc profile until userspace file-open syscall exists */
     static const char* rc_lines[] = {
@@ -161,12 +285,19 @@ void userland_shell_main(void) {
         if (n <= 0) continue;
 
         buf[n] = '\0';
-        if (n > 0 && buf[n - 1] == '\n') buf[n - 1] = '\0';
-        if (n > 1 && buf[n - 2] == '\r') buf[n - 2] = '\0';
+        trim_input_line(buf);
 
-        if (starts_with(buf, "exit")) {
+        if (cmd_is(buf, "exit")) {
             write_str("Bye.\r\n");
             poweroff_qemu();
+        } else if (cmd_is(buf, "ls")) {
+            const char* rest = buf + 2;
+            skip_ws(&rest);
+            cmd_ls(rest);
+        } else if (cmd_is(buf, "cat")) {
+            const char* rest = buf + 3;
+            skip_ws(&rest);
+            cmd_cat(rest);
         } else if (starts_with(buf, "echo")) {
             const char* msg = buf + 4;
             while (*msg == ' ' || *msg == '\t') msg++;

@@ -5,13 +5,14 @@
 
 namespace fs {
 
-/** Maximum name length in struct dirent */
-#define NAME_MAX 256
+/** Maximum name length in struct dirent (avoid clashing with libc NAME_MAX). */
+#define FS_NAME_MAX 256
 
 struct dirent {
     uint32_t d_ino;
-    uint8_t  d_type;   /* DT_REG, DT_DIR, etc. */
-    char     d_name[NAME_MAX];
+    uint8_t  d_type; /* DT_REG, DT_DIR, etc. */
+    uint8_t  d_pad[3];
+    char     d_name[FS_NAME_MAX];
 };
 
 #define DT_UNKNOWN 0

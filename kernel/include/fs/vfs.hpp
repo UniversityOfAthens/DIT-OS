@@ -12,6 +12,8 @@
 
 namespace fs {
 
+struct dirent;
+
 /** High-level VFS operations (implemented by VFS layer using inode/sb ops) */
 
 /** Open by path; returns file* or nullptr on error (errno set) */
@@ -29,6 +31,9 @@ int64_t vfs_lseek(file* f, int64_t offset, int whence);
 inode* vfs_path_lookup(const char* path, dentry** out_dentry);
 /** Stat by path */
 int   vfs_stat(const char* path, struct stat* st);
+
+/** Read one directory entry (directories only); see FileOps::readdir */
+int   vfs_readdir(file* f, dirent* de);
 /** Mount a filesystem */
 int   vfs_mount(const char* dev, const char* path, const char* fstype, void* data);
 

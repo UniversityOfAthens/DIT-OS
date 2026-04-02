@@ -101,3 +101,7 @@ build:
 - Assembly files that link with C++ objects: `nasm -f elf32`
 - Never mix `elf64` objects with `-m32` C++ objects
 
+## Post-change verification
+
+After substantive edits, run the **clean rebuild + QEMU** sequence in `.cursor/rules/verify-build.mdc` (from repo root: clean `kernel/build` and `bootloader/build`, then `make -C kernel`, `make -C bootloader all`, `make -C bootloader run`).
+

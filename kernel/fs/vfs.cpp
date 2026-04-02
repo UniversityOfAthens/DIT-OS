@@ -13,6 +13,7 @@
 #include "fs/file.hpp"
 #include "fs/stat.hpp"
 #include "fs/ops.hpp"
+#include "fs/dirent.hpp"
 
 #include "mm/kmalloc.hpp"
 #include "errno_defs.hpp"
@@ -90,6 +91,24 @@ static inode* traverse_path(const char* path, dentry** out_dentry) {
         name[n] = '\0';
 
         if (n == 0) break;
+
+        /* Skip "."; treat ".." as parent directory (POSIX path semantics). */
+        if (kstrcmp(name, ".") == 0) {
+            while (*p == '/') p++;
+            if (!*p) break;
+            continue;
+        }
+        if (kstrcmp(name, "..") == 0) {
+            if (curr_d->d_parent) {
+                dentry* old = curr_d;
+                curr_d = curr_d->d_parent;
+                curr_ino = curr_d->d_inode;
+                dentry_put(old);
+            }
+            while (*p == '/') p++;
+            if (!*p) break;
+            continue;
+        }
 
         dentry* next_d = alloc_dentry();
         if (!next_d) {
@@ -212,6 +231,12 @@ void dentry_put(dentry* d) {
 void inode_put(inode* ino) {
     (void)ino;
     // Inode lifetime is managed by the filesystem superblock in this minimal VFS.
+}
+
+int vfs_readdir(file* f, dirent* de) {
+    if (!f || !de) return -EINVAL;
+    if (!f->f_ops || !f->f_ops->readdir) return -EINVAL;
+    return f->f_ops->readdir(f, de);
 }
 
 int vfs_stat(const char* path, struct stat* st) {

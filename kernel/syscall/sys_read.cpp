@@ -2,7 +2,10 @@
 
 #include "syscall/syscall_defs.hpp"
 #include "syscall/syscall_numbers.hpp"
+#include "syscall/fd.hpp"
+#include "fs/vfs.hpp"
 #include "dev/serial.hpp"
+#include "errno_defs.hpp"
 #include <stdint.h>
 
 namespace syscall {
@@ -50,8 +53,9 @@ SyscallResult sys_read_impl(const SyscallArgs* args) {
         }
         return n;
     }
-    /* other fds: not implemented */
-    return -9; /* EBADF */
+    fs::file* vf = fd_get(fd);
+    if (vf) return fs::vfs_read(vf, (void*)buf, count);
+    return -EBADF;
 }
 
 } // namespace syscall

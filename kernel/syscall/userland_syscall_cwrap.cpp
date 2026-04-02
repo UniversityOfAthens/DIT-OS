@@ -26,5 +26,30 @@ int dit_sys_getpid(void) {
     return (int)r;
 }
 
+int dit_sys_open(const char* path, int flags) {
+    syscall::SyscallArgs args{};
+    args.args[0] = (uintptr_t)path;
+    args.args[1] = (uint32_t)flags;
+    args.args[2] = 0;
+    syscall::SyscallResult r = syscall::handle(syscall::SYS_open, &args);
+    return (int)r;
+}
+
+int dit_sys_close(int fd) {
+    syscall::SyscallArgs args{};
+    args.args[0] = (uint32_t)fd;
+    syscall::SyscallResult r = syscall::handle(syscall::SYS_close, &args);
+    return (int)r;
+}
+
+int dit_sys_getdents(int fd, void* buf, unsigned count) {
+    syscall::SyscallArgs args{};
+    args.args[0] = (uint32_t)fd;
+    args.args[1] = (uintptr_t)buf;
+    args.args[2] = count;
+    syscall::SyscallResult r = syscall::handle(syscall::SYS_getdents, &args);
+    return (int)r;
+}
+
 } // extern "C"
 

@@ -242,6 +242,10 @@ nix build            # Build using nix
 
 Always use the nix flake when available, it ensures exact toolchain versions.
 
+## Post-change verification
+
+After substantive edits, run the full sequence in **`verify-build.md`** (clean `kernel/build` and `bootloader/build`, then `make -C kernel`, `make -C bootloader all`, `make -C bootloader run`). Same content as `.cursor/rules/verify-build.mdc`.
+
 ## Absolute Rules
 
 1. **Always use `-Wall -Wextra -Werror`** - warnings are errors

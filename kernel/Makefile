@@ -41,7 +41,9 @@ include $(CORE_DIR)/Makefile
 CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(CORE_SOURCES) \
 	$(SYSCALL_DIR)/syscall_table.cpp $(SYSCALL_DIR)/syscall.cpp $(SYSCALL_DIR)/syscall_trace.cpp \
+	$(SYSCALL_DIR)/fd.cpp \
 	$(SYSCALL_DIR)/sys_read.cpp $(SYSCALL_DIR)/sys_write.cpp $(SYSCALL_DIR)/sys_exit.cpp \
+	$(SYSCALL_DIR)/sys_open.cpp $(SYSCALL_DIR)/sys_close.cpp $(SYSCALL_DIR)/sys_getdents.cpp \
 	$(SYSCALL_DIR)/sys_getpid.cpp $(SYSCALL_DIR)/sys_fork.cpp \
 	$(SYSCALL_DIR)/syscall_wrappers.cpp \
 	$(SYSCALL_DIR)/userland_syscall_cwrap.cpp \

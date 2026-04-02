@@ -27,7 +27,9 @@ enum SyscallNumber : uint32_t {
     SYS_kill    = 14,
     SYS_ioctl   = 15,
 
-    SYS_MAX = 16
+    SYS_getdents = 16,
+
+    SYS_MAX = 17
 };
 
 } // namespace syscall

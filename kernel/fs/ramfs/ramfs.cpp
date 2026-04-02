@@ -12,6 +12,7 @@
 #include "fs/file.hpp"
 #include "fs/stat.hpp"
 #include "fs/ops.hpp"
+#include "fs/dirent.hpp"
 
 #include "mm/kmalloc.hpp"
 
@@ -232,6 +233,73 @@ static int file_release(fs::inode* ino, fs::file* f) {
     return 0;
 }
 
+/** Directory read: one entry per call; f_pos counts entries already returned. */
+static int file_readdir(fs::file* f, fs::dirent* out) {
+    if (!f || !out) return -EINVAL;
+    if (!f->f_inode) return -EINVAL;
+    if ((f->f_inode->i_mode & S_IFMT) != S_IFDIR) return -ENOTDIR;
+
+    ramfs_dir* d = (ramfs_dir*)f->f_inode->i_private;
+    if (!d) return -EINVAL;
+
+    ramfs_entry* e = d->entries;
+    uint32_t skip = (uint32_t)f->f_pos;
+    while (e && skip > 0) {
+        e = e->next;
+        skip--;
+    }
+    if (!e)
+        return 0;
+
+    out->d_ino = e->ino->i_ino;
+    out->d_type = ((e->ino->i_mode & S_IFMT) == S_IFDIR) ? DT_DIR : DT_REG;
+    out->d_pad[0] = 0;
+    out->d_pad[1] = 0;
+    out->d_pad[2] = 0;
+    for (uint32_t i = 0; i < sizeof(out->d_name); i++) out->d_name[i] = e->name[i];
+
+    f->f_pos += 1;
+    return 1;
+}
+
+static fs::inode* s_root_inode = nullptr;
+
+static uint32_t kstrlen(const char* s) {
+    uint32_t n = 0;
+    while (s[n]) n++;
+    return n;
+}
+
+static void seed_text_file(fs::inode* root, const char* name, const char* text) {
+    if (!root || !name || !text) return;
+    fs::dentry t;
+    for (uint32_t i = 0; i < sizeof(t); i++) ((uint8_t*)&t)[i] = 0;
+    uint32_t j = 0;
+    while (name[j] && j < sizeof(t.d_name) - 1) {
+        t.d_name[j] = name[j];
+        j++;
+    }
+    t.d_name[j] = '\0';
+    if (inode_create(root, &t, 0644) != 0) return;
+    fs::inode* ino = t.d_inode;
+    if (!ino) return;
+    ramfs_file* rf = (ramfs_file*)ino->i_private;
+    if (!rf) return;
+    uint32_t len = kstrlen(text);
+    rf->data = (char*)mm::kmalloc(len ? len : 1);
+    if (!rf->data) return;
+    if (len) kmemcpy(rf->data, text, len);
+    rf->size = len;
+    rf->cap = len;
+    ino->i_size = len;
+}
+
+static void seed_demo_files() {
+    if (!s_root_inode) return;
+    seed_text_file(s_root_inode, "hello.txt", "Hello from DIT-OS ramfs.\n");
+    seed_text_file(s_root_inode, "README.txt", "Try: ls\n      cat hello.txt\n");
+}
+
 static int ramfs_get_sb(fs::fs_type* type, const char* dev, void* data, fs::superblock** out) {
     (void)type;
     (void)dev;
@@ -255,6 +323,7 @@ static int ramfs_get_sb(fs::fs_type* type, const char* dev, void* data, fs::supe
     root->i_file_ops = &s_file_ops;
 
     sb->s_root = root;
+    s_root_inode = root;
     *out = sb;
     return 0;
 }
@@ -291,10 +360,11 @@ void init() {
     s_file_ops.read = file_read;
     s_file_ops.write = file_write;
     s_file_ops.release = file_release;
-    s_file_ops.readdir = nullptr;
+    s_file_ops.readdir = file_readdir;
 
     fs::register_filesystem(&s_ramfs_type);
     fs::vfs_mount("ramfs", "/", "ramfs", nullptr);
+    seed_demo_files();
 }
 
 } // namespace ramfs
