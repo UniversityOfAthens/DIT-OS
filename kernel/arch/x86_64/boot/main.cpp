@@ -83,22 +83,33 @@ void print_hex(uint32_t val) {
     print(buf);
 }
 
-namespace boot { void early_init(); }
-namespace arch { void cpu_early_init(); void tss_set_kernel_stack(uint32_t esp0); void pic_unmask(uint8_t); }
-namespace syscall { void init(); }
-namespace ramfs { void init(); }
-#include "dev/serial.hpp"
+namespace boot {
+void early_init();
+}
+namespace arch {
+void cpu_early_init();
+void tss_set_kernel_stack(uint32_t esp0);
+void pic_unmask(uint8_t);
+} // namespace arch
+namespace syscall {
+void init();
+}
+namespace ramfs {
+void init();
+}
+#include "arch/x86_64/idt.hpp"
 #include "dev/keyboard.hpp"
 #include "dev/mouse.hpp"
-#include "dev/timer.hpp"
 #include "dev/rtc.hpp"
-#include "arch/x86_64/idt.hpp"
-#include "sched/sched.hpp"
+#include "dev/serial.hpp"
+#include "dev/timer.hpp"
 #include "graphics/vga.hpp"
+#include "sched/sched.hpp"
 
 extern "C" uint32_t kernel_stack_top;
 
-/* Print to both VGA and serial (so -display none -serial mon:stdio shows full boot) */
+/* Print to both VGA and serial (so -display none -serial mon:stdio shows full
+ * boot) */
 static void print_both(const char *str) {
     print(str);
     dev::serial_puts(str);
@@ -107,7 +118,8 @@ static void print_both(const char *str) {
 extern "C" void kernel_main() {
     boot::early_init();
 
-    /* Early serial so something appears with QEMU -display none -serial mon:stdio */
+    /* Early serial so something appears with QEMU -display none -serial
+     * mon:stdio */
     dev::serial_init();
     dev::serial_puts("\r\nDIT-OS Kernel starting...\r\n");
 
@@ -127,7 +139,6 @@ extern "C" void kernel_main() {
     arch::cpu_early_init();
     arch::tss_set_kernel_stack(kernel_stack_top);
     syscall::init();
-    ramfs::init(); /* mount minimal root filesystem at '/' */
     print_both("[OK] CPU management ready\n\n");
 
     print_both("[*] Memory Info:\n");
@@ -173,10 +184,17 @@ extern "C" void kernel_main() {
 
     dev::serial_puts("\r\n[main] before sched_init\r\n");
     sched::sched_init();
-    dev::serial_puts("\r\n[main] before sched_start (sti done inside sched_start)\r\n");
-    sched::sched_start(nullptr);  /* does not return; enables interrupts and runs init task */
+    dev::serial_puts("\r\n[main] before ramfs::init\r\n");
+    ramfs::init(); /* mount minimal root filesystem at '/' (needs heap from
+                      sched_init) */
+    dev::serial_puts("\r\n[main] ramfs::init done\r\n");
+    dev::serial_puts(
+        "\r\n[main] before sched_start (sti done inside sched_start)\r\n");
+    sched::sched_start(
+        nullptr); /* does not return; enables interrupts and runs init task */
     dev::serial_puts("\r\n[main] after sched_start (unexpected)\r\n");
-    for (;;) asm volatile("hlt");
+    for (;;)
+        asm volatile("hlt");
 }
 
 extern "C" void interrupt_handler(uint32_t vector) {
@@ -192,5 +210,6 @@ extern "C" void interrupt_handler(uint32_t vector) {
     buf[2] = '\0';
     print(buf);
     print("\n");
-    while (1) asm volatile("hlt");
+    while (1)
+        asm volatile("hlt");
 }
