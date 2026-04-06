@@ -67,7 +67,7 @@ disk: dirs $(DISK_IMAGE)
 
 run: disk
 	@echo "Running DIT-OS in QEMU..."
-	qemu-system-i386 -accel tcg,thread=single -drive format=raw,file=$(DISK_IMAGE),index=0,if=floppy -display none -serial mon:stdio -no-reboot -no-shutdown -m 32M
+	qemu-system-i386 -accel tcg,thread=single -drive format=raw,file=$(DISK_IMAGE),index=0,if=floppy -display none -serial mon:stdio -no-reboot -m 32M
 
 debug: disk
 	@echo "Running DIT-OS in QEMU with GDB..."
