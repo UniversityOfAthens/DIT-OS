@@ -3,14 +3,21 @@
 
 #include <stddef.h>
 
-namespace mm {
+namespace mm
+{
 
 void heap_init();
-void *heap_alloc(size_t size);
-void heap_free(void *ptr);
+void* heap_alloc(size_t size);
+void heap_free(void* ptr);
 
-inline void *kmalloc(size_t size) { return heap_alloc(size); }
-inline void kfree(void *ptr) { heap_free(ptr); }
+inline void* kmalloc(size_t size)
+{
+    return heap_alloc(size);
+}
+inline void kfree(void* ptr)
+{
+    heap_free(ptr);
+}
 
 } // namespace mm
 

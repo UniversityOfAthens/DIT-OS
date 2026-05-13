@@ -2,15 +2,19 @@
 
 #include "core/symbols.hpp"
 
-namespace core {
+namespace core
+{
 
-void symbols_init() {
+void symbols_init()
+{
 }
 
-const char* symbol_lookup(uint32_t addr, uint32_t* out_offset) {
+const char* symbol_lookup(uint32_t addr, uint32_t* out_offset)
+{
     (void)addr;
-    if (out_offset) *out_offset = 0;
+    if (out_offset)
+        *out_offset = 0;
     return nullptr;
 }
 
-}
+} // namespace core

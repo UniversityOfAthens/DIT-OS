@@ -4,9 +4,11 @@
 #include <stdint.h>
 #include "dev/device.hpp"
 
-namespace dev {
+namespace dev
+{
 
-/** Driver probe: return 0 on success, bind to device; negative on no match / error */
+/** Driver probe: return 0 on success, bind to device; negative on no match /
+ * error */
 using driver_probe_t = int (*)(Device* dev);
 
 /** Driver operations (optional per-driver) */

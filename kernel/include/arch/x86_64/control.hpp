@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace arch {
+namespace arch
+{
 
 uint32_t read_cr0();
 void write_cr0(uint32_t value);

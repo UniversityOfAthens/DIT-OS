@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -12,13 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential make nasm qemu-system-x86
+          sudo apt-get install -y build-essential make nasm qemu-system-x86 xxd
+
+      - name: Clean build artifacts
+        run: |
+          rm -rf bootloader/build kernel/build
 
       - name: Build kernel
         run: make -C kernel -j"$(nproc)"
@@ -26,8 +29,40 @@ jobs:
       - name: Build bootloader disk image
         run: make -C bootloader all
 
-      - name: QEMU smoke boot (menu -> boot option 1)
+      - name: Verify disk image integrity
         run: |
           set -euo pipefail
-          # Select "Boot DIT-OS", then ask shell to exit so QEMU powers off.
-          (printf "1\n"; sleep 5; printf "exit\n"; sleep 1) | timeout 30 make -C bootloader run
+          # Check MBR signature (0x55 0xAA at offset 0x1FE)
+          echo "MBR signature:"
+          xxd -s 0x1FE -l 2 bootloader/build/disk.img
+          [ "$(xxd -s 0x1FE -l 2 -p bootloader/build/disk.img)" = "55aa" ] || {
+            echo "ERROR: Missing MBR signature 0xAA55"
+            exit 1
+          }
+          # Verify stage2 loaded at sector 2
+          echo "Stage2 at sector 2: $(xxd -s $((2*512)) -l 4 -p bootloader/build/disk.img)"
+          # Verify kernel at sector 37
+          echo "Kernel ELF magic at sector 37: $(xxd -s $((37*512)) -l 4 -p bootloader/build/disk.img)"
+          [ "$(xxd -s $((37*512)) -l 4 -p bootloader/build/disk.img)" = "7f454c46" ] || {
+            echo "ERROR: Kernel ELF magic not found at sector 37"
+            exit 1
+          }
+
+      - name: QEMU smoke test
+        run: |
+          set -euo pipefail
+          # Boot QEMU, wait for shell prompt, run a command, verify output
+          EXPECTED="DIT-OS Kernel"
+          echo "Expected kernel message: $EXPECTED"
+          (sleep 3; printf "help\n"; sleep 1; printf "exit\n"; sleep 1) | \
+            timeout 30 qemu-system-i386 \
+            -accel tcg,thread=single \
+            -drive format=raw,file=bootloader/build/disk.img,index=0,if=floppy \
+            -display none -serial mon:stdio -no-reboot -m 32M 2>&1 | \
+            tee /tmp/qemu-output.log | \
+            grep -q "$EXPECTED" && echo "QEMU smoke test PASSED" || {
+              echo "=== QEMU output: ==="
+              cat /tmp/qemu-output.log
+              echo "QEMU smoke test FAILED — kernel message not found"
+              exit 1
+            }

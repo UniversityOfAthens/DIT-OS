@@ -14,25 +14,24 @@ GLOBAL read_sectors
 ; ES:BX = buffer
 read_sectors:
     pusha
-    mov si, .retry_count
+    mov si, 3           ; retry count
     xor bh, bh
-    
+
 .retry:
     mov ah, 0x02
     int 0x13
     jnc .done
     dec si
     jnz .retry
-    
+
     mov si, .error_msg
     call print_string
     jmp hang
-    
+
 .done:
     popa
     ret
 .error_msg: db "Disk I/O Error!", 0
-.retry_count: db 3
 ; Extended read (LBA)
 GLOBAL read_lba
 read_lba:

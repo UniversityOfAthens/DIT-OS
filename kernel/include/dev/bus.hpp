@@ -5,7 +5,8 @@
 #include "dev/device.hpp"
 #include "dev/driver.hpp"
 
-namespace dev {
+namespace dev
+{
 
 /** Bus type for enumerating and attaching drivers to devices */
 struct Bus {

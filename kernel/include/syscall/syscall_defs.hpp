@@ -3,9 +3,11 @@
 
 #include <stdint.h>
 
-namespace syscall {
+namespace syscall
+{
 
-/** Syscall argument/return ABI: typically up to 6 args in registers, return in one register */
+/** Syscall argument/return ABI: typically up to 6 args in registers, return in
+ * one register */
 
 /** Maximum number of syscall arguments (e.g. x86_64: 6) */
 constexpr unsigned SYSCALL_MAX_ARGS = 6;

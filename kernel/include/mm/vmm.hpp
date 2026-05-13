@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
-namespace mm {
+namespace mm
+{
 
 // Virtual memory manager: map/unmap virtual to physical
 // All vaddr are kernel virtual; paddr are physical.

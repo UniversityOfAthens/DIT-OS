@@ -4,12 +4,13 @@
 #include <stdint.h>
 #include "graphics/terminal-buffer.hpp"
 
-namespace gfx {
+namespace gfx
+{
 
 /** Kernel terminal: VGA output + optional scrollback buffer */
 struct Terminal {
-    TerminalBuffer* buffer;  /* nullptr if no scrollback */
-    uint8_t         attr;    /* current attribute (fg|bg<<4) */
+    TerminalBuffer* buffer; /* nullptr if no scrollback */
+    uint8_t attr; /* current attribute (fg|bg<<4) */
 };
 
 /** Initialize default kernel terminal (VGA) */

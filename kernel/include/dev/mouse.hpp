@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 struct MousePacket {
     int8_t dx, dy;
@@ -15,5 +16,5 @@ void mouse_init();
 MousePacket mouse_read();
 int mouse_has_input();
 
-}
+} // namespace dev
 #endif

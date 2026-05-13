@@ -9,29 +9,47 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up build environment
-        run: sudo apt-get update && sudo apt-get install -y build-essential genisoimage
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential make nasm
 
-      - name: Build ISO
-        run: make -C bootloader iso
+      - name: Clean and build
+        run: |
+          rm -rf bootloader/build kernel/build
+          make -C kernel -j"$(nproc)"
+          make -C bootloader all
+
+      - name: Package release artifacts
+        run: |
+          mkdir -p release
+          cp bootloader/build/disk.img release/DIT-OS.img
+          cp bootloader/build/kernel.bin release/DIT-OS.kernel
+          cp bootloader/build/stage1.bin release/
+          cp bootloader/build/stage2.bin release/
+          cp bootloader/build/loader.bin release/
+          echo "DIT-OS $(git describe --tags 2>/dev/null || echo 'dev')" > release/VERSION
+          sha256sum release/* > release/SHA256SUMS
+          cat release/SHA256SUMS
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
+          body: |
+            ## DIT-OS ${{ github.ref_name }}
+
+            ### Artifacts
+            - `DIT-OS.img` — Bootable floppy disk image
+            - `DIT-OS.kernel` — Kernel ELF binary
+            - Bootloader stage binaries
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload ISO to Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: bootloader/build/DIT-OS.iso
+          files: release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

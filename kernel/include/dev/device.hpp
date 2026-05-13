@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 /** Base device type for device tree and driver binding */
 struct Device {

@@ -4,9 +4,11 @@
 
 extern "C" void userland_init_main();
 
-namespace sched {
+namespace sched
+{
 
-void (*get_init_entry())() {
+void (*get_init_entry())()
+{
     return userland_init_main;
 }
 

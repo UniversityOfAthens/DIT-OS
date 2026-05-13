@@ -3,13 +3,14 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 struct PciDev;
 
 int nvme_init(const PciDev* pci);
 int nvme_read(uint64_t lba, uint32_t num_blocks, void* buf);
 
-}
+} // namespace dev
 
 #endif

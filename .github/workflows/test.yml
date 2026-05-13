@@ -1,26 +1,53 @@
 name: Test
 
 on:
-  # push:
-  #   branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  test:
+  smoke-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Set up build environment
-        run: sudo apt-get update && sudo apt-get install -y build-essential
-
-      - name: Build project for testing
-        run: make -C bootloader
-
-      - name: Run tests
+      - name: Install build dependencies
         run: |
-          # If you have a test target, use it here
-          if make -C bootloader test; then echo "Tests passed"; else echo "No test target or tests failed"; exit 1; fi
+          sudo apt-get update
+          sudo apt-get install -y build-essential make nasm qemu-system-x86 xxd
+
+      - name: Clean and build
+        run: |
+          rm -rf bootloader/build kernel/build
+          make -C kernel -j"$(nproc)"
+          make -C bootloader all
+
+      - name: Run QEMU boot smoke test
+        run: |
+          set -euo pipefail
+          # Boot to shell, verify kernel prints, run 'help' then 'exit'
+          (sleep 3; printf "help\n"; sleep 1; printf "exit\n"; sleep 1) | \
+            timeout 30 qemu-system-i386 \
+            -accel tcg,thread=single \
+            -drive format=raw,file=bootloader/build/disk.img,index=0,if=floppy \
+            -display none -serial mon:stdio -no-reboot -m 32M 2>&1 | \
+            tee /tmp/smoke-output.log
+
+          echo "=== Checking for kernel startup ==="
+          grep -q "DIT-OS Kernel" /tmp/smoke-output.log && echo "PASS: Kernel started" || {
+            echo "FAIL: Kernel did not start"
+            exit 1
+          }
+
+          echo "=== Checking for shell ==="
+          grep -q "shell" /tmp/smoke-output.log && echo "PASS: Shell reached" || {
+            echo "FAIL: Shell not reached"
+            exit 1
+          }
+
+          echo "=== Smoke test passed ==="
+
+

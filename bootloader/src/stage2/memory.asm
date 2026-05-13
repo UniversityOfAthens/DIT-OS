@@ -25,6 +25,7 @@ memory_e820:
     mov cx, [bp + 8]   ; max_entries
 
     xor si, si         ; count
+    xor ebx, ebx       ; continuation = 0 (first call)
 
 .e820_loop:
     mov eax, 0xE820

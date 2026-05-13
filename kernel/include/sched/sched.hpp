@@ -4,9 +4,11 @@
 #include <stdint.h>
 #include "sched/task.hpp"
 
-namespace sched {
+namespace sched
+{
 
-/** Switch from prev to next (saves prev's context, restores next's). Never returns to caller when switching to next. */
+/** Switch from prev to next (saves prev's context, restores next's). Never
+ * returns to caller when switching to next. */
 extern "C" void switch_to(Task* prev, Task* next);
 
 /** Current running task (set by scheduler) */

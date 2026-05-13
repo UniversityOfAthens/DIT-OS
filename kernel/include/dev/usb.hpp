@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 /** USB controller / bus (stub for future USB host driver) */
 void usb_init();

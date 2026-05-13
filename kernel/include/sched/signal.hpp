@@ -4,7 +4,8 @@
 
 #include <stdint.h>
 
-namespace sched {
+namespace sched
+{
 
 /** POSIX-style signal numbers (1-based; bit (sig-1) in sigset_t). */
 enum Signal : int {
@@ -51,25 +52,32 @@ struct SignalAction {
     int flags;
 };
 
-inline void sigemptyset(sigset_t* s) {
-    if (s) *s = 0;
+inline void sigemptyset(sigset_t* s)
+{
+    if (s)
+        *s = 0;
 }
 
-inline void sigfillset(sigset_t* s) {
-    if (s) *s = ~sigset_t(0);
+inline void sigfillset(sigset_t* s)
+{
+    if (s)
+        *s = ~sigset_t(0);
 }
 
-inline void sigaddset(sigset_t* s, int sig) {
+inline void sigaddset(sigset_t* s, int sig)
+{
     if (s && sig > 0 && sig < NSIG)
         *s |= (sigset_t(1) << (sig - 1));
 }
 
-inline void sigdelset(sigset_t* s, int sig) {
+inline void sigdelset(sigset_t* s, int sig)
+{
     if (s && sig > 0 && sig < NSIG)
         *s &= ~(sigset_t(1) << (sig - 1));
 }
 
-inline bool sigismember(sigset_t s, int sig) {
+inline bool sigismember(sigset_t s, int sig)
+{
     if (sig <= 0 || sig >= NSIG)
         return false;
     return (s & (sigset_t(1) << (sig - 1))) != 0;

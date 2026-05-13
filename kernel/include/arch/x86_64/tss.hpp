@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace arch {
+namespace arch
+{
 
 struct Tss {
     uint32_t reserved0;

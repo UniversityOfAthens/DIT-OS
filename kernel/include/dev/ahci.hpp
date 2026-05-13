@@ -3,13 +3,14 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 struct PciDev;
 
 int ahci_init(const PciDev* pci);
 int ahci_port_count();
 
-}
+} // namespace dev
 
 #endif

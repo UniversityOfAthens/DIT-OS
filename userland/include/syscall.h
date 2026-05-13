@@ -5,11 +5,11 @@
 #ifndef USERLAND_SYSCALL_H
 #define USERLAND_SYSCALL_H
 
-#define SYS_read   0
-#define SYS_write  1
-#define SYS_open   2
-#define SYS_close  3
-#define SYS_exit   6
+#define SYS_read 0
+#define SYS_write 1
+#define SYS_open 2
+#define SYS_close 3
+#define SYS_exit 6
 #define SYS_getpid 10
 #define SYS_getdents 16
 
@@ -36,36 +36,43 @@ int dit_sys_getdents(int fd, void* buf, unsigned count);
 }
 #endif
 
-static inline int read(int fd, void* buf, unsigned count) {
+static inline int read(int fd, void* buf, unsigned count)
+{
     (void)SYS_read;
     return dit_sys_read(fd, buf, count);
 }
-static inline int write(int fd, const void* buf, unsigned count) {
+static inline int write(int fd, const void* buf, unsigned count)
+{
     (void)SYS_write;
     return dit_sys_write(fd, buf, count);
 }
-static inline void exit(int code) {
+static inline void exit(int code)
+{
     (void)SYS_exit;
     dit_sys_exit(code);
     __builtin_unreachable();
 }
 
-static inline int getpid(void) {
+static inline int getpid(void)
+{
     (void)SYS_getpid;
     return dit_sys_getpid();
 }
 
-static inline int open(const char* path, int flags) {
+static inline int open(const char* path, int flags)
+{
     (void)SYS_open;
     return dit_sys_open(path, flags);
 }
 
-static inline int close(int fd) {
+static inline int close(int fd)
+{
     (void)SYS_close;
     return dit_sys_close(fd);
 }
 
-static inline int getdents(int fd, void* buf, unsigned count) {
+static inline int getdents(int fd, void* buf, unsigned count)
+{
     (void)SYS_getdents;
     return dit_sys_getdents(fd, buf, count);
 }

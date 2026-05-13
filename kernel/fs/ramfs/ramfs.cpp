@@ -20,7 +20,8 @@
 
 #include <stdint.h>
 
-namespace ramfs {
+namespace ramfs
+{
 
 // Helpers from inode.cpp
 fs::inode* inode_create_dir(fs::superblock* sb);
@@ -44,9 +45,12 @@ struct ramfs_file {
 
 static uint32_t s_max_file_cap = 64 * 1024; /* simple cap for now */
 
-static int kstrcmp(const char* a, const char* b) {
-    if (a == b) return 0;
-    if (!a || !b) return a ? 1 : -1;
+static int kstrcmp(const char* a, const char* b)
+{
+    if (a == b)
+        return 0;
+    if (!a || !b)
+        return a ? 1 : -1;
     while (*a && (*a == *b)) {
         a++;
         b++;
@@ -54,22 +58,28 @@ static int kstrcmp(const char* a, const char* b) {
     return (int)((unsigned char)*a) - (int)((unsigned char)*b);
 }
 
-static void kmemcpy(void* dest, const void* src, uint32_t n) {
+static void kmemcpy(void* dest, const void* src, uint32_t n)
+{
     uint8_t* d = (uint8_t*)dest;
     const uint8_t* s = (const uint8_t*)src;
-    for (uint32_t i = 0; i < n; i++) d[i] = s[i];
+    for (uint32_t i = 0; i < n; i++)
+        d[i] = s[i];
 }
 
 static fs::SuperblockOps s_sb_ops;
 static fs::InodeOps s_inode_ops;
 static fs::FileOps s_file_ops;
 
-static int inode_lookup(fs::inode* dir, fs::dentry* target) {
-    if (!dir || !target) return -EINVAL;
-    if ((dir->i_mode & S_IFMT) != S_IFDIR) return -ENOTDIR;
+static int inode_lookup(fs::inode* dir, fs::dentry* target)
+{
+    if (!dir || !target)
+        return -EINVAL;
+    if ((dir->i_mode & S_IFMT) != S_IFDIR)
+        return -ENOTDIR;
 
     ramfs_dir* d = (ramfs_dir*)dir->i_private;
-    if (!d) return -ENOENT;
+    if (!d)
+        return -ENOENT;
 
     for (ramfs_entry* e = d->entries; e; e = e->next) {
         if (kstrcmp(e->name, target->d_name) == 0) {
@@ -80,29 +90,38 @@ static int inode_lookup(fs::inode* dir, fs::dentry* target) {
     return -ENOENT;
 }
 
-static int inode_create(fs::inode* dir, fs::dentry* target, int mode) {
+static int inode_create(fs::inode* dir, fs::dentry* target, int mode)
+{
     (void)mode; /* currently create() always makes a regular file */
-    if (!dir || !target) return -EINVAL;
-    if ((dir->i_mode & S_IFMT) != S_IFDIR) return -ENOTDIR;
+    if (!dir || !target)
+        return -EINVAL;
+    if ((dir->i_mode & S_IFMT) != S_IFDIR)
+        return -ENOTDIR;
 
     ramfs_dir* d = (ramfs_dir*)dir->i_private;
-    if (!d) return -ENOENT;
+    if (!d)
+        return -ENOENT;
 
     // Disallow duplicates.
     for (ramfs_entry* e = d->entries; e; e = e->next) {
-        if (kstrcmp(e->name, target->d_name) == 0) return -EEXIST;
+        if (kstrcmp(e->name, target->d_name) == 0)
+            return -EEXIST;
     }
 
     fs::inode* ino = inode_create_file(dir->i_sb);
-    if (!ino) return -ENOMEM;
+    if (!ino)
+        return -ENOMEM;
     ino->i_ops = &s_inode_ops;
     ino->i_file_ops = &s_file_ops;
 
     ramfs_entry* ne = (ramfs_entry*)mm::kmalloc(sizeof(ramfs_entry));
-    if (!ne) return -ENOMEM;
-    for (uint32_t i = 0; i < sizeof(ramfs_entry); i++) ((uint8_t*)ne)[i] = 0;
+    if (!ne)
+        return -ENOMEM;
+    for (uint32_t i = 0; i < sizeof(ramfs_entry); i++)
+        ((uint8_t*)ne)[i] = 0;
 
-    for (uint32_t i = 0; i < 256 && target->d_name[i]; i++) ne->name[i] = target->d_name[i];
+    for (uint32_t i = 0; i < 256 && target->d_name[i]; i++)
+        ne->name[i] = target->d_name[i];
     ne->name[255] = '\0';
     ne->ino = ino;
     ne->next = d->entries;
@@ -112,28 +131,37 @@ static int inode_create(fs::inode* dir, fs::dentry* target, int mode) {
     return 0;
 }
 
-static int inode_mkdir(fs::inode* dir, fs::dentry* target, int mode) {
+static int inode_mkdir(fs::inode* dir, fs::dentry* target, int mode)
+{
     (void)mode; /* currently create mkdir without special permissions */
-    if (!dir || !target) return -EINVAL;
-    if ((dir->i_mode & S_IFMT) != S_IFDIR) return -ENOTDIR;
+    if (!dir || !target)
+        return -EINVAL;
+    if ((dir->i_mode & S_IFMT) != S_IFDIR)
+        return -ENOTDIR;
 
     ramfs_dir* d = (ramfs_dir*)dir->i_private;
-    if (!d) return -ENOENT;
+    if (!d)
+        return -ENOENT;
 
     for (ramfs_entry* e = d->entries; e; e = e->next) {
-        if (kstrcmp(e->name, target->d_name) == 0) return -EEXIST;
+        if (kstrcmp(e->name, target->d_name) == 0)
+            return -EEXIST;
     }
 
     fs::inode* ino = inode_create_dir(dir->i_sb);
-    if (!ino) return -ENOMEM;
+    if (!ino)
+        return -ENOMEM;
     ino->i_ops = &s_inode_ops;
     ino->i_file_ops = &s_file_ops;
 
     ramfs_entry* ne = (ramfs_entry*)mm::kmalloc(sizeof(ramfs_entry));
-    if (!ne) return -ENOMEM;
-    for (uint32_t i = 0; i < sizeof(ramfs_entry); i++) ((uint8_t*)ne)[i] = 0;
+    if (!ne)
+        return -ENOMEM;
+    for (uint32_t i = 0; i < sizeof(ramfs_entry); i++)
+        ((uint8_t*)ne)[i] = 0;
 
-    for (uint32_t i = 0; i < 256 && target->d_name[i]; i++) ne->name[i] = target->d_name[i];
+    for (uint32_t i = 0; i < 256 && target->d_name[i]; i++)
+        ne->name[i] = target->d_name[i];
     ne->name[255] = '\0';
     ne->ino = ino;
     ne->next = d->entries;
@@ -143,19 +171,24 @@ static int inode_mkdir(fs::inode* dir, fs::dentry* target, int mode) {
     return 0;
 }
 
-static int inode_unlink(fs::inode* dir, fs::dentry* target) {
-    if (!dir || !target) return -EINVAL;
-    if ((dir->i_mode & S_IFMT) != S_IFDIR) return -ENOTDIR;
+static int inode_unlink(fs::inode* dir, fs::dentry* target)
+{
+    if (!dir || !target)
+        return -EINVAL;
+    if ((dir->i_mode & S_IFMT) != S_IFDIR)
+        return -ENOTDIR;
 
     ramfs_dir* d = (ramfs_dir*)dir->i_private;
-    if (!d) return -ENOENT;
+    if (!d)
+        return -ENOENT;
 
     ramfs_entry** pp = &d->entries;
     while (*pp) {
         ramfs_entry* e = *pp;
         if (kstrcmp(e->name, target->d_name) == 0) {
             *pp = e->next;
-            /* We intentionally do not free the inode/file data in this minimal implementation. */
+            /* We intentionally do not free the inode/file data in this minimal
+             * implementation. */
             mm::kfree(e);
             return 0;
         }
@@ -164,40 +197,55 @@ static int inode_unlink(fs::inode* dir, fs::dentry* target) {
     return -ENOENT;
 }
 
-static int file_open(fs::inode* ino, fs::file* f) {
+static int file_open(fs::inode* ino, fs::file* f)
+{
     (void)ino;
-    if (!f) return -EINVAL;
+    if (!f)
+        return -EINVAL;
     f->f_pos = 0;
     return 0;
 }
 
-static int file_read(fs::file* f, void* buf, uint32_t size) {
-    if (!f || !buf) return -EINVAL;
-    if (!f->f_inode) return -EBADF;
-    if ((f->f_inode->i_mode & S_IFMT) != S_IFREG) return -EISDIR;
+static int file_read(fs::file* f, void* buf, uint32_t size)
+{
+    if (!f || !buf)
+        return -EINVAL;
+    if (!f->f_inode)
+        return -EBADF;
+    if ((f->f_inode->i_mode & S_IFMT) != S_IFREG)
+        return -EISDIR;
 
     ramfs_file* rf = (ramfs_file*)f->f_inode->i_private;
-    if (!rf) return -EINVAL;
+    if (!rf)
+        return -EINVAL;
 
-    if (f->f_pos >= rf->size) return 0;
+    if (f->f_pos >= rf->size)
+        return 0;
     uint32_t avail = rf->size - (uint32_t)f->f_pos;
     uint32_t n = (size < avail) ? size : avail;
 
-    if (n) kmemcpy(buf, rf->data + f->f_pos, n);
+    if (n)
+        kmemcpy(buf, rf->data + f->f_pos, n);
     f->f_pos += n;
     return (int)n;
 }
 
-static int file_write(fs::file* f, const void* buf, uint32_t size) {
-    if (!f || !buf) return -EINVAL;
-    if (!f->f_inode) return -EBADF;
-    if ((f->f_inode->i_mode & S_IFMT) != S_IFREG) return -EISDIR;
+static int file_write(fs::file* f, const void* buf, uint32_t size)
+{
+    if (!f || !buf)
+        return -EINVAL;
+    if (!f->f_inode)
+        return -EBADF;
+    if ((f->f_inode->i_mode & S_IFMT) != S_IFREG)
+        return -EISDIR;
 
     ramfs_file* rf = (ramfs_file*)f->f_inode->i_private;
-    if (!rf) return -EINVAL;
+    if (!rf)
+        return -EINVAL;
 
     uint32_t end_pos = (uint32_t)f->f_pos + size;
-    if (end_pos > s_max_file_cap) return -ENOSPC;
+    if (end_pos > s_max_file_cap)
+        return -ENOSPC;
 
     if (end_pos > rf->cap) {
         uint32_t new_cap = rf->cap ? rf->cap : 1024;
@@ -208,12 +256,16 @@ static int file_write(fs::file* f, const void* buf, uint32_t size) {
                 break;
             }
         }
-        if (new_cap < end_pos) return -ENOSPC;
+        if (new_cap < end_pos)
+            return -ENOSPC;
 
         char* new_data = (char*)mm::kmalloc(new_cap);
-        if (!new_data) return -ENOMEM;
-        for (uint32_t i = 0; i < new_cap; i++) new_data[i] = 0;
-        if (rf->data && rf->size) kmemcpy(new_data, rf->data, rf->size);
+        if (!new_data)
+            return -ENOMEM;
+        for (uint32_t i = 0; i < new_cap; i++)
+            new_data[i] = 0;
+        if (rf->data && rf->size)
+            kmemcpy(new_data, rf->data, rf->size);
         mm::kfree(rf->data);
         rf->data = new_data;
         rf->cap = new_cap;
@@ -221,26 +273,34 @@ static int file_write(fs::file* f, const void* buf, uint32_t size) {
 
     kmemcpy(rf->data + f->f_pos, buf, size);
     f->f_pos += size;
-    if ((uint32_t)f->f_pos > rf->size) rf->size = (uint32_t)f->f_pos;
+    if ((uint32_t)f->f_pos > rf->size)
+        rf->size = (uint32_t)f->f_pos;
 
     f->f_inode->i_size = rf->size;
     return (int)size;
 }
 
-static int file_release(fs::inode* ino, fs::file* f) {
+static int file_release(fs::inode* ino, fs::file* f)
+{
     (void)ino;
     (void)f;
     return 0;
 }
 
-/** Directory read: one entry per call; f_pos counts entries already returned. */
-static int file_readdir(fs::file* f, fs::dirent* out) {
-    if (!f || !out) return -EINVAL;
-    if (!f->f_inode) return -EINVAL;
-    if ((f->f_inode->i_mode & S_IFMT) != S_IFDIR) return -ENOTDIR;
+/** Directory read: one entry per call; f_pos counts entries already returned.
+ */
+static int file_readdir(fs::file* f, fs::dirent* out)
+{
+    if (!f || !out)
+        return -EINVAL;
+    if (!f->f_inode)
+        return -EINVAL;
+    if ((f->f_inode->i_mode & S_IFMT) != S_IFDIR)
+        return -ENOTDIR;
 
     ramfs_dir* d = (ramfs_dir*)f->f_inode->i_private;
-    if (!d) return -EINVAL;
+    if (!d)
+        return -EINVAL;
 
     ramfs_entry* e = d->entries;
     uint32_t skip = (uint32_t)f->f_pos;
@@ -256,7 +316,8 @@ static int file_readdir(fs::file* f, fs::dirent* out) {
     out->d_pad[0] = 0;
     out->d_pad[1] = 0;
     out->d_pad[2] = 0;
-    for (uint32_t i = 0; i < sizeof(out->d_name); i++) out->d_name[i] = e->name[i];
+    for (uint32_t i = 0; i < sizeof(out->d_name); i++)
+        out->d_name[i] = e->name[i];
 
     f->f_pos += 1;
     return 1;
@@ -264,51 +325,69 @@ static int file_readdir(fs::file* f, fs::dirent* out) {
 
 static fs::inode* s_root_inode = nullptr;
 
-static uint32_t kstrlen(const char* s) {
+static uint32_t kstrlen(const char* s)
+{
     uint32_t n = 0;
-    while (s[n]) n++;
+    while (s[n])
+        n++;
     return n;
 }
 
-static void seed_text_file(fs::inode* root, const char* name, const char* text) {
-    if (!root || !name || !text) return;
+static void seed_text_file(fs::inode* root, const char* name, const char* text)
+{
+    if (!root || !name || !text)
+        return;
     fs::dentry t;
-    for (uint32_t i = 0; i < sizeof(t); i++) ((uint8_t*)&t)[i] = 0;
+    for (uint32_t i = 0; i < sizeof(t); i++)
+        ((uint8_t*)&t)[i] = 0;
     uint32_t j = 0;
     while (name[j] && j < sizeof(t.d_name) - 1) {
         t.d_name[j] = name[j];
         j++;
     }
     t.d_name[j] = '\0';
-    if (inode_create(root, &t, 0644) != 0) return;
+    if (inode_create(root, &t, 0644) != 0)
+        return;
     fs::inode* ino = t.d_inode;
-    if (!ino) return;
+    if (!ino)
+        return;
     ramfs_file* rf = (ramfs_file*)ino->i_private;
-    if (!rf) return;
+    if (!rf)
+        return;
     uint32_t len = kstrlen(text);
     rf->data = (char*)mm::kmalloc(len ? len : 1);
-    if (!rf->data) return;
-    if (len) kmemcpy(rf->data, text, len);
+    if (!rf->data)
+        return;
+    if (len)
+        kmemcpy(rf->data, text, len);
     rf->size = len;
     rf->cap = len;
     ino->i_size = len;
 }
 
-static void seed_demo_files() {
-    if (!s_root_inode) return;
+static void seed_demo_files()
+{
+    if (!s_root_inode)
+        return;
     seed_text_file(s_root_inode, "hello.txt", "Hello from DIT-OS ramfs.\n");
-    seed_text_file(s_root_inode, "README.txt", "Try: ls\n      cat hello.txt\n");
+    seed_text_file(s_root_inode, "README.txt",
+                   "Try: ls\n      cat hello.txt\n");
 }
 
-static int ramfs_get_sb(fs::fs_type* type, const char* dev, void* data, fs::superblock** out) {
+static int ramfs_get_sb(fs::fs_type* type, const char* dev, void* data,
+                        fs::superblock** out)
+{
     (void)type;
     (void)dev;
     (void)data;
-    if (!out) return -EINVAL;
+    if (!out)
+        return -EINVAL;
 
     fs::superblock* sb = (fs::superblock*)mm::kmalloc(sizeof(fs::superblock));
-    if (!sb) return -ENOMEM;
-    for (uint32_t i = 0; i < sizeof(fs::superblock); i++) ((uint8_t*)sb)[i] = 0;
+    if (!sb)
+        return -ENOMEM;
+    for (uint32_t i = 0; i < sizeof(fs::superblock); i++)
+        ((uint8_t*)sb)[i] = 0;
 
     sb->s_blocksize = 512;
     sb->s_blocks = 0;
@@ -318,7 +397,8 @@ static int ramfs_get_sb(fs::fs_type* type, const char* dev, void* data, fs::supe
     sb->s_ops = &s_sb_ops;
 
     fs::inode* root = inode_create_dir(sb);
-    if (!root) return -ENOMEM;
+    if (!root)
+        return -ENOMEM;
     root->i_ops = &s_inode_ops;
     root->i_file_ops = &s_file_ops;
 
@@ -328,7 +408,8 @@ static int ramfs_get_sb(fs::fs_type* type, const char* dev, void* data, fs::supe
     return 0;
 }
 
-static void ramfs_kill_sb(fs::superblock* sb) {
+static void ramfs_kill_sb(fs::superblock* sb)
+{
     (void)sb;
     /* no persistence, so nothing to do */
 }
@@ -342,8 +423,10 @@ static fs::fs_type s_ramfs_type = {
 
 static bool s_inited = false;
 
-void init() {
-    if (s_inited) return;
+void init()
+{
+    if (s_inited)
+        return;
     s_inited = true;
 
     // Wire operation tables (must happen before mount/get_sb).
@@ -368,4 +451,3 @@ void init() {
 }
 
 } // namespace ramfs
-

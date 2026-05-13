@@ -3,11 +3,12 @@
 
 #include <stdint.h>
 
-namespace core {
+namespace core
+{
 
 void symbols_init();
 const char* symbol_lookup(uint32_t addr, uint32_t* out_offset);
 
-}
+} // namespace core
 
 #endif

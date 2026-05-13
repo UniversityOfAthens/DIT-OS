@@ -6,9 +6,11 @@
 
 extern "C" void load_gdt(void);
 
-namespace boot {
+namespace boot
+{
 
-void gdt_load() {
+void gdt_load()
+{
     load_gdt();
 }
 

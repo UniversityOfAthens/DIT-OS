@@ -4,13 +4,16 @@
 
 #include "arch/x86_64/apic.hpp"
 
-namespace arch {
+namespace arch
+{
 
-bool apic_available() {
+bool apic_available()
+{
     return false;
 }
 
-void apic_init() {
+void apic_init()
+{
 }
 
 } // namespace arch

@@ -4,7 +4,8 @@
 #include "types.hpp"
 #include "disk.hpp"
 
-namespace boot {
+namespace boot
+{
 
 // Generic file/dir entry (name + size + cluster/sector)
 struct DirEntry {
@@ -19,13 +20,13 @@ class FSReader {
 public:
     virtual ~FSReader() = default;
     virtual bool init(u8 drive) = 0;
-    virtual bool open(const char *path, DirEntry *out) = 0;
-    virtual bool read(void *buffer, u32 size) = 0;
+    virtual bool open(const char* path, DirEntry* out) = 0;
+    virtual bool read(void* buffer, u32 size) = 0;
     virtual void close() = 0;
 };
 
 // Detect filesystem and return appropriate reader (caller owns)
-FSReader *fs_detect(u8 drive);
+FSReader* fs_detect(u8 drive);
 
 } // namespace boot
 

@@ -8,16 +8,19 @@
 #include "arch/x86_64/tss.hpp"
 #include "arch/x86_64/pic.hpp"
 
-namespace arch {
+namespace arch
+{
 
-void cpu_early_init() {
+void cpu_early_init()
+{
     gdt_load();
     idt_init();
     tss_init();
     pic_init();
 }
 
-void cpu_init() {
+void cpu_init()
+{
     cpu_early_init();
 }
 

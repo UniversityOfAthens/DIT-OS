@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace boot {
+namespace boot
+{
 
 constexpr int MAX_ENTRIES = 8;
 constexpr int MAX_NAME_LEN = 32;
@@ -25,21 +26,23 @@ struct Config {
 };
 
 class ConfigParser {
-  public:
+public:
     ConfigParser();
-    bool parse(const char *buffer, uint32_t size);
-    const Config &get_config() const { return config_; }
+    bool parse(const char* buffer, uint32_t size);
+    const Config& get_config() const
+    {
+        return config_;
+    }
 
-  private:
+private:
     Config config_;
 
-    void skip_whitespace(const char *&p);
-    void skip_to_newline(const char *&p);
-    uint8_t parse_number(const char *&p);
-    bool parse_entry(const char *&p, BootEntry &entry);
+    void skip_whitespace(const char*& p);
+    void skip_to_newline(const char*& p);
+    uint8_t parse_number(const char*& p);
+    bool parse_entry(const char*& p, BootEntry& entry);
 };
 
 } // namespace boot
-
 
 #endif

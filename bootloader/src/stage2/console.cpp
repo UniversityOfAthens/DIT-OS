@@ -5,13 +5,15 @@
 #include "../../include/video.hpp"
 #include "../../include/types.hpp"
 
-namespace boot {
+namespace boot
+{
 
 static int s_cursor_x = 0;
 static int s_cursor_y = 0;
 
-void console_putchar(char c) {
-    volatile u16 *vga = (volatile u16 *)VGA_TEXT_BASE;
+void console_putchar(char c)
+{
+    volatile u16* vga = (volatile u16*)VGA_TEXT_BASE;
     if (c == '\n') {
         s_cursor_x = 0;
         s_cursor_y++;
@@ -32,13 +34,15 @@ void console_putchar(char c) {
     }
 }
 
-void console_write(const char *str) {
+void console_write(const char* str)
+{
     while (*str)
         console_putchar(*str++);
 }
 
-void console_clear() {
-    volatile u16 *vga = (volatile u16 *)VGA_TEXT_BASE;
+void console_clear()
+{
+    volatile u16* vga = (volatile u16*)VGA_TEXT_BASE;
     for (int i = 0; i < VGA_COLS * VGA_ROWS; i++)
         vga[i] = (0x0F << 8) | ' ';
     s_cursor_x = s_cursor_y = 0;

@@ -1,14 +1,17 @@
-/** Per-process file descriptor table (single address space; fds >= 3 are VFS files). */
+/** Per-process file descriptor table (single address space; fds >= 3 are VFS
+ * files). */
 #ifndef KERNEL_SYSCALL_FD_HPP
 #define KERNEL_SYSCALL_FD_HPP
 
 #include <stdint.h>
 
-namespace fs {
+namespace fs
+{
 struct file;
 }
 
-namespace syscall {
+namespace syscall
+{
 
 constexpr int FD_TABLE_SIZE = 32;
 constexpr int FIRST_FILE_FD = 3;

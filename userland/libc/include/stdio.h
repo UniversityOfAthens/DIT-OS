@@ -6,4 +6,3 @@
 int printf(const char* fmt, ...);
 
 #endif
-

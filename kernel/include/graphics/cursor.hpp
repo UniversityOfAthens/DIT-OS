@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace gfx {
+namespace gfx
+{
 
 /** Cursor position (text or pixel) */
 struct Cursor {

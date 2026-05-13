@@ -6,24 +6,34 @@
 #include <stdint.h>
 #include <stddef.h>
 
-namespace sched {
+namespace sched
+{
 
-Task* task_create(void (*entry)(), uint32_t* stack, uint32_t stack_size) {
-    if (stack_size < 32) return nullptr;
+Task* task_create(void (*entry)(), uint32_t* stack, uint32_t stack_size)
+{
+    if (stack_size < 32)
+        return nullptr;
     uint32_t* sp = stack + stack_size / sizeof(uint32_t);
-    sp--; *sp = (uint32_t)entry;
-    sp--; *sp = 0;
-    sp--; *sp = 0;
-    sp--; *sp = 0;
-    sp--; *sp = 0;
+    sp--;
+    *sp = 0; // EBX (popped 4th by context.asm)
+    sp--;
+    *sp = 0; // EBP (popped 3rd)
+    sp--;
+    *sp = 0; // ESI (popped 2nd)
+    sp--;
+    *sp = 0; // EDI (popped 1st)
+    sp--;
+    *sp = (uint32_t)entry; // EIP (popped by ret)
     Task* t = (Task*)mm::heap_alloc(sizeof(Task));
-    if (!t) return nullptr;
+    if (!t)
+        return nullptr;
     t->ctx.edi = 0;
     t->ctx.esi = 0;
     t->ctx.ebp = 0;
     t->ctx.ebx = 0;
     t->ctx.esp = (uint32_t)sp;
-    t->ctx.eip = (uint32_t)entry; /* for debugging; context.asm resumes via stack+ret */
+    t->ctx.eip =
+        (uint32_t)entry; /* for debugging; context.asm resumes via stack+ret */
     t->state = TaskState::Runnable;
     t->next = nullptr;
     t->stack_top = (uint32_t)stack;

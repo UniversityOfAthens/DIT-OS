@@ -8,7 +8,8 @@
 #include "syscall/fd.hpp"
 #include <stdint.h>
 
-namespace syscall {
+namespace syscall
+{
 
 extern SyscallResult sys_read_impl(const SyscallArgs* args);
 extern SyscallResult sys_write_impl(const SyscallArgs* args);
@@ -19,7 +20,8 @@ extern SyscallResult sys_open_impl(const SyscallArgs* args);
 extern SyscallResult sys_close_impl(const SyscallArgs* args);
 extern SyscallResult sys_getdents_impl(const SyscallArgs* args);
 
-void init() {
+void init()
+{
     fd_init();
     syscall_set_handler(SYS_read, sys_read_impl);
     syscall_set_handler(SYS_write, sys_write_impl);
@@ -31,15 +33,18 @@ void init() {
     syscall_set_handler(SYS_getdents, sys_getdents_impl);
 }
 
-SyscallResult handle(uint32_t num, const SyscallArgs* args) {
+SyscallResult handle(uint32_t num, const SyscallArgs* args)
+{
     trace_enter(num, args);
     SyscallResult r = syscall_dispatch(num, args);
     trace_exit(num, r);
     return r;
 }
 
-/** Called from IDT when int 0x80; regs = pointer to saved pusha block (low to high: EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX) */
-extern "C" void syscall_entry(uint32_t* regs) {
+/** Called from IDT when int 0x80; regs = pointer to saved pusha block (low to
+ * high: EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX) */
+extern "C" void syscall_entry(uint32_t* regs)
+{
     SyscallArgs args;
     args.args[0] = regs[4]; /* EBX */
     args.args[1] = regs[6]; /* ECX */

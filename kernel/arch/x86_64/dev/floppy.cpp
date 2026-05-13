@@ -4,19 +4,32 @@
 #include "arch/x86_64/io.hpp"
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 static constexpr uint16_t FDC_BASE = 0x3F0;
-enum { SRA = 0, SRB = 1, DOR = 2, TDR = 3, MSR = 4, DSR = 4, FIFO = 5, DIR = 7 };
+enum {
+    SRA = 0,
+    SRB = 1,
+    DOR = 2,
+    TDR = 3,
+    MSR = 4,
+    DSR = 4,
+    FIFO = 5,
+    DIR = 7
+};
 enum { CMD_SPECIFY = 3, CMD_SEEK = 15, CMD_READ = 0xE6 };
 
-static void wait_msr(uint8_t mask, uint8_t val) {
+static void wait_msr(uint8_t mask, uint8_t val)
+{
     for (int i = 0; i < 1000; i++) {
-        if ((arch::inb(FDC_BASE + MSR) & mask) == val) return;
+        if ((arch::inb(FDC_BASE + MSR) & mask) == val)
+            return;
     }
 }
 
-void floppy_init() {
+void floppy_init()
+{
     arch::outb(FDC_BASE + DOR, 0x00);
     wait_msr(0x80, 0x80);
     arch::outb(FDC_BASE + DOR, 0x0C);
@@ -25,8 +38,11 @@ void floppy_init() {
     arch::outb(FDC_BASE + FIFO, 0x02);
 }
 
-int floppy_read_sector(uint8_t head, uint8_t track, uint8_t sector, uint8_t* buf_512) {
-    if (!buf_512) return -1;
+int floppy_read_sector(uint8_t head, uint8_t track, uint8_t sector,
+                       uint8_t* buf_512)
+{
+    if (!buf_512)
+        return -1;
     wait_msr(0x80, 0x80);
     arch::outb(FDC_BASE + DOR, 0x1C);
     arch::outb(FDC_BASE + FIFO, CMD_SEEK);
@@ -52,4 +68,4 @@ int floppy_read_sector(uint8_t head, uint8_t track, uint8_t sector, uint8_t* buf
     return 0;
 }
 
-}
+} // namespace dev

@@ -5,12 +5,13 @@
 #include "sched/sched.hpp"
 #include <stdint.h>
 
-namespace syscall {
+namespace syscall
+{
 
-SyscallResult sys_getpid_impl(const SyscallArgs* args) {
+SyscallResult sys_getpid_impl(const SyscallArgs* args)
+{
     (void)args;
     return (SyscallResult)sched::current_pid();
 }
 
 } // namespace syscall
-

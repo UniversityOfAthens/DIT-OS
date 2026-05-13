@@ -6,14 +6,16 @@
 #include "syscall/syscall_defs.hpp"
 #include <stdint.h>
 
-namespace syscall {
+namespace syscall
+{
 
-extern SyscallResult sys_open_impl(const SyscallArgs *args);
+extern SyscallResult sys_open_impl(const SyscallArgs* args);
 
-static int copy_user_path(uintptr_t uptr, char *out, uint32_t cap) {
+static int copy_user_path(uintptr_t uptr, char* out, uint32_t cap)
+{
     if (!out || cap < 2)
         return -EINVAL;
-    const volatile char *p = (const volatile char *)uptr;
+    const volatile char* p = (const volatile char*)uptr;
     for (uint32_t i = 0; i < cap - 1; i++) {
         char c = p[i];
         out[i] = c;
@@ -24,13 +26,14 @@ static int copy_user_path(uintptr_t uptr, char *out, uint32_t cap) {
     return -EINVAL;
 }
 
-SyscallResult sys_open_impl(const SyscallArgs *args) {
+SyscallResult sys_open_impl(const SyscallArgs* args)
+{
     char path[256];
     int pe = copy_user_path(args->args[0], path, sizeof(path));
     if (pe != 0)
         return pe;
 
-    fs::file *f = fs::vfs_open(path, 0);
+    fs::file* f = fs::vfs_open(path, 0);
     if (!f)
         return -ENOENT;
 

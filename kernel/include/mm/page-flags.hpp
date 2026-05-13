@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace mm {
+namespace mm
+{
 
 using page_flags_t = uint32_t;
 

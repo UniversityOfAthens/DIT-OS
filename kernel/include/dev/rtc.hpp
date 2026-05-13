@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 struct RtcTime {
     uint8_t second, minute, hour;
@@ -12,8 +13,8 @@ struct RtcTime {
 };
 
 void rtc_init();
-void rtc_read(RtcTime *out);
+void rtc_read(RtcTime* out);
 uint8_t rtc_read_reg(uint8_t reg);
 
-}
+} // namespace dev
 #endif

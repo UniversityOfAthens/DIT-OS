@@ -1,4 +1,5 @@
-/** DIT-OS Kernel - Default build configuration (used when config.hpp not generated). */
+/** DIT-OS Kernel - Default build configuration (used when config.hpp not
+ * generated). */
 #ifndef KERNEL_KCONFIG_DEFAULTS_HPP
 #define KERNEL_KCONFIG_DEFAULTS_HPP
 

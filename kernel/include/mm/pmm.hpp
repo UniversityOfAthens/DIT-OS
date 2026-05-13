@@ -4,14 +4,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
-namespace mm {
+namespace mm
+{
 
 // Physical frame (page) allocator
 // All addresses are physical.
 
 void pmm_init();
-void *pmm_alloc(size_t num_pages);
-void pmm_free(void *physical, size_t num_pages);
+void* pmm_alloc(size_t num_pages);
+void pmm_free(void* physical, size_t num_pages);
 
 // Optional: get total / free frame count (stub may return 0)
 size_t pmm_total_frames();
