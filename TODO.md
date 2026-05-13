@@ -394,30 +394,228 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 
 ---
 
-## HIGH-LEVEL ROADMAP
+## PRODUCTION-LEVEL ROADMAP
 
-### Phase 1: Stabilize (current bugs)
-1. Fix critical bugs (kernel truncation, stack init order, duplicate outb, interrupt UB)
-2. Fix build system (cross-compiler, clang-format, shell scripts)
-3. Fix bootloader constants and bugs
-4. Add `copy_from_user`/`copy_to_user` for security
+### Phase 1: Stabilize (current bugs — priority)
+- [ ] Add `copy_from_user`/`copy_to_user` for syscall security
+- [ ] Fix heap_free to actually free memory (slab/buddy allocator)
+- [ ] Implement proper VMM with page fault handling and demand paging
+- [ ] Standardize cross-compiler toolchain (i686-elf-*) in all build paths
+- [ ] Fix shell scripts with `set -euo pipefail`
+- [ ] Export Mutex struct to header
+- [ ] Fix `.clang-format` and run as part of CI
 
-### Phase 2: Core expansion
-5. Implement remaining basic syscalls (fork, exec, waitpid, brk, stat)
-6. Implement proper heap allocator with free
-7. Implement proper VMM with page fault handling
-8. Add buffer cache and ext2 filesystem
+### Phase 2: POSIX Core — Process model & syscalls
+- [ ] Implement fork() with proper address space cloning
+- [ ] Implement execve() with ELF loader for user binaries
+- [ ] Implement waitpid() for process lifecycle
+- [ ] Implement brk()/mmap()/munmap() for heap management
+- [ ] Implement stat()/fstat() for file metadata
+- [ ] Implement kill() and signal delivery
+- [ ] Implement ioctl() for device control
+- [ ] Implement pipe() and FIFO for inter-process communication
+- [ ] Full POSIX signal handling (sigaction, sigpending, sigsuspend)
+- [ ] POSIX timers (setitimer, nanosleep)
+- [ ] Shared memory (shmget, shmat, shmdt)
 
-### Phase 3: Userland separation
-9. Separate userland into ring 3 with proper page table isolation
-10. Implement ELF loader for user binaries
-11. Build full libc
-12. Add shell parsing, I/O redirection, pipes
+### Phase 3: Memory Management
+- [ ] Slab allocator for small kernel objects
+- [ ] Buddy allocator for physical page management
+- [ ] Demand paging with page fault handler
+- [ ] Swap space and swap file support
+- [ ] Memory-mapped files (mmap of regular files)
+- [ ] mprotect() for per-page permissions
+- [ ] mlock/munlock for wired pages
+- [ ] NUMA-aware allocations
+- [ ] Per-CPU page allocator
+- [ ] Huge pages (2MiB / 1GiB)
+- [ ] OOM killer
+- [ ] /proc/meminfo, /proc/pagetypeinfo
 
-### Phase 4: Advanced features
-13. SMP support
-14. APIC interrupt controller
-15. Network stack
-16. USB subsystem
-17. ISO boot with GRUB/Limine
-18. Testing infrastructure
+### Phase 4: Storage & Filesystems
+- [ ] Buffer cache layer
+- [ ] Block device abstraction (request queue, I/O scheduler)
+- [ ] Deadline / CFQ / noop I/O schedulers
+- [ ] ext2 filesystem (read+write)
+- [ ] FAT32 filesystem (read+write)
+- [ ] ISO9660 filesystem (read-only)
+- [ ] tmpfs
+- [ ] devfs (/dev/null, /dev/zero, /dev/random, /dev/tty, etc.)
+- [ ] procfs (/proc/self, /proc/cpuinfo, /proc/meminfo, /proc/pid/)
+- [ ] sysfs device model
+- [ ] Filesystem journaling (ext3-style)
+- [ ] Disk encryption (dm-crypt / LUKS-style)
+- [ ] Logical Volume Manager (LVM-style)
+- [ ] RAID (mdadm-style — 0, 1, 5, 6, 10)
+- [ ] Mount namespaces
+- [ ] Quotas
+
+### Phase 5: Userland Environment
+- [ ] User/kernel privilege separation (ring 3)
+- [ ] Separate page tables per process
+- [ ] Full POSIX libc (stdio, stdlib, string, unistd, signal, time, math, locale)
+- [ ] Dynamic linker (ld.so) for shared libraries
+- [ ] crt0 with BSS clear, argc/argv, proper exit
+- [ ] Init system (PID 1 that reaps orphans)
+- [ ] Service manager (launch daemons, dependencies, supervision)
+- [ ] Login manager (getty, login, session management)
+- [ ] Device manager (udev-style — hotplug, dev node creation)
+- [ ] D-Bus for inter-process communication
+- [ ] System logging (syslog / journald-style)
+
+### Phase 6: Security & Isolation
+- [ ] ASLR (kernel + user space)
+- [ ] KASLR (kernel base address randomization)
+- [ ] Stack canaries (compiler -fstack-protector)
+- [ ] SMEP/SMAP (supervisor-mode execution prevention / access prevention)
+- [ ] NX bit (non-executable stack and pages)
+- [ ] IOMMU (VT-d) for device isolation
+- [ ] Secure Boot + UEFI verification
+- [ ] Signed kernel modules
+- [ ] SELinux / AppArmor LSM-style mandatory access control
+- [ ] Control Flow Integrity (CFI) / IBT
+- [ ] seccomp for syscall filtering
+- [ ] Namespaces (PID, mount, network, user, cgroup)
+- [ ] cgroups v2 for resource limits (CPU, memory, I/O)
+- [ ] Capabilities (POSIX 1e capabilities)
+- [ ] Encrypted swap
+- [ ] Kernel lockdown (lockdown=confidentiality/integrity)
+
+### Phase 7: Networking Stack
+- [ ] Network interface abstraction layer
+- [ ] Ethernet driver framework
+- [ ] Loopback device
+- [ ] ARP protocol
+- [ ] IPv4 stack (routing, fragmentation, options)
+- [ ] ICMP (ping, error reporting)
+- [ ] UDP (sockets, sendto/recvfrom)
+- [ ] TCP (sockets, connect/accept, flow control, congestion control)
+- [ ] BSD socket API (socket, bind, listen, accept, connect)
+- [ ] DNS resolver (stub resolver)
+- [ ] DHCP client
+- [ ] NTP client
+- [ ] Firewall (netfilter-style packet filtering)
+- [ ] Network bridge / VLAN
+- [ ] WireGuard VPN
+- [ ] TLS (mbedTLS / BearSSL-style)
+- [ ] NIC drivers (e1000, rtl8139, virtio-net)
+
+### Phase 8: Device Drivers
+- [ ] AHCI/SATA (proper MMIO, not port I/O)
+- [ ] NVMe driver (proper)
+- [ ] USB 2.0 (EHCI) + USB 3.0 (xHCI)
+- [ ] USB HUB driver
+- [ ] USB HID (keyboard, mouse, gamepad)
+- [ ] USB mass storage
+- [ ] GPU — VBE framebuffer (vesafb)
+- [ ] GPU — simple DRM/KMS driver (bochs, virtio-gpu, vmware-svga)
+- [ ] GPU — 2D acceleration, modesetting
+- [ ] Audio (AC97, HDA, SoundBlaster 16)
+- [ ] ATA PIO improvements (error handling, DMA)
+- [ ] Floppy driver cleanup
+- [ ] PS/2 mouse (full protocol)
+- [ ] RTC alarm support
+- [ ] ACPI (AML interpreter, power management, sleep states)
+- [ ] SMBIOS / DMI reading
+
+### Phase 9: Multi-Processor & Concurrency
+- [ ] SMP boot (APIC, SIPI, trampoline)
+- [ ] Local APIC timer (per-CPU timer)
+- [ ] I/O APIC interrupt routing
+- [ ] Per-CPU run queues
+- [ ] Spinlocks with proper memory ordering
+- [ ] Reader-writer locks
+- [ ] RCU (Read-Copy-Update)
+- [ ] Lock-free data structures (lockless lists, queues)
+- [ ] CPU hotplug
+- [ ] Scheduler — CFS (Completely Fair Scheduler)
+- [ ] Scheduler — real-time priorities (FIFO, RR)
+- [ ] Scheduler — load balancing across CPUs
+- [ ] Scheduler — deadline scheduler
+- [ ] CPU frequency scaling (cpufreq)
+- [ ] CPU idle states (cpuidle)
+
+### Phase 10: Reliability & Debugging
+- [ ] Kernel crash dumps (kdump-style)
+- [ ] Stack unwinder (DWARF / frame pointer based)
+- [ ] GDB stub (kgdb-style)
+- [ ] ftrace / tracepoints
+- [ ] eBPF bytecode verifier + runtime
+- [ ] perf — performance counters
+- [ ] Error Decode (EDAC) for memory errors
+- [ ] Watchdog timer (hardware + software)
+- [ ] Filesystem consistency checker (fsck)
+- [ ] Journal recovery
+- [ ] Liveness / hung task detection
+- [ ] Lockdep-style deadlock detection
+- [ ] kmemleak (kernel memory leak detector)
+- [ ] KASAN (kernel address sanitizer)
+- [ ] UBSAN (undefined behavior sanitizer)
+
+### Phase 11: Virtualization
+- [ ] KVM hypervisor support (KVM-on-xxx)
+- [ ] VirtIO — block device
+- [ ] VirtIO — network device
+- [ ] VirtIO — GPU
+- [ ] VirtIO — input (keyboard/mouse)
+- [ ] VirtIO — balloon (memory overcommit)
+- [ ] Para-virtualized clock
+- [ ] Hyper-V enlightenments
+- [ ] VMware backdoor interface
+
+### Phase 12: Performance Optimization
+- [ ] Multi-queue block I/O (blk-mq)
+- [ ] Per-CPU page cache
+- [ ] Read-ahead for sequential reads
+- [ ] Writeback throttling
+- [ ] Large folios for page cache
+- [ ] Zero-copy networking (sendfile, splice)
+- [ ] TCP segmentation offload (TSO)
+- [ ] Receive-side scaling (RSS)
+- [ ] Fine-grained kernel locking
+- [ ] Preemptible kernel (CONFIG_PREEMPT)
+- [ ] Interrupt threading
+- [ ] Benchmark suite (lmbench, hackbench, will-it-scale)
+
+### Phase 13: Firmware & Platform
+- [ ] UEFI runtime services (SetVariable, GetTime, etc.)
+- [ ] ACPI AML bytecode interpreter
+- [ ] Power management (suspend-to-RAM, hibernate)
+- [ ] PCI Express (AER, hotplug, SR-IOV)
+- [ ] ATA / SCSI pass-through
+- [ ] NVDIMM / persistent memory
+- [ ] x86 platform drivers (Samsung, Lenovo, Dell specific)
+- [ ] Microcode loading
+- [ ] SMBIOS table parsing
+- [ ] Device tree support (for non-x86)
+- [ ] ARM64 architecture port
+
+### Phase 14: Tooling & Infrastructure
+- [ ] Unit test framework (kunit-style)
+- [ ] Integration tests (QEMU smoke tests)
+- [ ] Coverage reporting (gcov)
+- [ ] Kconfig / menuconfig build configuration
+- [ ] ISOLINUX/GRUB/Limine boot support
+- [ ] Bootable ISO generation
+- [ ] initramfs / initrd support
+- [ ] Package manager for userland
+- [ ] Cross-compiler build scripts (crosstool-NG style)
+- [ ] Docker / container support (via namespaces + cgroups)
+- [ ] Self-hosted build (building DIT-OS on DIT-OS)
+- [ ] CI/CD with QEMU boot tests on every commit
+- [ ] Debuginfod / symbol server
+- [ ] Documentation site (architecture, API, driver writing)
+- [ ] Coding style checker in CI
+
+### Phase 15: Production Hardening
+- [ ] Kernel lives in a separate address space (higher-half kernel)
+- [ ] Kernel page table isolation (KPTI) for Meltdown mitigation
+- [ ] Retpolines / IBRS / IBPB for Spectre mitigation
+- [ ] GFNI/VAES acceleration for crypto
+- [ ] Random seed early supply (RDRAND, RDSEED)
+- [ ] Credential / security model for users
+- [ ] ACL / extended attributes
+- [ ] POSIX 1003.1e capabilities
+- [ ] Audit subsystem (auditd-compatible)
+- [ ] TPM 2.0 integration (measure boot, key storage)
+- [ ] Full POSIX conformance certification target

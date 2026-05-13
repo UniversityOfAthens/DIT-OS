@@ -15,15 +15,15 @@ Task* task_create(void (*entry)(), uint32_t* stack, uint32_t stack_size)
         return nullptr;
     uint32_t* sp = stack + stack_size / sizeof(uint32_t);
     sp--;
-    *sp = 0; // EBX (popped 4th by context.asm)
+    *sp = (uint32_t)entry; // EIP (popped LAST by ret = highest addr)
+    sp--;
+    *sp = 0; // EBX (popped 4th)
     sp--;
     *sp = 0; // EBP (popped 3rd)
     sp--;
     *sp = 0; // ESI (popped 2nd)
     sp--;
-    *sp = 0; // EDI (popped 1st)
-    sp--;
-    *sp = (uint32_t)entry; // EIP (popped by ret)
+    *sp = 0; // EDI (popped 1st = lowest addr = final sp)
     Task* t = (Task*)mm::heap_alloc(sizeof(Task));
     if (!t)
         return nullptr;

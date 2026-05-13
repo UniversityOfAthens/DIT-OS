@@ -28,26 +28,30 @@ jobs:
       - name: Run QEMU boot smoke test
         run: |
           set -euo pipefail
-          # Boot to shell, verify kernel prints, run 'help' then 'exit'
-          (sleep 3; printf "help\n"; sleep 1; printf "exit\n"; sleep 1) | \
-            timeout 30 qemu-system-i386 \
+          (sleep 3; printf "1\n"; sleep 6; printf "echo OK\n"; sleep 2; \
+           printf "exit\n"; sleep 2) | \
+            timeout 35 qemu-system-i386 \
             -accel tcg,thread=single \
             -drive format=raw,file=bootloader/build/disk.img,index=0,if=floppy \
             -display none -serial mon:stdio -no-reboot -m 32M 2>&1 | \
             tee /tmp/smoke-output.log
 
-          echo "=== Checking for kernel startup ==="
+          echo "=== Smoke test checks ==="
           grep -q "DIT-OS Kernel" /tmp/smoke-output.log && echo "PASS: Kernel started" || {
             echo "FAIL: Kernel did not start"
+            cat /tmp/smoke-output.log
             exit 1
           }
-
-          echo "=== Checking for shell ==="
-          grep -q "shell" /tmp/smoke-output.log && echo "PASS: Shell reached" || {
-            echo "FAIL: Shell not reached"
+          grep -q "user@dit" /tmp/smoke-output.log && echo "PASS: Shell prompt visible" || {
+            echo "FAIL: Shell prompt not found"
+            cat /tmp/smoke-output.log
             exit 1
           }
-
+          grep -q "OK" /tmp/smoke-output.log && echo "PASS: Echo command executed" || {
+            echo "FAIL: Echo command failed"
+            cat /tmp/smoke-output.log
+            exit 1
+          }
           echo "=== Smoke test passed ==="
 
 

@@ -5,6 +5,7 @@
 #include "syscall/fd.hpp"
 #include "fs/vfs.hpp"
 #include "dev/serial.hpp"
+#include "sched/sched.hpp"
 #include "errno_defs.hpp"
 #include <stdint.h>
 
@@ -27,6 +28,7 @@ SyscallResult sys_read_impl(const SyscallArgs* args)
         while (n < (int)count) {
             int c = dev::serial_getchar(0);
             if (c < 0) {
+                sched::maybe_yield();
                 __asm__ volatile("pause");
                 continue;
             }

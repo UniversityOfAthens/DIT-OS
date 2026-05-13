@@ -48,21 +48,32 @@ jobs:
             exit 1
           }
 
-      - name: QEMU smoke test
+      - name: QEMU smoke test (boot → shell → echo → exit)
         run: |
           set -euo pipefail
-          # Boot QEMU, wait for shell prompt, run a command, verify output
-          EXPECTED="DIT-OS Kernel"
-          echo "Expected kernel message: $EXPECTED"
-          (sleep 3; printf "help\n"; sleep 1; printf "exit\n"; sleep 1) | \
-            timeout 30 qemu-system-i386 \
+          # Boot sequence: select menu option 1, wait for shell, run echo, exit
+          (sleep 3; printf "1\n"; sleep 6; printf "echo HELLO\n"; sleep 2; \
+           printf "exit\n"; sleep 2) | \
+            timeout 35 qemu-system-i386 \
             -accel tcg,thread=single \
             -drive format=raw,file=bootloader/build/disk.img,index=0,if=floppy \
             -display none -serial mon:stdio -no-reboot -m 32M 2>&1 | \
-            tee /tmp/qemu-output.log | \
-            grep -q "$EXPECTED" && echo "QEMU smoke test PASSED" || {
-              echo "=== QEMU output: ==="
-              cat /tmp/qemu-output.log
-              echo "QEMU smoke test FAILED — kernel message not found"
-              exit 1
-            }
+            tee /tmp/qemu-output.log
+
+          echo "=== Smoke test checks ==="
+          grep -q "DIT-OS Kernel" /tmp/qemu-output.log && echo "PASS: Kernel started" || {
+            echo "FAIL: Kernel did not start"
+            cat /tmp/qemu-output.log
+            exit 1
+          }
+          grep -q "HELLO" /tmp/qemu-output.log && echo "PASS: Shell processed echo command" || {
+            echo "FAIL: Shell did not process command"
+            cat /tmp/qemu-output.log
+            exit 1
+          }
+          grep -q "Bye" /tmp/qemu-output.log && echo "PASS: Shell exit succeeded" || {
+            echo "FAIL: Shell did not exit cleanly"
+            cat /tmp/qemu-output.log
+            exit 1
+          }
+          echo "=== QEMU smoke test PASSED ==="

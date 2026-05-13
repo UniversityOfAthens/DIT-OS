@@ -12,6 +12,7 @@ namespace sched
 Task* current_task = nullptr;
 Task* run_queue_head = nullptr;
 Task* idle_task = nullptr;
+volatile uint32_t s_need_resched = 0;
 
 static Task s_idle;
 static uint32_t s_idle_stack[256];
@@ -84,8 +85,9 @@ void sched_start(void (*init_entry)())
     (void)init_entry;
     dev::serial_puts("\r\n[sched] start: current=idle, schedule()\r\n");
     current_task = idle_task;
-    schedule();
-    dev::serial_puts("\r\n[sched] start: after schedule (unexpected)\r\n");
+    for (;;) {
+        schedule();
+    }
 }
 
 void schedule()
@@ -99,9 +101,15 @@ void schedule()
         return;
     Task* prev = current_task;
     current_task = next;
-    dev::serial_puts("\r\n[sched] switch_to\r\n");
     switch_to(prev, next);
-    dev::serial_puts("\r\n[sched] switch_to returned\r\n");
+}
+
+void maybe_yield()
+{
+    if (s_need_resched) {
+        s_need_resched = 0;
+        schedule();
+    }
 }
 
 } // namespace sched

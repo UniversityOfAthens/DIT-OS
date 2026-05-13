@@ -128,13 +128,10 @@ extern "C" void kernel_main()
 {
     boot::early_init();
 
-    /* Early serial so something appears with QEMU -display none -serial
-     * mon:stdio */
     dev::serial_init();
     dev::serial_puts("\r\nDIT-OS Kernel starting...\r\n");
 
     gfx::vga_clear(gfx::vga_attr(gfx::VGA_BLACK, gfx::VGA_BLACK));
-
     cursor_x = 0;
     cursor_y = 0;
 
@@ -195,13 +192,12 @@ extern "C" void kernel_main()
     dev::serial_puts("\r\n[main] before sched_init\r\n");
     sched::sched_init();
     dev::serial_puts("\r\n[main] before ramfs::init\r\n");
-    ramfs::init(); /* mount minimal root filesystem at '/' (needs heap from
-                      sched_init) */
+    ramfs::init();
     dev::serial_puts("\r\n[main] ramfs::init done\r\n");
-    dev::serial_puts(
-        "\r\n[main] before sched_start (sti done inside sched_start)\r\n");
-    sched::sched_start(
-        nullptr); /* does not return; enables interrupts and runs init task */
+    dev::serial_puts("\r\n[main] enabling interrupts\r\n");
+    __asm__ volatile("sti");
+    dev::serial_puts("\r\n[main] before sched_start\r\n");
+    sched::sched_start(nullptr);
     dev::serial_puts("\r\n[main] after sched_start (unexpected)\r\n");
     for (;;)
         asm volatile("hlt");
@@ -211,7 +207,7 @@ extern "C" void interrupt_handler(uint32_t vector)
 {
     if (vector == arch::IRQ_BASE + 0) {
         dev::timer_tick();
-        sched::schedule();
+        sched::s_need_resched = 1;
         return;
     }
     print("\n[ERROR] Interrupt! Vector: ");
