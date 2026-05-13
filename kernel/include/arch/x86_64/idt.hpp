@@ -3,10 +3,11 @@
 
 #include <stdint.h>
 
-namespace arch {
+namespace arch
+{
 
 // Exception vectors (0-31)
-constexpr int IRQ_BASE = 32;  // IRQ 0-15 map to 32-47
+constexpr int IRQ_BASE = 32; // IRQ 0-15 map to 32-47
 
 void idt_init();
 void idt_load();

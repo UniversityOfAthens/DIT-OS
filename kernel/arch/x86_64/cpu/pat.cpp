@@ -4,6 +4,9 @@
 
 #include <stdint.h>
 
-namespace arch {
-void pat_init() {}
+namespace arch
+{
+void pat_init()
+{
+}
 } // namespace arch

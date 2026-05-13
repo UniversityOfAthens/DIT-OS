@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 void keyboard_init();
 int keyboard_get_scancode();

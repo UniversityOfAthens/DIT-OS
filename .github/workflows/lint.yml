@@ -1,0 +1,54 @@
+name: Lint
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Check C++/C formatting
+        run: |
+          set -euo pipefail
+          SOURCES=$(find kernel bootloader userland -type f \
+            \( -name "*.cpp" -o -name "*.hpp" -o -name "*.c" -o -name "*.h" \) \
+            -not -path "*/build/*" \
+            -not -path "*/.git/*" | sort)
+          # Dry-run: print names of files that would change
+          clang-format --dry-run -Werror $SOURCES 2>&1 && echo "Style check PASSED" || {
+            echo "Style check FAILED — run 'clang-format -i' on the files above"
+            exit 1
+          }
+
+  asm-style:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check NASM source conventions
+        run: |
+          set -euo pipefail
+          BAD=0
+          for f in $(find bootloader kernel -name "*.asm" -not -path "*/build/*"); do
+            # Check bits directive present
+            if ! head -20 "$f" | grep -q "[BITS]"; then
+              echo "MISSING BITS directive: $f"
+              BAD=$((BAD+1))
+            fi
+          done
+          if [ "$BAD" -gt 0 ]; then
+            echo "Found $BAD assembly files missing BITS directive"
+            exit 1
+          fi
+          echo "NASM style check PASSED"

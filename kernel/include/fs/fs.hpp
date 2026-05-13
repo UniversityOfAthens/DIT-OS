@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace fs {
+namespace fs
+{
 
 struct superblock;
 struct inode;
@@ -12,10 +13,10 @@ struct file;
 
 /** Filesystem type: name and ops to mount/read superblock */
 struct fs_type {
-    const char*     name;
-    int             (*get_sb)(fs_type* type, const char* dev, void* data, superblock** out);
-    void            (*kill_sb)(superblock* sb);
-    fs_type*        next;
+    const char* name;
+    int (*get_sb)(fs_type* type, const char* dev, void* data, superblock** out);
+    void (*kill_sb)(superblock* sb);
+    fs_type* next;
 };
 
 /** Register a filesystem type */

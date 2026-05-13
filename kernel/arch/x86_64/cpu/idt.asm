@@ -57,12 +57,14 @@ isr_common:
     mov es, ax
     mov fs, ax
     mov gs, ax
-    mov eax, [esp + 52]
-    mov ebx, [esp + 56]
-    push ebx
-    push eax
+    mov eax, [esp + 48]   ; vector (after pusha=32 + segments=16 = 48 bytes)
+    mov ebx, [esp + 52]   ; error_code
+    lea ecx, [esp + 16]   ; regs pointer (pusha block starts after 4 segment regs)
+    push ecx               ; regs (3rd arg)
+    push ebx               ; error_code (2nd arg)
+    push eax               ; vector (1st arg)
     call interrupt_dispatch
-    add esp, 8
+    add esp, 12
     pop gs
     pop fs
     pop es

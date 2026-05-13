@@ -10,7 +10,8 @@
 #include "fs/stat.hpp"
 #include "fs/fcntl.hpp"
 
-namespace fs {
+namespace fs
+{
 
 struct dirent;
 
@@ -19,23 +20,24 @@ struct dirent;
 /** Open by path; returns file* or nullptr on error (errno set) */
 file* vfs_open(const char* path, int flags);
 /** Close and release file */
-void  vfs_close(file* f);
+void vfs_close(file* f);
 /** Read from file; return bytes read or negative errno */
-int   vfs_read(file* f, void* buf, uint32_t size);
+int vfs_read(file* f, void* buf, uint32_t size);
 /** Write to file; return bytes written or negative errno */
-int   vfs_write(file* f, const void* buf, uint32_t size);
+int vfs_write(file* f, const void* buf, uint32_t size);
 /** Seek; return new position or negative errno */
 int64_t vfs_lseek(file* f, int64_t offset, int whence);
 
 /** Get inode for path; caller must release inode */
 inode* vfs_path_lookup(const char* path, dentry** out_dentry);
 /** Stat by path */
-int   vfs_stat(const char* path, struct stat* st);
+int vfs_stat(const char* path, struct stat* st);
 
 /** Read one directory entry (directories only); see FileOps::readdir */
-int   vfs_readdir(file* f, dirent* de);
+int vfs_readdir(file* f, dirent* de);
 /** Mount a filesystem */
-int   vfs_mount(const char* dev, const char* path, const char* fstype, void* data);
+int vfs_mount(const char* dev, const char* path, const char* fstype,
+              void* data);
 
 } // namespace fs
 

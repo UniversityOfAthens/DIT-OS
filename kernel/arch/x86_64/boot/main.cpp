@@ -5,10 +5,10 @@
 #include <stdint.h>
 
 // Kernel version
-const char *kernel_version = "DIT-OS 0.1.0";
+const char* kernel_version = "DIT-OS 0.1.0";
 
 // Simple VGA text buffer
-volatile uint16_t *vga_buffer = (uint16_t *)0xB8000;
+volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;
 const int VGA_WIDTH = 80;
 const int VGA_HEIGHT = 25;
 
@@ -34,15 +34,18 @@ enum vga_color {
     VGA_COLOR_WHITE = 15,
 };
 
-uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) {
+uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)
+{
     return fg | (bg << 4);
 }
 
-uint16_t vga_entry(unsigned char c, uint8_t color) {
+uint16_t vga_entry(unsigned char c, uint8_t color)
+{
     return (uint16_t)c | (uint16_t)(color << 8);
 }
 
-void print(const char *str) {
+void print(const char* str)
+{
     while (*str) {
         if (*str == '\n') {
             cursor_y++;
@@ -72,8 +75,9 @@ void print(const char *str) {
     }
 }
 
-void print_hex(uint32_t val) {
-    const char *hex = "0123456789ABCDEF";
+void print_hex(uint32_t val)
+{
+    const char* hex = "0123456789ABCDEF";
     char buf[11] = "0x00000000";
 
     for (int i = 0; i < 8; i++) {
@@ -83,18 +87,22 @@ void print_hex(uint32_t val) {
     print(buf);
 }
 
-namespace boot {
+namespace boot
+{
 void early_init();
 }
-namespace arch {
+namespace arch
+{
 void cpu_early_init();
 void tss_set_kernel_stack(uint32_t esp0);
 void pic_unmask(uint8_t);
 } // namespace arch
-namespace syscall {
+namespace syscall
+{
 void init();
 }
-namespace ramfs {
+namespace ramfs
+{
 void init();
 }
 #include "arch/x86_64/idt.hpp"
@@ -106,25 +114,24 @@ void init();
 #include "graphics/vga.hpp"
 #include "sched/sched.hpp"
 
-extern "C" uint32_t kernel_stack_top;
+extern "C" uint32_t kernel_stack_top[];
 
 /* Print to both VGA and serial (so -display none -serial mon:stdio shows full
  * boot) */
-static void print_both(const char *str) {
+static void print_both(const char* str)
+{
     print(str);
     dev::serial_puts(str);
 }
 
-extern "C" void kernel_main() {
+extern "C" void kernel_main()
+{
     boot::early_init();
 
-    /* Early serial so something appears with QEMU -display none -serial
-     * mon:stdio */
     dev::serial_init();
     dev::serial_puts("\r\nDIT-OS Kernel starting...\r\n");
 
     gfx::vga_clear(gfx::vga_attr(gfx::VGA_BLACK, gfx::VGA_BLACK));
-
     cursor_x = 0;
     cursor_y = 0;
 
@@ -137,7 +144,7 @@ extern "C" void kernel_main() {
 
     print_both("[*] CPU init (GDT, IDT, TSS, PIC)...\n");
     arch::cpu_early_init();
-    arch::tss_set_kernel_stack(kernel_stack_top);
+    arch::tss_set_kernel_stack((uint32_t)kernel_stack_top);
     syscall::init();
     print_both("[OK] CPU management ready\n\n");
 
@@ -185,22 +192,22 @@ extern "C" void kernel_main() {
     dev::serial_puts("\r\n[main] before sched_init\r\n");
     sched::sched_init();
     dev::serial_puts("\r\n[main] before ramfs::init\r\n");
-    ramfs::init(); /* mount minimal root filesystem at '/' (needs heap from
-                      sched_init) */
+    ramfs::init();
     dev::serial_puts("\r\n[main] ramfs::init done\r\n");
-    dev::serial_puts(
-        "\r\n[main] before sched_start (sti done inside sched_start)\r\n");
-    sched::sched_start(
-        nullptr); /* does not return; enables interrupts and runs init task */
+    dev::serial_puts("\r\n[main] enabling interrupts\r\n");
+    __asm__ volatile("sti");
+    dev::serial_puts("\r\n[main] before sched_start\r\n");
+    sched::sched_start(nullptr);
     dev::serial_puts("\r\n[main] after sched_start (unexpected)\r\n");
     for (;;)
         asm volatile("hlt");
 }
 
-extern "C" void interrupt_handler(uint32_t vector) {
+extern "C" void interrupt_handler(uint32_t vector)
+{
     if (vector == arch::IRQ_BASE + 0) {
         dev::timer_tick();
-        sched::schedule();
+        sched::s_need_resched = 1;
         return;
     }
     print("\n[ERROR] Interrupt! Vector: ");

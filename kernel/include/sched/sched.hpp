@@ -4,9 +4,11 @@
 #include <stdint.h>
 #include "sched/task.hpp"
 
-namespace sched {
+namespace sched
+{
 
-/** Switch from prev to next (saves prev's context, restores next's). Never returns to caller when switching to next. */
+/** Switch from prev to next (saves prev's context, restores next's). Never
+ * returns to caller when switching to next. */
 extern "C" void switch_to(Task* prev, Task* next);
 
 /** Current running task (set by scheduler) */
@@ -21,11 +23,17 @@ void run_queue_add(Task* t);
 /** Remove task from run queue; returns new head */
 Task* run_queue_remove(Task* t);
 
+/** Flag set by timer ISR, checked at safe points to invoke schedule() */
+extern volatile uint32_t s_need_resched;
+
 /** Pick next task from run queue (round-robin). Returns idle if none. */
 Task* schedule_next();
 
 /** Called every timer tick (and on yield): switch to next task if needed */
 void schedule();
+
+/** Check if reschedule is needed and yield if so (call from safe points) */
+void maybe_yield();
 
 /** Create a new task with entry_point and stack; add to run queue */
 Task* task_create(void (*entry)(), uint32_t* stack, uint32_t stack_size);

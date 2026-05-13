@@ -1,4 +1,5 @@
-/** DIT-OS Kernel - Auto-generated or default config. Include defaults then overrides. */
+/** DIT-OS Kernel - Auto-generated or default config. Include defaults then
+ * overrides. */
 #ifndef KERNEL_CONFIG_HPP
 #define KERNEL_CONFIG_HPP
 

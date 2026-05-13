@@ -7,7 +7,8 @@ STAGE2_LOAD      equ 0x1000     ; Stage2 load address
 KERNEL_LOAD      equ 0x100000   ; Kernel load address (1MB)
 ; Disk
 SECTOR_SIZE      equ 512
-STAGE2_SECTORS   equ 16          ; Adjust based on stage2 size
+STAGE2_SECTORS   equ 9           ; Actual: 9 sectors (matches Makefile)
+KERNEL_SECTORS   equ 200         ; Actual: ~167 sectors, 200 with headroom
 ; Video
 VIDEO_MEM        equ 0xB8000     ; Text mode video memory
 VIDEO_COLS       equ 80

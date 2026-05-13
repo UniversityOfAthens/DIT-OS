@@ -3,10 +3,11 @@
 
 #include <stdint.h>
 
-namespace gfx {
+namespace gfx
+{
 
 /** VGA text mode: 80x25, 16 colors, buffer at 0xB8000 */
-constexpr uint16_t VGA_WIDTH  = 80;
+constexpr uint16_t VGA_WIDTH = 80;
 constexpr uint16_t VGA_HEIGHT = 25;
 constexpr uintptr_t VGA_BUFFER_PHYS = 0xB8000;
 
@@ -31,12 +32,14 @@ enum VgaColor : uint8_t {
 };
 
 /** Build attribute byte: fg | (bg << 4) */
-inline uint8_t vga_attr(uint8_t fg, uint8_t bg) {
+inline uint8_t vga_attr(uint8_t fg, uint8_t bg)
+{
     return fg | (bg << 4);
 }
 
 /** Build 16-bit cell: char | (attr << 8) */
-inline uint16_t vga_cell(char c, uint8_t attr) {
+inline uint16_t vga_cell(char c, uint8_t attr)
+{
     return (uint16_t)(uint8_t)c | ((uint16_t)attr << 8);
 }
 

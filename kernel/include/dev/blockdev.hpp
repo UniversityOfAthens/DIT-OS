@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 /** Block device interface: fixed block size, read/write by block index */
 struct BlockDev {
@@ -14,7 +15,8 @@ struct BlockDev {
     /** Read one or more blocks. Return 0 on success, negative on error. */
     int (*read)(BlockDev* bdev, uint64_t block, uint32_t count, void* buf);
     /** Write one or more blocks. Return 0 on success, negative on error. */
-    int (*write)(BlockDev* bdev, uint64_t block, uint32_t count, const void* buf);
+    int (*write)(BlockDev* bdev, uint64_t block, uint32_t count,
+                 const void* buf);
     void* driver_data;
 };
 

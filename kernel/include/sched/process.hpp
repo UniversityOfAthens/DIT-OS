@@ -1,11 +1,13 @@
-/** DIT-OS Kernel - Process descriptor (parent/child tree, signals, exit status). */
+/** DIT-OS Kernel - Process descriptor (parent/child tree, signals, exit
+ * status). */
 #ifndef KERNEL_SCHED_PROCESS_HPP
 #define KERNEL_SCHED_PROCESS_HPP
 
 #include <stdint.h>
 #include "sched/signal.hpp"
 
-namespace sched {
+namespace sched
+{
 
 struct Task;
 

@@ -9,29 +9,35 @@
 #include <stdint.h>
 #include <stddef.h>
 
-namespace mm {
+namespace mm
+{
 
 static bool vmm_initialized;
 
-void vmm_init() {
+void vmm_init()
+{
     vmm_initialized = true;
 }
 
-int vmm_map(uint32_t vaddr, uint32_t paddr, size_t num_pages, uint32_t flags) {
+int vmm_map(uint32_t vaddr, uint32_t paddr, size_t num_pages, uint32_t flags)
+{
     (void)vaddr;
     (void)paddr;
     (void)num_pages;
     (void)flags;
-    if (!vmm_initialized) return -1;
+    if (!vmm_initialized)
+        return -1;
     return 0;
 }
 
-void vmm_unmap(uint32_t vaddr, size_t num_pages) {
+void vmm_unmap(uint32_t vaddr, size_t num_pages)
+{
     (void)vaddr;
     (void)num_pages;
 }
 
-uint32_t vmm_virt_to_phys(uint32_t vaddr) {
+uint32_t vmm_virt_to_phys(uint32_t vaddr)
+{
     (void)vaddr;
     return 0;
 }

@@ -7,12 +7,15 @@
 #include "syscall/syscall_table.hpp"
 #include "syscall/syscall_trace.hpp"
 
-namespace syscall {
+namespace syscall
+{
 
-/** Initialize syscall table and arch-specific syscall entry (e.g. MSR or int 0x80) */
+/** Initialize syscall table and arch-specific syscall entry (e.g. MSR or int
+ * 0x80) */
 void init();
 
-/** Entry from arch trap/syscall: num and args from user regs; returns value to put in return reg */
+/** Entry from arch trap/syscall: num and args from user regs; returns value to
+ * put in return reg */
 SyscallResult handle(uint32_t num, const SyscallArgs* args);
 
 /** Kernel-thread wrappers (no int 0x80) */

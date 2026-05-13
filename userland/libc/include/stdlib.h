@@ -4,10 +4,9 @@
 #include <stddef.h>
 
 void* malloc(size_t size);
-void  free(void* ptr);
+void free(void* ptr);
 
 // _exit wrapper (may be used for libc-style termination)
-void  _exit(int code);
+void _exit(int code);
 
 #endif
-

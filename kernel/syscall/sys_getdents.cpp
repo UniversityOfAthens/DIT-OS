@@ -7,22 +7,24 @@
 #include "syscall/syscall_defs.hpp"
 #include <stdint.h>
 
-namespace syscall {
+namespace syscall
+{
 
-extern SyscallResult sys_getdents_impl(const SyscallArgs *args);
+extern SyscallResult sys_getdents_impl(const SyscallArgs* args);
 
-SyscallResult sys_getdents_impl(const SyscallArgs *args) {
+SyscallResult sys_getdents_impl(const SyscallArgs* args)
+{
     int fd = (int)args->args[0];
     uintptr_t buf = (uintptr_t)args->args[1];
     uint32_t count = (uint32_t)args->args[2];
     if (count == 0)
         return 0;
 
-    fs::file *f = fd_get(fd);
+    fs::file* f = fd_get(fd);
     if (!f)
         return -EBADF;
 
-    uint8_t *p = (uint8_t *)buf;
+    uint8_t* p = (uint8_t*)buf;
     uint32_t off = 0;
     while (off + sizeof(fs::dirent) <= count) {
         fs::dirent de;
@@ -31,7 +33,7 @@ SyscallResult sys_getdents_impl(const SyscallArgs *args) {
             return r;
         if (r == 0)
             break;
-        const uint8_t *src = (const uint8_t *)&de;
+        const uint8_t* src = (const uint8_t*)&de;
         for (uint32_t i = 0; i < sizeof(fs::dirent); i++)
             p[off + i] = src[i];
         off += sizeof(fs::dirent);

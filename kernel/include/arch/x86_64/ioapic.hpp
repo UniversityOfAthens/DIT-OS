@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace arch {
+namespace arch
+{
 
 void ioapic_init();
 void ioapic_set_irq(uint8_t gsi, uint32_t vector, uint32_t flags);

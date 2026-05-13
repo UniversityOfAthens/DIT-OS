@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace arch {
+namespace arch
+{
 
 struct CpuidResult {
     uint32_t eax, ebx, ecx, edx;

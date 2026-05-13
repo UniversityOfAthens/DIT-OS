@@ -3,13 +3,14 @@
 
 #include "types.hpp"
 
-namespace boot {
+namespace boot
+{
 
 // ELF32 types
-constexpr u32 ELF_MAGIC = 0x464C457F;  // "\x7FELF"
+constexpr u32 ELF_MAGIC = 0x464C457F; // "\x7FELF"
 
 struct Elf32_Ehdr {
-    u8  e_ident[16];
+    u8 e_ident[16];
     u16 e_type;
     u16 e_machine;
     u32 e_version;
@@ -39,7 +40,7 @@ struct Elf32_Phdr {
 constexpr u32 PT_LOAD = 1;
 
 // Validate ELF and load segments to their p_vaddr
-bool elf_load(void *file, u32 size, u32 *entry_out);
+bool elf_load(void* file, u32 size, u32* entry_out);
 
 } // namespace boot
 

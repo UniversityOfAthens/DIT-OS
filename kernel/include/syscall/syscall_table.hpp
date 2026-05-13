@@ -5,9 +5,11 @@
 #include "syscall/syscall_defs.hpp"
 #include "syscall/syscall_numbers.hpp"
 
-namespace syscall {
+namespace syscall
+{
 
-/** Handler: (args) -> result. Implemented in kernel, called from arch trap/syscall entry */
+/** Handler: (args) -> result. Implemented in kernel, called from arch
+ * trap/syscall entry */
 using SyscallHandler = SyscallResult (*)(const SyscallArgs* args);
 
 /** Get handler for syscall number; nullptr if invalid */

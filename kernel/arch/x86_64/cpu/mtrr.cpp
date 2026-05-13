@@ -4,6 +4,9 @@
 
 #include <stdint.h>
 
-namespace arch {
-void mtrr_init() {}
+namespace arch
+{
+void mtrr_init()
+{
+}
 } // namespace arch

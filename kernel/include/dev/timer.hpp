@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 void timer_init();
 void timer_set_hz(uint32_t hz);

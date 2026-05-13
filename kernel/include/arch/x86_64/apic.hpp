@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace arch {
+namespace arch
+{
 
 // Stub: APIC detection/init (use PIC for now)
 bool apic_available();

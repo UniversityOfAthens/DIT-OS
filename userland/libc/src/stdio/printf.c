@@ -7,33 +7,42 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static void putc(char c) {
+static void putc(char c)
+{
     write(1, &c, 1);
 }
 
-static void puts_cstr(const char* s) {
-    if (!s) s = "(null)";
+static void puts_cstr(const char* s)
+{
+    if (!s)
+        s = "(null)";
     unsigned i = 0;
-    while (s[i]) i++;
+    while (s[i])
+        i++;
     write(1, s, i);
 }
 
-static void utoa(uint32_t v, unsigned base, char* out, unsigned* out_len) {
+static void utoa(uint32_t v, unsigned base, char* out, unsigned* out_len)
+{
     static const char digits[] = "0123456789abcdef";
     char tmp[16];
     unsigned n = 0;
-    if (v == 0) tmp[n++] = '0';
+    if (v == 0)
+        tmp[n++] = '0';
     while (v && n < sizeof(tmp)) {
         tmp[n++] = digits[v % base];
         v /= base;
     }
     unsigned k = 0;
-    for (unsigned i = 0; i < n; i++) out[k++] = tmp[n - 1 - i];
+    for (unsigned i = 0; i < n; i++)
+        out[k++] = tmp[n - 1 - i];
     *out_len = k;
 }
 
-int printf(const char* fmt, ...) {
-    if (!fmt) return 0;
+int printf(const char* fmt, ...)
+{
+    if (!fmt)
+        return 0;
     va_list ap;
     va_start(ap, fmt);
 
@@ -48,7 +57,8 @@ int printf(const char* fmt, ...) {
             continue;
         }
         p++;
-        if (!*p) break;
+        if (!*p)
+            break;
 
         if (*p == '%') {
             putc('%');
@@ -65,9 +75,11 @@ int printf(const char* fmt, ...) {
 
         if (*p == 's') {
             const char* s = va_arg(ap, const char*);
-            if (!s) s = "(null)";
+            if (!s)
+                s = "(null)";
             unsigned i = 0;
-            while (s[i]) i++;
+            while (s[i])
+                i++;
             write(1, s, i);
             written += i;
             continue;
@@ -112,4 +124,3 @@ int printf(const char* fmt, ...) {
     va_end(ap);
     return (int)written;
 }
-

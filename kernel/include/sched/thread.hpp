@@ -6,11 +6,13 @@
 #include "sched/task.hpp"
 #include "sched/process.hpp"
 
-namespace sched {
+namespace sched
+{
 
 /**
  * Thread: embeds Task for context switch; ties to Process.
- * Current kernel tasks use standalone Task*; Thread is the multi-threading shape.
+ * Current kernel tasks use standalone Task*; Thread is the multi-threading
+ * shape.
  */
 struct Thread {
     Task task;

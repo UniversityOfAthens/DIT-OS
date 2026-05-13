@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace core {
+namespace core
+{
 
 struct Module {
     const char* name;
@@ -15,6 +16,6 @@ void modules_init();
 unsigned int modules_count();
 const Module* module_get(unsigned int i);
 
-}
+} // namespace core
 
 #endif

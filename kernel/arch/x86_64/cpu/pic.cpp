@@ -9,9 +9,11 @@
 
 extern "C" void pic_send_eoi(uint8_t irq);
 
-namespace arch {
+namespace arch
+{
 
-void pic_init() {
+void pic_init()
+{
     const uint8_t icw1 = 0x11;
     const uint8_t icw4 = 0x01;
     outb(PIC1_CMD, icw1);
@@ -26,19 +28,22 @@ void pic_init() {
     outb(PIC2_DATA, 0xFF);
 }
 
-void pic_mask(uint8_t irq) {
+void pic_mask(uint8_t irq)
+{
     uint16_t port = irq < 8 ? PIC1_DATA : PIC2_DATA;
     uint8_t mask = inb(port) | (1u << (irq & 7));
     outb(port, mask);
 }
 
-void pic_unmask(uint8_t irq) {
+void pic_unmask(uint8_t irq)
+{
     uint16_t port = irq < 8 ? PIC1_DATA : PIC2_DATA;
     uint8_t mask = inb(port) & ~(1u << (irq & 7));
     outb(port, mask);
 }
 
-void pic_eoi(uint8_t irq) {
+void pic_eoi(uint8_t irq)
+{
     pic_send_eoi(irq);
 }
 

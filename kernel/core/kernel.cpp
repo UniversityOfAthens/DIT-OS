@@ -9,13 +9,16 @@
 #include "core/logo.hpp"
 #include "core/panic.hpp"
 
-namespace core {
+namespace core
+{
 
-void kernel_early_init() {
+void kernel_early_init()
+{
     config_init();
 }
 
-void kernel_main_continue() {
+void kernel_main_continue()
+{
     console_init();
     logo_print();
     printk("Kernel core ready. Version: %s\n", version_string());
@@ -23,4 +26,4 @@ void kernel_main_continue() {
         printk("Command line: %s\n", cmdline_get());
 }
 
-}
+} // namespace core

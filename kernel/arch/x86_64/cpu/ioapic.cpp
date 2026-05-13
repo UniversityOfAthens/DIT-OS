@@ -4,9 +4,14 @@
 
 #include "arch/x86_64/ioapic.hpp"
 
-namespace arch {
+namespace arch
+{
 
-void ioapic_init() {}
-void ioapic_set_irq(uint8_t, uint32_t, uint32_t) {}
+void ioapic_init()
+{
+}
+void ioapic_set_irq(uint8_t, uint32_t, uint32_t)
+{
+}
 
 } // namespace arch

@@ -3,7 +3,8 @@
 
 #include <stdarg.h>
 
-namespace core {
+namespace core
+{
 
 int printk(const char* fmt, ...);
 int vprintk(const char* fmt, va_list args);
@@ -11,6 +12,6 @@ int printk_info(const char* fmt, ...);
 int printk_warn(const char* fmt, ...);
 int printk_err(const char* fmt, ...);
 
-}
+} // namespace core
 
 #endif

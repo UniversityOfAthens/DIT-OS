@@ -4,8 +4,8 @@
 
 void userland_shell_main(void);
 
-void userland_init_main(void) {
+void userland_init_main(void)
+{
     userland_shell_main();
     exit(0);
 }
-

@@ -5,7 +5,8 @@
 
 #include <stdint.h>
 
-namespace fs {
+namespace fs
+{
 
 struct inode;
 struct dentry;
@@ -16,8 +17,8 @@ struct dirent;
 
 struct SuperblockOps {
     inode* (*alloc_inode)(superblock*);
-    void   (*destroy_inode)(inode*);
-    int    (*sync)(superblock*);
+    void (*destroy_inode)(inode*);
+    int (*sync)(superblock*);
 };
 
 struct InodeOps {
@@ -47,11 +48,11 @@ struct FileOps {
     /** Optional release hook. */
     int (*release)(inode* ino, file* f);
 
-    /** Read one directory entry; returns 1 if @de filled, 0 at EOF, negative errno. */
+    /** Read one directory entry; returns 1 if @de filled, 0 at EOF, negative
+     * errno. */
     int (*readdir)(file* f, dirent* de);
 };
 
 } // namespace fs
 
 #endif
-

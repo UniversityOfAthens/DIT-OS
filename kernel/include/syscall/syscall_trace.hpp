@@ -5,9 +5,11 @@
 #include "syscall/syscall_defs.hpp"
 #include "syscall/syscall_numbers.hpp"
 
-namespace syscall {
+namespace syscall
+{
 
-/** Optional: log syscall entry/exit (for debugging). No-op if tracing disabled */
+/** Optional: log syscall entry/exit (for debugging). No-op if tracing disabled
+ */
 void trace_enter(uint32_t num, const SyscallArgs* args);
 
 /** Optional: log syscall return value */

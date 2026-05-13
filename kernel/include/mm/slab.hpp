@@ -3,11 +3,12 @@
 
 #include <stddef.h>
 
-namespace mm {
+namespace mm
+{
 
 // Slab allocator - stub for object-sized caches
-void *slab_alloc(size_t size);
-void slab_free(void *ptr, size_t size);
+void* slab_alloc(size_t size);
+void slab_free(void* ptr, size_t size);
 
 } // namespace mm
 

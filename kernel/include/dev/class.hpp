@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 
-namespace dev {
+namespace dev
+{
 
 /** Device class for grouping devices (block, char, net, etc.) */
 enum class DeviceClass : uint8_t {

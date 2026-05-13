@@ -7,26 +7,32 @@
 
 extern "C" {
 
-int dit_sys_read(int fd, void* buf, unsigned count) {
+int dit_sys_read(int fd, void* buf, unsigned count)
+{
     return syscall::syscall_read(fd, buf, (uint32_t)count);
 }
 
-int dit_sys_write(int fd, const void* buf, unsigned count) {
+int dit_sys_write(int fd, const void* buf, unsigned count)
+{
     return syscall::syscall_write(fd, buf, (uint32_t)count);
 }
 
-void dit_sys_exit(int code) {
+void dit_sys_exit(int code)
+{
     syscall::syscall_exit(code);
-    for (;;) asm volatile("hlt");
+    for (;;)
+        asm volatile("hlt");
 }
 
-int dit_sys_getpid(void) {
+int dit_sys_getpid(void)
+{
     syscall::SyscallArgs args{};
     syscall::SyscallResult r = syscall::handle(syscall::SYS_getpid, &args);
     return (int)r;
 }
 
-int dit_sys_open(const char* path, int flags) {
+int dit_sys_open(const char* path, int flags)
+{
     syscall::SyscallArgs args{};
     args.args[0] = (uintptr_t)path;
     args.args[1] = (uint32_t)flags;
@@ -35,14 +41,16 @@ int dit_sys_open(const char* path, int flags) {
     return (int)r;
 }
 
-int dit_sys_close(int fd) {
+int dit_sys_close(int fd)
+{
     syscall::SyscallArgs args{};
     args.args[0] = (uint32_t)fd;
     syscall::SyscallResult r = syscall::handle(syscall::SYS_close, &args);
     return (int)r;
 }
 
-int dit_sys_getdents(int fd, void* buf, unsigned count) {
+int dit_sys_getdents(int fd, void* buf, unsigned count)
+{
     syscall::SyscallArgs args{};
     args.args[0] = (uint32_t)fd;
     args.args[1] = (uintptr_t)buf;
@@ -52,4 +60,3 @@ int dit_sys_getdents(int fd, void* buf, unsigned count) {
 }
 
 } // extern "C"
-

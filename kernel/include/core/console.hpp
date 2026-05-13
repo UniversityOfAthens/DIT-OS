@@ -1,7 +1,8 @@
 #ifndef KERNEL_CORE_CONSOLE_HPP
 #define KERNEL_CORE_CONSOLE_HPP
 
-namespace core {
+namespace core
+{
 
 /** Initialize kernel console (serial + VGA). */
 void console_init();
@@ -16,6 +17,6 @@ void console_puts(const char* str);
 enum class ConsoleTarget { Serial, VGA, Both };
 void console_set_target(ConsoleTarget t);
 
-}
+} // namespace core
 
 #endif

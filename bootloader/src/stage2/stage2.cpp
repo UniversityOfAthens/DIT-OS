@@ -6,7 +6,7 @@
 extern "C" {
 void enable_a20();
 void print_char(char c);
-void print_string(const char *s);
+void print_string(const char* s);
 char read_key();
 void disk_read();
 }
@@ -15,15 +15,17 @@ void show_menu();
 void boot_kernel();
 void show_advanced_menu();
 // Simple VGA text output
-namespace vga {
-uint16_t *const VIDEO_MEMORY = (uint16_t *)0xB8000;
+namespace vga
+{
+uint16_t* const VIDEO_MEMORY = (uint16_t*)0xB8000;
 constexpr int COLS = 80;
 constexpr int ROWS = 25;
 
 int cursor_x = 0;
 int cursor_y = 0;
 
-void put_char(char c) {
+void put_char(char c)
+{
     if (c == '\n') {
         cursor_x = 0;
         cursor_y++;
@@ -43,18 +45,21 @@ void put_char(char c) {
     }
 }
 
-void write(const char *str) {
+void write(const char* str)
+{
     while (*str) {
         put_char(*str++);
     }
 }
 
-void write_line(const char *str) {
+void write_line(const char* str)
+{
     write(str);
     put_char('\n');
 }
 
-void clear() {
+void clear()
+{
     for (int i = 0; i < COLS * ROWS; i++) {
         VIDEO_MEMORY[i] = (0x0F << 8) | ' ';
     }
@@ -63,11 +68,13 @@ void clear() {
 }
 } // namespace vga
 // Menu state
-namespace menu {
+namespace menu
+{
 int selected = 0;
 const int max_options = 2;
 
-void draw() {
+void draw()
+{
     vga::write("======================================\n");
     vga::write("         DIT-OS Bootloader\n");
     vga::write("======================================\n");
@@ -97,7 +104,8 @@ void draw() {
     vga::write("Use arrow keys to select, Enter to confirm\n");
 }
 
-void handle_input() {
+void handle_input()
+{
     char key = read_key();
 
     if (key == 0x48) { // Up arrow
@@ -123,7 +131,8 @@ void handle_input() {
 }
 } // namespace menu
 // Boot the kernel
-void boot_kernel() {
+void boot_kernel()
+{
     vga::clear();
     vga::write_line("Booting DIT-OS...");
     vga::write_line("Loading kernel from disk...");
@@ -134,7 +143,8 @@ void boot_kernel() {
     read_key();
 }
 // Advanced options menu
-void show_advanced_menu() {
+void show_advanced_menu()
+{
     vga::clear();
     vga::write_line("=== Advanced Options ===");
     vga::write_line("");
@@ -156,7 +166,8 @@ void show_advanced_menu() {
     show_menu();
 }
 // Main entry point (called from assembly)
-extern "C" void stage2_main() {
+extern "C" void stage2_main()
+{
     enable_a20();
 
     vga::clear();
