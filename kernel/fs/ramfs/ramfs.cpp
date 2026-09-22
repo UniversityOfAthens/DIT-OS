@@ -243,9 +243,10 @@ static int file_write(fs::file* f, const void* buf, uint32_t size)
     if (!rf)
         return -EINVAL;
 
-    uint32_t end_pos = (uint32_t)f->f_pos + size;
-    if (end_pos > s_max_file_cap)
+    // Compare without adding first so a huge size cannot wrap end_pos.
+    if (f->f_pos > s_max_file_cap || size > s_max_file_cap - f->f_pos)
         return -ENOSPC;
+    uint32_t end_pos = (uint32_t)f->f_pos + size;
 
     if (end_pos > rf->cap) {
         uint32_t new_cap = rf->cap ? rf->cap : 1024;

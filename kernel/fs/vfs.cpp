@@ -15,6 +15,7 @@
 #include "fs/ops.hpp"
 #include "fs/dirent.hpp"
 
+#include "core/panic.hpp"
 #include "mm/kmalloc.hpp"
 #include "errno_defs.hpp"
 
@@ -106,12 +107,19 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
     while (*p == '/')
         p++;
 
+    // Each dentry owns one reference on its parent, so dentry_put() on the
+    // leaf releases every ancestor that is no longer shared.
     for (;;) {
         char name[256];
         uint32_t n = 0;
 
-        while (*p && *p != '/' && n < 255)
+        while (*p && *p != '/') {
+            if (n == sizeof(name) - 1) {
+                dentry_put(curr_d); // component too long (ENAMETOOLONG)
+                return nullptr;
+            }
             name[n++] = *p++;
+        }
         name[n] = '\0';
 
         if (n == 0)
@@ -129,6 +137,7 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
             if (curr_d->d_parent) {
                 dentry* old = curr_d;
                 curr_d = curr_d->d_parent;
+                curr_d->d_refcnt++; // keep parent alive past dentry_put(old)
                 curr_ino = curr_d->d_inode;
                 dentry_put(old);
             }
@@ -139,6 +148,11 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
             continue;
         }
 
+        if (!curr_ino->i_ops || !curr_ino->i_ops->lookup) {
+            dentry_put(curr_d);
+            return nullptr;
+        }
+
         dentry* next_d = alloc_dentry();
         if (!next_d) {
             dentry_put(curr_d);
@@ -147,19 +161,12 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
         // Copy component name into dentry.
         for (uint32_t i = 0; i <= n; i++)
             next_d->d_name[i] = name[i];
-        next_d->d_parent = curr_d;
+        next_d->d_parent = curr_d; // takes over our reference on curr_d
 
         // Lookup child inode by name inside curr_ino's inode ops.
-        if (!curr_ino->i_ops || !curr_ino->i_ops->lookup) {
-            dentry_put(next_d);
-            dentry_put(curr_d);
-            return nullptr;
-        }
-
         int rc = curr_ino->i_ops->lookup(curr_ino, next_d);
         if (rc < 0 || !next_d->d_inode) {
-            dentry_put(next_d);
-            dentry_put(curr_d);
+            dentry_put(next_d); // also releases curr_d
             return nullptr;
         }
 
@@ -205,9 +212,10 @@ file* vfs_open(const char* path, int flags)
     f->f_dentry = d;
     f->f_inode = ino;
     f->f_ops = ino->i_file_ops;
-    if (f->f_ops && f->f_ops->open) {
-        int rc = f->f_ops->open(ino, f);
-        (void)rc;
+    if (f->f_ops && f->f_ops->open && f->f_ops->open(ino, f) < 0) {
+        dentry_put(d);
+        mm::kfree(f);
+        return nullptr;
     }
     return f;
 }
@@ -276,12 +284,17 @@ int namei(const char* path, uint32_t flags, dentry** out_dentry,
 
 void dentry_put(dentry* d)
 {
-    if (!d)
-        return;
-    if (d->d_refcnt > 0)
-        d->d_refcnt--;
-    if (d->d_refcnt == 0)
+    // Freeing a dentry drops the reference it holds on its parent, so walk up
+    // the chain instead of recursing.
+    while (d) {
+        if (d->d_refcnt == 0)
+            core::panic("dentry_put: refcount underflow");
+        if (--d->d_refcnt > 0)
+            return;
+        dentry* parent = d->d_parent;
         mm::kfree(d);
+        d = parent;
+    }
 }
 
 void inode_put(inode* ino)

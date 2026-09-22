@@ -16,6 +16,7 @@ static void idle_loop()
 
 void idle_task_init(Task* idle, uint32_t* stack, uint32_t stack_size)
 {
+    stack[0] = STACK_CANARY;
     uint32_t* sp = stack + stack_size / sizeof(uint32_t);
     sp--;
     *sp = (uint32_t)idle_loop;

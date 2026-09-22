@@ -8,6 +8,8 @@ namespace arch
 
 uint32_t read_cr0();
 void write_cr0(uint32_t value);
+/** Faulting linear address of the last page fault. */
+uint32_t read_cr2();
 uint32_t read_cr3();
 void write_cr3(uint32_t value);
 uint32_t read_cr4();

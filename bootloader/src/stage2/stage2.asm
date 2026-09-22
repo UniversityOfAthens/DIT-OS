@@ -4,7 +4,11 @@
 bits 16
 ORG 0x7E00
 
-KERNEL_SECTORS equ 200       ; Sectors to load for kernel (85KB current + headroom)
+; Sectors to load for the kernel image; bootloader/Makefile passes it and
+; fails the build if the image is bigger.
+%ifndef KERNEL_SECTORS
+%error "KERNEL_SECTORS must be passed with -DKERNEL_SECTORS=N"
+%endif
 COM1_BASE equ 0x3F8
 COM_LSR   equ 5
 COM_DATA  equ 0
@@ -170,7 +174,7 @@ boot_selection:
     mov dword [dap_lba], 11
     call read_lba
     jc .error
-    ; Load kernel ELF (110 sectors from LBA 37) to 0x2000:0 = 0x20000
+    ; Load kernel ELF (KERNEL_SECTORS from LBA 37) to 0x2000:0 = 0x20000
     mov word [dap_count], KERNEL_SECTORS
     mov word [dap_offset], 0x0000
     mov word [dap_segment], 0x2000

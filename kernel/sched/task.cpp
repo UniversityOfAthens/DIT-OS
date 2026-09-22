@@ -13,6 +13,7 @@ Task* task_create(void (*entry)(), uint32_t* stack, uint32_t stack_size)
 {
     if (stack_size < 32)
         return nullptr;
+    stack[0] = STACK_CANARY;
     uint32_t* sp = stack + stack_size / sizeof(uint32_t);
     sp--;
     *sp = (uint32_t)entry; // EIP (popped LAST by ret = highest addr)

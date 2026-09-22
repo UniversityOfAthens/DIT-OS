@@ -39,7 +39,7 @@ void idt_init()
         e[2] = 0x08; // selector low
         e[3] = 0x00; // selector high
         e[4] = 0;
-        e[5] = (i == 0x80) ?
+        e[5] = (static_cast<uint32_t>(i) == SYSCALL_VECTOR) ?
                    0xEE :
                    0x8E; // 0x80: DPL=3 so user can int 0x80; else ring 0
         e[6] = (offset >> 16) & 0xFF;
@@ -48,22 +48,25 @@ void idt_init()
     idt_load();
 }
 
-extern "C" void interrupt_handler(uint32_t vector);
+extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
+                                  uint32_t* regs);
 
 // Called from asm for every interrupt (vector 0-255, error_code for exceptions)
-// regs points to the pusha block (EDI, ESI, EBP, ESP_orig, EBX, EDX, ECX, EAX)
+// regs points to the saved frame (see FRAME_* in idt.hpp)
 extern "C" void interrupt_dispatch(uint32_t vector, uint32_t error_code,
                                    uint32_t* regs)
 {
-    (void)error_code;
-    if (vector == 0x80) {
+    if (vector == SYSCALL_VECTOR) {
         syscall_entry(regs);
         return;
     }
-    if (vector >= IRQ_BASE && vector < IRQ_BASE + 16) {
-        pic_eoi(static_cast<uint8_t>(vector - IRQ_BASE));
+    if (vector >= IRQ_BASE && vector < IRQ_BASE + IRQ_COUNT) {
+        uint8_t irq = static_cast<uint8_t>(vector - IRQ_BASE);
+        if (pic_is_spurious(irq))
+            return;
+        pic_eoi(irq);
     }
-    interrupt_handler(vector);
+    interrupt_handler(vector, error_code, regs);
 }
 
 } // namespace arch

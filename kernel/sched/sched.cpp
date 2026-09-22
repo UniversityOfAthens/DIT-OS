@@ -2,6 +2,7 @@
 
 #include "sched/sched.hpp"
 #include "sched/task.hpp"
+#include "core/panic.hpp"
 #include "mm/kmalloc.hpp"
 #include "dev/serial.hpp"
 #include <stdint.h>
@@ -16,7 +17,8 @@ volatile uint32_t s_need_resched = 0;
 
 static Task s_idle;
 static uint32_t s_idle_stack[256];
-static uint32_t s_init_stack[512];
+/* The init task runs the shell and the whole syscall/VFS path on this stack. */
+static uint32_t s_init_stack[4096];
 
 void run_queue_add(Task* t)
 {
@@ -90,6 +92,13 @@ void sched_start(void (*init_entry)())
     }
 }
 
+static void check_stack(const Task* t)
+{
+    if (t->stack_top &&
+        *reinterpret_cast<const uint32_t*>(t->stack_top) != STACK_CANARY)
+        core::panicf("stack overflow in task pid %u\n", t->pid);
+}
+
 void schedule()
 {
     if (!current_task)
@@ -100,6 +109,7 @@ void schedule()
     if (next == current_task)
         return;
     Task* prev = current_task;
+    check_stack(prev);
     current_task = next;
     switch_to(prev, next);
 }

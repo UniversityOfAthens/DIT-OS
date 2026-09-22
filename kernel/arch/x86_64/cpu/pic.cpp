@@ -47,4 +47,20 @@ void pic_eoi(uint8_t irq)
     pic_send_eoi(irq);
 }
 
+bool pic_is_spurious(uint8_t irq)
+{
+    if (irq != PIC_SPURIOUS_MASTER && irq != PIC_SPURIOUS_SLAVE)
+        return false;
+    // A real IRQ 7/15 has its bit set in the in-service register; a spurious
+    // one (line dropped before the CPU acknowledged it) does not.
+    uint16_t cmd = irq == PIC_SPURIOUS_MASTER ? PIC1_CMD : PIC2_CMD;
+    outb(cmd, PIC_READ_ISR);
+    if (inb(cmd) & (1u << (irq & 7)))
+        return false;
+    // The master did see a real IRQ 2 from the slave, so it still needs one.
+    if (irq == PIC_SPURIOUS_SLAVE)
+        outb(PIC1_CMD, PIC_EOI);
+    return true;
+}
+
 } // namespace arch
