@@ -11,7 +11,15 @@
 #define SYS_close 3
 #define SYS_exit 6
 #define SYS_getpid 10
+#define SYS_ioctl 15
 #define SYS_getdents 16
+
+/** Console TTY ioctls on fds 0-2 (must match kernel syscall/tty.hpp).
+ * TTY_IOC_GETMODE returns the mode; TTY_IOC_SETMODE takes it as the value. */
+#define TTY_IOC_GETMODE 0x5401
+#define TTY_IOC_SETMODE 0x5402
+#define TTY_MODE_ECHO 0x1 /* echo input back */
+#define TTY_MODE_CANON 0x2 /* kernel line editing, read() returns lines */
 
 /** Must match kernel fs::dirent layout (see kernel/include/fs/dirent.hpp). */
 #define DIT_DIRENT_SIZE 264
@@ -21,6 +29,7 @@ struct dit_dirent {
     unsigned char d_pad[3];
     char d_name[256];
 };
+#define DIT_DT_DIR 4 /* d_type of a directory (kernel DT_DIR) */
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,6 +41,7 @@ int dit_sys_getpid(void);
 int dit_sys_open(const char* path, int flags);
 int dit_sys_close(int fd);
 int dit_sys_getdents(int fd, void* buf, unsigned count);
+int dit_sys_ioctl(int fd, unsigned long request, unsigned long arg);
 #ifdef __cplusplus
 }
 #endif
@@ -75,6 +85,14 @@ static inline int getdents(int fd, void* buf, unsigned count)
 {
     (void)SYS_getdents;
     return dit_sys_getdents(fd, buf, count);
+}
+
+/* Simplified from the variadic POSIX/Linux prototype: the argument is always
+ * passed by value. */
+static inline int ioctl(int fd, unsigned long request, unsigned long arg)
+{
+    (void)SYS_ioctl;
+    return dit_sys_ioctl(fd, request, arg);
 }
 
 #endif

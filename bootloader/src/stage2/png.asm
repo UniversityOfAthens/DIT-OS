@@ -31,26 +31,26 @@ PNG_FILTER_PAETH: equ 4
 global png_load_image
 png_load_image:
     pushad
-    
+
     ; Verify PNG signature
     mov edi, esi
     mov ebx, PNG_SIGNATURE
     mov ecx, 8
     rep cmpsb
     jne .error
-    
+
     ; Find IHDR chunk
     call png_find_chunk
     jc .error
-    
+
     ; Parse IHDR
     call png_parse_ihdr
     jc .error
-    
+
     ; Find IDAT chunk (image data)
     call png_find_chunk
     jc .error
-    
+
     ; Allocate buffer for decompressed data
     ; Estimate: width * height * (bpp/8 + 1 for filter)
     movzx eax, word [png_width]
@@ -59,15 +59,15 @@ png_load_image:
     mov ebx, eax
     shl ebx, 2              ; *4 bytes per pixel (32-bit)
     add ebx, eax            ; Add filter byte per row
-    
+
     push ebx                ; Save decompressed size
-    
+
     ; Allocate memory for decompressed data
     mov eax, 0x20000        ; 128KB buffer
     mov [png_work_buffer], eax
-    
+
     pop ebx
-    
+
     ; Decompress IDAT data using zlib
     push esi                ; Compressed data
     push ecx                ; Compressed size
@@ -77,26 +77,26 @@ png_load_image:
     pop ecx
     pop esi
     jc .error
-    
+
     ; Now we have decompressed image data, need to de-filter it
     ; For simplicity, just copy to framebuffer
     ; In a full implementation, apply filter reconstruction
-    
+
     ; For now, copy raw to framebuffer
     mov edi, [framebuffer_addr]
     mov esi, [png_work_buffer]
     movzx ecx, word [png_width]
     movzx ebx, word [png_height]
     mul ebx                  ; Total pixels
-    
+
 .copy_loop:
     movsb
     loop .copy_loop
-    
+
     clc
     popad
     ret
-    
+
 .error:
     stc
     popad
@@ -109,29 +109,29 @@ png_load_image:
 ; =============================================================================
 png_find_chunk:
     ; Skip to next chunk (already at chunk start or after signature)
-    
+
 .next_chunk:
     ; Read chunk length (4 bytes big-endian)
     lodsd
     bswap eax
     mov [png_chunk_length], eax
-    
+
     ; Read chunk type (4 bytes)
     lodsd
     mov [png_chunk_type], eax
-    
+
     ; Check if this is the chunk we want
     mov eax, [png_chunk_type]
     cmp eax, [png_target_chunk]
     je .found
-    
+
     ; Skip chunk data + CRC (4 bytes)
     movzx ecx, word [png_chunk_length]
     add esi, ecx
     add esi, 4              ; Skip CRC
-    
+
     jmp .next_chunk
-    
+
 .found:
     movzx ecx, word [png_chunk_length]
     clc
@@ -146,39 +146,39 @@ png_parse_ihdr:
     lodsd
     bswap eax
     mov [png_width], ax
-    
+
     ; Height
     lodsd
     bswap eax
     mov [png_height], ax
-    
+
     ; Bit depth
     lodsb
     mov [png_bit_depth], al
-    
+
     ; Color type
     lodsb
     mov [png_color_type], al
-    
+
     ; Compression method
     lodsb
-    
+
     ; Filter method
     lodsb
-    
+
     ; Interlace method
     lodsb
-    
+
     ; Validate
     cmp byte [png_color_type], 2      ; RGB
     je .ok
     cmp byte [png_color_type], 6     ; RGBA
     je .ok
-    
+
     ; Only support RGB and RGBA for now
     stc
     ret
-    
+
 .ok:
     clc
     ret
@@ -190,17 +190,17 @@ png_parse_ihdr:
 ; =============================================================================
 zlib_decompress:
     pushad
-    
+
     ; Skip zlib header (2 bytes minimum)
     lodsb
     lodsb
-    
+
     ; Simple stored block decompression
     ; In a full implementation, handle deflate blocks
-    
+
     ; For now, just copy data (assuming uncompressed)
     ; This is a simplified version
-    
+
     popad
     ret
 
@@ -226,13 +226,13 @@ pngDecompressDst: dd 0
 global render_png_background
 render_png_background:
     pushad
-    
+
     ; Load the PNG
     call png_load_image
     jc .done
-    
+
     ; Successfully loaded - image is now in framebuffer
-    
+
 .done:
     popad
     ret

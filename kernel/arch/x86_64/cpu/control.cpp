@@ -6,6 +6,7 @@
 
 extern "C" uint32_t read_cr0_impl(void);
 extern "C" void write_cr0_impl(uint32_t);
+extern "C" uint32_t read_cr2_impl(void);
 extern "C" uint32_t read_cr3_impl(void);
 extern "C" void write_cr3_impl(uint32_t);
 extern "C" uint32_t read_cr4_impl(void);
@@ -21,6 +22,10 @@ uint32_t read_cr0()
 void write_cr0(uint32_t value)
 {
     write_cr0_impl(value);
+}
+uint32_t read_cr2()
+{
+    return read_cr2_impl();
 }
 uint32_t read_cr3()
 {

@@ -4,9 +4,12 @@
 # With -serial mon:stdio, the menu uses the terminal: use Up/Down arrows or 1/2/3, Enter to select.
 # To exit QEMU: press Ctrl+A then X (QEMU intercepts Ctrl+A; the next key is the command).
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DISK="$ROOT/bootloader/build/disk.img"
+readonly ROOT
+readonly DISK="$ROOT/bootloader/build/disk.img"
 
 if [[ ! -f "$DISK" ]]; then
     echo "Disk not found. Running build..."

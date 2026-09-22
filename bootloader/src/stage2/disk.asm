@@ -36,7 +36,7 @@ read_sectors:
 GLOBAL read_lba
 read_lba:
     pusha
-    
+
     ; Set up DAP (Disk Address Packet)
     mov si, dap
     mov byte [si], 0x10    ; Size of DAP
@@ -46,11 +46,11 @@ read_lba:
     mov word [si+6], 0      ; Buffer segment
     mov dword [si+8], edx   ; LBA (low 32)
     mov dword [si+12], 0    ; LBA (high 32)
-    
+
     mov ah, 0x42
     int 0x13
     jc .error
-    
+
     popa
     ret
 .error:

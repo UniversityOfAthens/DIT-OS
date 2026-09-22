@@ -115,14 +115,16 @@ int vprintk(const char* fmt, va_list args)
         }
         if (*fmt == 'd' || *fmt == 'i') {
             int32_t v = va_arg(args, int32_t);
+            // Negate in unsigned arithmetic: -v overflows for INT32_MIN.
+            uint32_t mag = static_cast<uint32_t>(v);
             char buf[12];
             if (v < 0) {
                 putchar('-');
                 putchar_vga('-');
                 n++;
-                v = (uint32_t) - (int32_t)v;
+                mag = 0u - mag;
             }
-            unsigned int len = u32_to_dec((uint32_t)v, buf, sizeof(buf));
+            unsigned int len = u32_to_dec(mag, buf, sizeof(buf));
             for (unsigned int i = 0; i < len; i++) {
                 putchar(buf[i]);
                 putchar_vga(buf[i]);

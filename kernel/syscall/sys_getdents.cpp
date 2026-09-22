@@ -3,6 +3,7 @@
 #include "errno_defs.hpp"
 #include "fs/dirent.hpp"
 #include "fs/vfs.hpp"
+#include "mm/uaccess.hpp"
 #include "syscall/fd.hpp"
 #include "syscall/syscall_defs.hpp"
 #include <stdint.h>
@@ -20,11 +21,12 @@ SyscallResult sys_getdents_impl(const SyscallArgs* args)
     if (count == 0)
         return 0;
 
+    if (!mm::user_range_ok(buf, count))
+        return -EFAULT;
     fs::file* f = fd_get(fd);
     if (!f)
         return -EBADF;
 
-    uint8_t* p = (uint8_t*)buf;
     uint32_t off = 0;
     while (off + sizeof(fs::dirent) <= count) {
         fs::dirent de;
@@ -33,9 +35,8 @@ SyscallResult sys_getdents_impl(const SyscallArgs* args)
             return r;
         if (r == 0)
             break;
-        const uint8_t* src = (const uint8_t*)&de;
-        for (uint32_t i = 0; i < sizeof(fs::dirent); i++)
-            p[off + i] = src[i];
+        if (mm::copy_to_user(buf + off, &de, sizeof(de)) < 0)
+            return -EFAULT;
         off += sizeof(fs::dirent);
     }
     return (SyscallResult)off;

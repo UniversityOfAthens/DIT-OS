@@ -49,6 +49,16 @@ int dit_sys_close(int fd)
     return (int)r;
 }
 
+int dit_sys_ioctl(int fd, unsigned long request, unsigned long arg)
+{
+    syscall::SyscallArgs args{};
+    args.args[0] = (uint32_t)fd;
+    args.args[1] = request;
+    args.args[2] = arg;
+    syscall::SyscallResult r = syscall::handle(syscall::SYS_ioctl, &args);
+    return (int)r;
+}
+
 int dit_sys_getdents(int fd, void* buf, unsigned count)
 {
     syscall::SyscallArgs args{};

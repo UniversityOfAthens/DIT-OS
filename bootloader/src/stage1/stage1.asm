@@ -1,6 +1,7 @@
 ; =============================================================================
 ; DIT-OS Stage 1 Bootloader
 ; =============================================================================
+BITS 16
 ORG 0x7C00
 
 COM1_BASE equ 0x3F8
@@ -12,7 +13,7 @@ COM_DLH   equ 1
 
 start:
     mov [boot_drive], dl
-    
+
     cli
     xor ax, ax
     mov ds, ax
@@ -20,11 +21,11 @@ start:
     mov ss, ax
     mov sp, 0x5000
     sti
-    
+
     call serial_init
     mov si, msg_startup
     call print_both
-    
+
     ; Reset disk
     mov si, msg_reset
     call print_both
@@ -32,7 +33,7 @@ start:
     mov dl, [boot_drive]
     int 0x13
     jc disk_error
-    
+
     ; Read stage2 (9 sectors from LBA 2; CHS sector is 1-based so cl=3 = LBA 2)
     mov si, msg_read
     call print_both
@@ -45,12 +46,12 @@ start:
     mov dl, [boot_drive]
     int 0x13
     jc disk_error
-    
+
     mov si, msg_loaded
     call print_both
     mov si, msg_jump2
     call print_both
-    
+
     ; Far jump to stage2
     jmp 0x0000:0x7E00
 

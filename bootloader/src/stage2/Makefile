@@ -16,8 +16,13 @@ all: asm
 
 asm: $(STAGE2_BIN)
 
+# KERNEL_SECTORS comes from bootloader/Makefile, which owns the disk layout.
 $(STAGE2_BIN): $(STAGE2_ASM)
-	$(NASM) $(NASM_BIN) -I$(COMMON) -I. -o $(STAGE2_BIN) $(STAGE2_ASM)
+	@[ -n "$(KERNEL_SECTORS)" ] || { \
+		echo "ERROR: pass KERNEL_SECTORS=N (see bootloader/Makefile)" >&2; \
+		exit 1; }
+	$(NASM) $(NASM_BIN) -I$(COMMON) -I. -DKERNEL_SECTORS=$(KERNEL_SECTORS) \
+		-o $(STAGE2_BIN) $(STAGE2_ASM)
 
 clean:
 	rm -f $(STAGE2_BIN) *.o

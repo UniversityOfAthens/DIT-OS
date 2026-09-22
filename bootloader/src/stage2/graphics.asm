@@ -60,35 +60,35 @@ global check_vesa
 check_vesa:
     pusha
     push es
-    
+
     ; Set up buffer for VBE info
     mov ax, 0x1000          ; Segment where we'll store VBE info
     mov es, ax
     xor di, di
-    
+
     ; Fill signature 'VBE2' to indicate VBE 2.0+ support
     mov dword [es:di], 'VBE2'
-    
+
     ; Call VBE function 00h - Return VBE Controller Information
     mov ax, 0x4F00
     int 0x10
-    
+
     ; Check if VBE is present (AH should be 0)
     cmp ax, 0x004F
     jne .no_vbe
-    
+
     ; Verify signature 'VESA'
     cmp dword [es:di], 'VESA'
     jne .no_vbe
-    
+
     ; VBE is available, store that we have graphics
     mov byte [graphics_available], 1
-    
+
     pop es
     popa
     clc
     ret
-    
+
 .no_vbe:
     mov byte [graphics_available], 0
     pop es
@@ -104,70 +104,70 @@ global find_graphics_mode
 find_graphics_mode:
     pusha
     push es
-    
+
     ; Get pointer to video mode list from VBE info
     mov ax, 0x1000
     mov es, ax
     mov si, [es:VbeInfoBlock.videoModesPtr]
     mov ax, [es:VbeInfoBlock.videoModesPtr + 2]
     mov es, ax
-    
+
 .search_loop:
     lodsw
     cmp ax, 0xFFFF          ; End of mode list
     je .not_found
-    
+
     mov cx, ax              ; Save mode number
-    
+
     ; Get mode info
     push es
     push si
-    
+
     mov ax, 0x2000          ; Buffer for mode info
     mov es, ax
     xor di, di
-    
+
     mov ax, 0x4F01          ; Get VBE Mode Info
     int 0x10
-    
+
     cmp ax, 0x004F
     jne .next_mode
-    
+
     ; Check if mode supports linear framebuffer
     mov ax, [es:VbeModeInfo.attributes]
     test ax, 0x0080         ; Linear framebuffer bit
     jz .next_mode
-    
+
     ; Check dimensions and bpp
     mov ax, [es:VbeModeInfo.width]
     cmp ax, 800
     jne .next_mode
-    
+
     mov ax, [es:VbeModeInfo.height]
     cmp ax, 600
     jne .next_mode
-    
+
     mov al, [es:VbeModeInfo.bpp]
     cmp al, 32
     jne .next_mode
-    
+
     ; Found suitable mode!
     mov [graphics_mode], cx
     mov eax, [es:VbeModeInfo.framebuffer]
     mov [framebuffer_addr], eax
-    
+
     pop si
     pop es
     pop es
     popa
     mov ax, cx
     ret
-    
+
 .next_mode:
     pop si
     pop es
     jmp .search_loop
-    
+
 .not_found:
     pop es
     popa
@@ -181,13 +181,13 @@ find_graphics_mode:
 global set_graphics_mode
 set_graphics_mode:
     pusha
-    
+
     ; Set VBE mode with linear framebuffer
     or ax, 0x4000           ; Enable linear framebuffer
     mov bx, ax
     mov ax, 0x4F02
     int 0x10
-    
+
     popa
     ret
 
@@ -198,21 +198,21 @@ set_graphics_mode:
 global plot_pixel
 plot_pixel:
     pusha
-    
+
     ; Calculate offset: (y * width + x) * 4
     mov ebx, [framebuffer_addr]
-    
+
     mov eax, edx
     mov edx, 800            ; Width
     mul edx
     add eax, ecx
     shl eax, 2              ; * 4 bytes per pixel
-    
+
     add ebx, eax
-    
+
     pop eax                 ; Restore color
     mov [ebx], eax          ; Write pixel
-    
+
     popa
     ret
 
@@ -223,16 +223,16 @@ plot_pixel:
 global clear_graphics_screen
 clear_graphics_screen:
     pusha
-    
+
     mov edi, [framebuffer_addr]
     mov ecx, 800 * 600      ; Total pixels
-    
+
 .clear_loop:
     mov [edi], eax
     add edi, 4
     dec ecx
     jnz .clear_loop
-    
+
     popa
     ret
 
@@ -261,23 +261,23 @@ use_text_mode:          db 0
 global should_use_graphics
 should_use_graphics:
     push bx
-    
+
     ; Check if text mode is forced
     cmp byte [use_text_mode], 1
     je .text_mode
-    
+
     ; Check if VBE is available
     cmp byte [graphics_available], 1
     jne .text_mode
-    
+
     ; Check if we found a valid mode
     cmp word [graphics_mode], 0
     je .text_mode
-    
+
     pop bx
     mov al, 1
     ret
-    
+
 .text_mode:
     pop bx
     xor al, al
@@ -291,23 +291,23 @@ should_use_graphics:
 global draw_graphics_menu
 draw_graphics_menu:
     pusha
-    
+
     ; Load theme (uses defaults if no theme file)
     call load_theme
-    
+
     ; Render theme background (header, menu bg, borders)
     call render_theme_background
-    
+
     ; Render theme title
     call render_theme_title
-    
+
     ; Draw menu entries using theme
     xor bl, bl              ; Entry index
-    
+
 .entry_loop:
     cmp bl, [entry_count]
     jae .entries_done
-    
+
     ; Get entry name
     push ebx
     xor eax, eax
@@ -317,17 +317,17 @@ draw_graphics_menu:
     mov esi, entries
     add esi, eax
     pop ebx
-    
+
     ; Render this menu item with theme
     call render_theme_menu_item
-    
+
     inc bl
     jmp .entry_loop
-    
+
 .entries_done:
     ; Render theme footer
     call render_theme_footer
-    
+
     popa
     ret
 
@@ -341,9 +341,9 @@ msg_graphics_timeout: db "Auto-boot in ", 0
 ; -----------------------------------------------------------------------------
 draw_rect:
     pusha
-    
+
     mov ebx, [framebuffer_addr]
-    
+
     ; Calculate starting address
     push eax
     mov eax, edx
@@ -353,28 +353,28 @@ draw_rect:
     shl eax, 2
     add ebx, eax
     pop eax
-    
+
     mov ecx, esi            ; Save width
-    
+
 .row_loop:
     push ecx
     mov ecx, esi            ; Width counter
-    
+
 .pixel_loop:
     mov [ebx], eax
     add ebx, 4
     dec ecx
     jnz .pixel_loop
-    
+
     pop ecx
     ; Move to next row
     mov edx, 800
     sub edx, esi
     shl edx, 2
     add ebx, edx
-    
+
     dec edi
     jnz .row_loop
-    
+
     popa
     ret

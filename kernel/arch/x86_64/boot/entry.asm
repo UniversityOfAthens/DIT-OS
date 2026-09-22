@@ -29,7 +29,7 @@ _start:
     ; Jump to C++ kernel
     extern kernel_main
     call kernel_main
-    
+
     ; Should never return
     jmp $
 
@@ -46,5 +46,5 @@ align 16
 global kernel_stack
 global kernel_stack_top
 kernel_stack:
-    times 16384 db 0
+    resb 16384
 kernel_stack_top:

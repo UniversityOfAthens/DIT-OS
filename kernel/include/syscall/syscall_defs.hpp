@@ -20,6 +20,10 @@ struct SyscallArgs {
 /** Result: value (>=0) or negated errno */
 using SyscallResult = int64_t;
 
+/** Kernel bounce buffer size for read/write: user data is copied through it
+ * so drivers and filesystems never touch user pointers. */
+constexpr uint32_t SYSCALL_BOUNCE_SIZE = 256;
+
 } // namespace syscall
 
 #endif

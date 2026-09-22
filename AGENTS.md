@@ -554,7 +554,11 @@ struct FileOps {
 | Kernel | `i686-elf-gcc`, `i686-elf-g++` | 32-bit, freestanding |
 | Userland | `i686-elf-gcc` | Links against custom libc, NOT freestanding |
 
-Always verify toolchain with `scripts/check-toolchain.sh` before building.
+**Current state**: `kernel/Makefile` uses `i686-elf-*` when it is on `PATH`
+(e.g. `nix develop .#cross`) and otherwise the host `gcc`/`g++`/`ld` with
+`-m32` (this is what CI installs). Override with `CROSS_COMPILE=`. Both paths
+use `-march=i686 -mgeneral-regs-only` so no compiler can emit SSE/x87 code.
+`scripts/check-toolchain.sh` does not exist yet.
 
 ### Compiler Flags
 
@@ -595,11 +599,17 @@ Always verify toolchain with `scripts/check-toolchain.sh` before building.
 | Offset (sectors) | Content | Size | Load Address |
 |------------------|---------|------|--------------|
 | 0 | stage1.bin | 512 B | 0x7C00 |
-| 1 | stage2.bin | 9 sectors | 0x7E00 |
-| 10 | loader.bin | variable | 0x10000 |
-| after loader | kernel.bin (ELF) | variable | 0x100000 |
+| 2–10 | stage2.bin | 9 sectors | 0x7E00 |
+| 11–36 | loader.bin | 26 sectors reserved (2 read) | 0x10000 |
+| 37+ | kernel.img (stripped kernel ELF) | `KERNEL_SECTORS` (200) | raw at 0x20000, segments copied to 0x100000 |
 
-Sector counts and offsets **must stay in sync** between `bootloader/Makefile`, `common/constants.inc`, and `bootloader/include/boot.hpp`.
+`kernel.bin` keeps symbols for GDB; `kernel.img` is the stripped copy written to
+disk. `KERNEL_SECTORS` is defined once in `bootloader/Makefile`, passed to
+`stage2.asm` with `-D`, and the build fails if `kernel.img` does not fit.
+
+Sector counts and offsets **must stay in sync** between `bootloader/Makefile`,
+`stage1.asm` (stage2 CHS read), `stage2.asm` (loader/kernel LBAs),
+`common/constants.inc`, and `bootloader/include/boot.hpp`.
 
 ### Makefile Patterns
 
@@ -666,52 +676,56 @@ Rules:
 ./scripts/build.sh
 
 # Run in QEMU (serial output to terminal)
-./scripts/run-qemu.sh
+./scripts/run-qemu.sh          # or: make -C bootloader run
 
-# Run with GDB attached
-./scripts/run-qemu-debug.sh &
-./scripts/gdb.sh
+# Run with GDB attached (QEMU waits on :1234; see GDB below)
+make -C bootloader debug
 ```
 
 ### Serial Output Milestones
 
 Each stage should print to COM1 (serial). If you see these, that stage is alive:
 
-1. `[stage1] booting...` — stage1 loaded by BIOS
-2. `[stage2] loaded` — stage2 running in real mode
-3. `[loader] jumping to kernel` — loader about to enter kernel
-4. `kernel_main: started` — kernel C code running
-5. `[init] shell started` — scheduler running, init task reached
+1. `[1/3] Stage1...` — stage1 loaded by BIOS
+2. `[2/3] Stage2 loaded.` — stage2 running in real mode; the boot menu
+   follows and waits for Enter (send `\r` when scripting QEMU)
+3. `[3/3] Loading loader+kernel...` then `Read OK.` — stage2 read the disk
+4. `L`, `O`, `E`, `K` — loader started, protected mode, kernel ELF found,
+   jumping to kernel
+5. `DIT-OS Kernel starting...` — kernel C++ code running
+6. `[sched] init: done` — scheduler and init task created
+7. `user@dit:~$` — the shell is running
 
-If a stage's message is missing, the fault is in the transition *before* that stage.
+If a stage's message is missing, the fault is in the transition *before* that
+stage. A CPU exception prints `*** KERNEL PANIC ***` with the exception name,
+error code and `EIP`.
 
 ### QEMU Configuration
 
+This is what `make -C bootloader run` uses:
+
 ```bash
-qemu-system-i386 \
-  -drive file=bootloader/build/disk.img,format=raw,if=floppy \
-  -serial stdio \
+qemu-system-i386 -accel tcg,thread=single \
+  -drive format=raw,file=bootloader/build/disk.img,index=0,if=floppy \
+  -display none -serial mon:stdio \
   -no-reboot \
-  -no-shutdown \
   -m 32M
 ```
 
-- `-serial stdio` captures serial output
-- `-no-reboot -no-shutdown` keeps QEMU open on triple fault
+- `-display none -serial mon:stdio` puts the whole boot and shell on the
+  terminal (Ctrl+A then X quits)
+- `-no-reboot` stops on triple fault instead of rebooting; add
+  `-no-shutdown` to keep QEMU open for inspection (`run-qemu.sh` does)
 
 ### Debug Mode
 
-```bash
-qemu-system-i386 \
-  -drive file=bootloader/build/disk.img,format=raw,if=floppy \
-  -serial stdio -no-reboot -no-shutdown -m 32M \
-  -s -S          # -s = GDB on :1234, -S = pause at start
-```
+`make -C bootloader debug` runs the command above plus `-no-shutdown -s -S`
+(`-s` = GDB on :1234, `-S` = pause at start).
 
 ### GDB
 
 ```bash
-i686-elf-gdb \
+gdb \
   -ex "target remote :1234" \
   -ex "symbol-file bootloader/build/kernel.bin" \
   -ex "break kernel_main" \
@@ -723,13 +737,30 @@ i686-elf-gdb \
 - Run on the **host** (not in QEMU) — test pure logic
 - Compile with host `g++`, not cross-compiler
 - No kernel headers allowed in unit tests
-- Run: `make -C tests/unit && tests/unit/run_all.sh`
+- Run: `make -C tests/unit && tests/unit/run_all.sh` (planned — `tests/`
+  does not exist yet)
 
 ### Integration Tests
 
-- Launch QEMU and check serial output
-- Must complete within 10 seconds (use `timeout`)
-- Exit 0 = pass, non-zero = fail
+- `scripts/qemu-test.sh [disk.img]` boots the image in QEMU and drives the
+  shell over serial: boot menu, `echo`, `cat`, `ls`, tab completion, a
+  repeated-command stress run and `exit` (QEMU must power off)
+- It waits for expected output (per-step timeout, `QEMU_TEST_TIMEOUT`)
+  instead of fixed sleeps; anchor new checks with `^` so the echoed input
+  line cannot satisfy them
+- Exit 0 = pass, non-zero = fail (the end of the serial log is printed)
+- CI runs it on every push and pull request (`.github/workflows/ci.yml`),
+  both with host GCC and inside `nix develop`
+
+### CI Workflows
+
+| Workflow | Runs | Checks |
+|----------|------|--------|
+| `ci.yml` | push to main/dev, PRs | clean `-Werror` build, disk layout, no SSE/x87 in the kernel, `qemu-test.sh` (host GCC and Nix shell), CMake wrapper |
+| `lint.yml` | push to main/dev, PRs | clang-format 20.1.8 (pinned), shellcheck + strict mode, BITS directives, no `#pragma once`, whitespace/newlines, syscall numbers match, actionlint |
+| `release.yml` | `v*` tags | build, `qemu-test.sh`, notes from the matching `CHANGELOG.md` section, pre-release for `-alpha` tags |
+
+Run the formatter CI uses with `pipx run clang-format==20.1.8 -i <files>`.
 
 ### Common Failure Modes
 

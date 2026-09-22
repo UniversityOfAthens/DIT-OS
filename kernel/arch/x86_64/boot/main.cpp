@@ -105,7 +105,10 @@ namespace ramfs
 {
 void init();
 }
+#include "arch/x86_64/control.hpp"
 #include "arch/x86_64/idt.hpp"
+#include "core/panic.hpp"
+#include "core/printk.hpp"
 #include "dev/keyboard.hpp"
 #include "dev/mouse.hpp"
 #include "dev/rtc.hpp"
@@ -153,7 +156,8 @@ extern "C" void kernel_main()
     print_both("    VGA buffer: 0x000B8000\n\n");
 
     print_both("[*] Serial/Input drivers...\n");
-    dev::serial_init();
+    // Serial was initialized first thing; re-running serial_init() here
+    // would switch the COM1 receive interrupt back off.
     dev::serial_puts("  Serial (COM1) OK\n");
     print("  Serial (COM1) OK\n");
     dev::keyboard_init();
@@ -182,6 +186,7 @@ extern "C" void kernel_main()
     print_both(db);
     print_both("\n");
     arch::pic_unmask(0);
+    arch::pic_unmask(dev::SERIAL_COM1_IRQ);
     print_both("[OK] Serial, keyboard, mouse, timer, RTC ready\n\n");
 
     print_both("======================================\n");
@@ -203,20 +208,67 @@ extern "C" void kernel_main()
         asm volatile("hlt");
 }
 
-extern "C" void interrupt_handler(uint32_t vector)
+static const char* const s_exception_names[arch::EXCEPTION_COUNT] = {
+    "divide error",
+    "debug",
+    "NMI",
+    "breakpoint",
+    "overflow",
+    "bound range exceeded",
+    "invalid opcode",
+    "device not available",
+    "double fault",
+    "coprocessor segment overrun",
+    "invalid TSS",
+    "segment not present",
+    "stack-segment fault",
+    "general protection fault",
+    "page fault",
+    "reserved",
+    "x87 floating-point error",
+    "alignment check",
+    "machine check",
+    "SIMD floating-point error",
+    "virtualization exception",
+    "control protection exception",
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+    "reserved",
+    "hypervisor injection exception",
+    "VMM communication exception",
+    "security exception",
+    "reserved",
+};
+
+// Everything except syscalls lands here; PIC EOI is already sent by
+// interrupt_dispatch.
+extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
+                                  uint32_t* regs)
 {
     if (vector == arch::IRQ_BASE + 0) {
         dev::timer_tick();
-        sched::s_need_resched = 1;
         return;
     }
-    print("\n[ERROR] Interrupt! Vector: ");
-    char buf[4];
-    buf[0] = '0' + (vector / 10);
-    buf[1] = '0' + (vector % 10);
-    buf[2] = '\0';
-    print(buf);
-    print("\n");
-    while (1)
-        asm volatile("hlt");
+    if (vector == arch::IRQ_BASE + dev::SERIAL_COM1_IRQ) {
+        dev::serial_irq();
+        return;
+    }
+    if (vector >= arch::IRQ_BASE && vector < arch::IRQ_BASE + arch::IRQ_COUNT) {
+        core::printk("[irq] unhandled IRQ %u\n", vector - arch::IRQ_BASE);
+        return;
+    }
+    if (vector < arch::EXCEPTION_COUNT) {
+        // printk/panicf write to serial and VGA, so the report is visible
+        // with -display none too.
+        uint32_t cr2 = vector == arch::VECTOR_PAGE_FAULT ? arch::read_cr2() : 0;
+        core::panicf("CPU exception %u (%s)\n"
+                     "  error=0x%x eip=0x%x cs=0x%x eflags=0x%x cr2=0x%x\n",
+                     vector, s_exception_names[vector], error_code,
+                     regs[arch::FRAME_EIP], regs[arch::FRAME_CS],
+                     regs[arch::FRAME_EFLAGS], cr2);
+    }
+    core::printk("[irq] unexpected interrupt vector %u\n", vector);
 }

@@ -15,7 +15,7 @@ SECTION .pe_header
 pe_header:
     ; PE Signature
     db 'PE', 0, 0
-    
+
     ; COFF Header
 coff_header:
     dw 0x8664      ; Machine = AMD64 (x86-64)
@@ -135,36 +135,36 @@ efi_main:
     ; Parameters:
     ; rcx = ImageHandle (EFI_HANDLE)
     ; rdx = SystemTable (EFI_SYSTEM_TABLE*)
-    
+
     ; Save system table
     mov [system_table], rdx
-    
+
     ; Get boot services
     mov rax, [rdx + 48]    ; SystemTable->BootServices
     mov [boot_services], rax
-    
+
     ; Initialize console output
     call init_conout
-    
+
     ; Print welcome
     lea rsi, [welcome_msg]
     call efi_puts
-    
+
     ; Initialize graphics
     call init_graphics
-    
+
     ; Load boot config
     call load_boot_config
-    
+
     ; Display boot menu
     call display_boot_menu
-    
+
     ; Load kernel
     call load_kernel
-    
+
     ; Exit boot services
     call exit_boot_services
-    
+
     ; Jump to kernel
     jmp kernel_entry
 
@@ -173,20 +173,20 @@ efi_main:
 ; =============================================================================
 init_conout:
     push rbx
-    
+
     mov rax, [system_table]
     mov rbx, [rax + 64]   ; ConOut handle
     mov rax, [rax + 72]   ; SimpleTextOutputProtocol
-    
+
     mov [conout_handle], rbx
     mov [conout_protocol], rax
-    
+
     ; Clear screen
     mov rcx, rbx
     mov rdx, rax
     xor r8, r8              ; Attribute = default
     call [rax + 8]         ; ClearScreen
-    
+
     pop rbx
     ret
 
@@ -197,13 +197,13 @@ init_conout:
 efi_puts:
     push rcx
     push rdx
-    
+
     mov rcx, [conout_handle]
     mov rdx, rsi
-    
+
     mov rax, [conout_protocol]
     call [rax + 6]         ; OutputString
-    
+
     pop rdx
     pop rcx
     ret
@@ -213,13 +213,13 @@ efi_puts:
 ; =============================================================================
 init_graphics:
     push rbx
-    
+
     ; Get GOP
     mov rax, [boot_services]
     mov rbx, [rax + 56]    ; LocateProtocol GOP
-    
+
     ; Note: In full implementation, would locate GOP and set mode
-    
+
     pop rbx
     ret
 
@@ -228,13 +228,13 @@ init_graphics:
 ; =============================================================================
 load_boot_config:
     push rsi
-    
+
     lea rsi, [config_msg]
     call efi_puts
-    
+
     ; Parse /boot/bootloader/config/boot.cfg
     ; For now, use defaults
-    
+
     pop rsi
     ret
 
@@ -243,16 +243,16 @@ load_boot_config:
 ; =============================================================================
 display_boot_menu:
     push rsi
-    
+
     lea rsi, [menu_msg]
     call efi_puts
-    
+
     ; In full implementation, would:
     ; 1. Read entries from config
     ; 2. Display menu
     ; 3. Wait for input
     ; 4. Return selected entry
-    
+
     pop rsi
     ret
 
@@ -261,16 +261,16 @@ display_boot_menu:
 ; =============================================================================
 load_kernel:
     push rsi
-    
+
     lea rsi, [loading_msg]
     call efi_puts
-    
+
     ; In full implementation:
     ; 1. Read kernel from filesystem
     ; 2. Parse ELF
     ; 3. Load into memory
     ; 4. Set up Multiboot info
-    
+
     pop rsi
     ret
 
@@ -280,16 +280,16 @@ load_kernel:
 exit_boot_services:
     push rax
     push rcx
-    
+
     mov rax, [boot_services]
     mov rcx, [image_handle]
-    
+
     ; Get memory map size first
     xor ebx, ebx
-    
+
     ; Call ExitBootServices(ImageHandle, MapKey)
     ; Note: Need proper memory map for this
-    
+
     pop rcx
     pop rax
     ret

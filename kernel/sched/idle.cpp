@@ -1,44 +1,32 @@
 // DIT-OS Kernel - Idle task
 
 #include "sched/sched.hpp"
-#include "dev/serial.hpp"
+#include "core/panic.hpp"
 #include <stdint.h>
 
 namespace sched
 {
 
+// Runs whenever nothing else is runnable. Interrupts are disabled while the
+// run queue is checked, and "sti; hlt" re-enables them only as hlt starts, so
+// a wakeup IRQ cannot slip in between the check and the halt.
 static void idle_loop()
 {
     for (;;) {
-        asm volatile("sti; hlt");
+        __asm__ volatile("cli" : : : "memory");
+        if (has_other_runnable()) {
+            __asm__ volatile("sti" : : : "memory");
+            schedule();
+        } else {
+            __asm__ volatile("sti; hlt" : : : "memory");
+        }
     }
 }
 
 void idle_task_init(Task* idle, uint32_t* stack, uint32_t stack_size)
 {
-    uint32_t* sp = stack + stack_size / sizeof(uint32_t);
-    sp--;
-    *sp = (uint32_t)idle_loop;
-    sp--;
-    *sp = 0;
-    sp--;
-    *sp = 0;
-    sp--;
-    *sp = 0;
-    sp--;
-    *sp = 0;
-    idle->ctx.edi = 0;
-    idle->ctx.esi = 0;
-    idle->ctx.ebp = 0;
-    idle->ctx.ebx = 0;
-    idle->ctx.esp = (uint32_t)sp;
-    idle->ctx.eip = (uint32_t)
-        idle_loop; /* for debugging; context.asm resumes via stack+ret */
-    idle->state = TaskState::Runnable;
-    idle->next = nullptr;
-    idle->stack_top = (uint32_t)stack;
-    idle->stack_sz = stack_size;
-    idle->pid = 0;
+    if (!task_init(idle, idle_loop, stack, stack_size, 0))
+        core::panic("idle_task_init: bad idle stack");
 }
 
 } // namespace sched

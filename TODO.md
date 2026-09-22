@@ -15,9 +15,9 @@ See `ISSUES.md` for full details. These are the blockers:
 - [x] **`disk.asm` retry count uses address as counter** — changed to `mov si, 3`
 - [x] **E820 uninitialized EBX** — added `xor ebx, ebx` before loop
 - [x] **`kernel_stack_top` treated as value, not address** — changed to array declaration
-- [ ] **No `copy_from_user`/`copy_to_user`** — user pointer validation missing in all syscalls
-- [ ] **CMake uses host compiler** not `i686-elf-*` (`CMakeLists.txt:55,83`)
-- [ ] **flake.nix has no cross-compiler** — only native gcc13 provided
+- [x] **No `copy_from_user`/`copy_to_user`** — `mm::copy_from_user` / `copy_to_user` / `strncpy_from_user` in all pointer-taking syscalls; real isolation still needs ring 3 (ISSUES.md C5)
+- [x] **CMake uses host compiler** — CMake now wraps the Makefiles, which pick `i686-elf-*` when available
+- [x] **flake.nix has no cross-compiler** — `nix develop .#cross` adds it; default shell fixed (hardening off, no SSE)
 
 ---
 
@@ -29,8 +29,8 @@ See `ISSUES.md` for full details. These are the blockers:
 - [x] **Fix conflicting `serial_init` declarations** — removed dead `kernel.h` and `arch/serial.h`
 - [ ] **Export `Mutex` struct** from `kernel/sched/mutex.cpp` to a header so it's usable
 - [ ] **Add `-ENOSYS` handler** for unimplemented syscalls in `syscall_table.cpp` instead of null pointers
-- [ ] **Fix `scripts/create-disk.sh`** — stop hiding `dd` errors with `2>/dev/null`
-- [ ] **Fix all shell scripts** — add `set -euo pipefail` and `IFS=$'\n\t'`
+- [x] **Fix `scripts/create-disk.sh`** — stop hiding `dd` errors with `2>/dev/null`
+- [x] **Fix all shell scripts** — add `set -euo pipefail` and `IFS=$'\n\t'`
 - [ ] **Add `kernel/build/` to `.gitignore`**
 
 ---
@@ -163,7 +163,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/arch/x86_64/mm/mtrr.asm`
 - [ ] Implement proper VMM with page fault handling
 - [ ] Implement proper slab/buddy allocator
-- [ ] Implement `copy_from_user` / `copy_to_user` with address-space checks
+- [x] Implement `copy_from_user` / `copy_to_user` with address-space checks (`kernel/arch/x86_64/mm/uaccess.cpp`)
 - [ ] Make `heap_free` actually free memory
 
 ### Architecture — Device Drivers
@@ -250,7 +250,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/syscall/sys_getdents.cpp`
 - [x] `kernel/syscall/sys_fork.cpp` — STUB (returns -ENOSYS)
 - [ ] Implement: stat, fstat, execve, waitpid, mmap, munmap, brk, kill, ioctl
-- [ ] Add `copy_from_user` / `copy_to_user` to all syscall handlers
+- [x] Add `copy_from_user` / `copy_to_user` to all syscall handlers
 
 ### Kernel include headers
 All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the full list.
@@ -316,39 +316,38 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [x] `kernel/Makefile` — Builds kernel ELF + compiles userland sources
 - [x] `bootloader/Makefile` — Assembles disk.img, runs QEMU
 - [x] All sub-Makefiles for stage1, stage2, loader, core, ramfs
-- [ ] Standardize on cross-compiler (i686-elf-*) or document host-gcc approach
+- [x] Standardize on cross-compiler (i686-elf-*) or document host-gcc approach — auto-detected, `CROSS_COMPILE` override
+- [x] Kernel build uses `-O2 -Werror -MMD -MP -march=i686 -mgeneral-regs-only`
 
 ### CMake
-- [x] `CMakeLists.txt`
-- [ ] Fix to use `i686-elf-g++` not host `g++`
-- [ ] Add `enable_language(ASM_NASM)` for NASM support
-- [ ] Add proper clean target for custom command outputs
+- [x] `CMakeLists.txt` — thin wrapper over the Makefiles (targets: kernel, disk, run, debug, os-clean)
 
 ### Nix flake
 - [x] `flake.nix` + `flake.lock`
-- [ ] Add `i686-elf-gcc` cross-compiler package
-- [ ] Add xorriso, grub, mtools, clang-tools packages
+- [x] Add `i686-elf-gcc` cross-compiler package (`devShells.cross`)
+- [ ] Add grub package (xorriso, mtools, clang-tools already added)
 - [ ] Add formatter and check outputs
 
 ### Scripts
 - [x] `scripts/build.sh`
-- [x] `scripts/create-disk.sh` — Hides dd errors
+- [x] `scripts/create-disk.sh`
+- [x] `scripts/qemu-test.sh` — QEMU integration test (boot, shell commands, tab completion, stress, poweroff)
 - [x] `scripts/run-qemu.sh`
 - [ ] `scripts/check-toolchain.sh` — Referenced in docs but doesn't exist
 - [ ] `scripts/run-qemu-debug.sh`
 - [ ] `scripts/gdb.sh`
-- [ ] Add `set -euo pipefail` to all scripts
-- [ ] Add `readonly` for constants
-- [ ] Fix create-disk.sh to not hide dd errors
+- [x] Add `set -euo pipefail` to all scripts (enforced by the lint workflow)
+- [x] Add `readonly` for constants
+- [x] Fix create-disk.sh to not hide dd errors
 
 ---
 
 ## INFRASTRUCTURE
 
 ### GitHub / CI/CD
-- [x] `.github/workflows/build.yml`
-- [x] `.github/workflows/test.yml`
-- [x] `.github/workflows/release.yml`
+- [x] `.github/workflows/ci.yml` — build, layout/SSE checks, QEMU integration test, Nix shell, CMake wrapper
+- [x] `.github/workflows/lint.yml` — clang-format (pinned), shellcheck, source conventions, actionlint
+- [x] `.github/workflows/release.yml` — tag-driven, boot-tested, notes from CHANGELOG.md
 - [x] `.github/workflows/hello.yaml`
 - [x] `.github/ISSUE_TEMPLATE/bug_report.md`
 - [x] `.github/ISSUE_TEMPLATE/feature_request.md`
@@ -397,11 +396,11 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 ## PRODUCTION-LEVEL ROADMAP
 
 ### Phase 1: Stabilize (current bugs — priority)
-- [ ] Add `copy_from_user`/`copy_to_user` for syscall security
+- [x] Add `copy_from_user`/`copy_to_user` for syscall security
 - [ ] Fix heap_free to actually free memory (slab/buddy allocator)
 - [ ] Implement proper VMM with page fault handling and demand paging
-- [ ] Standardize cross-compiler toolchain (i686-elf-*) in all build paths
-- [ ] Fix shell scripts with `set -euo pipefail`
+- [x] Standardize cross-compiler toolchain (i686-elf-*) in all build paths
+- [x] Fix shell scripts with `set -euo pipefail`
 - [ ] Export Mutex struct to header
 - [ ] Fix `.clang-format` and run as part of CI
 
@@ -592,7 +591,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 
 ### Phase 14: Tooling & Infrastructure
 - [ ] Unit test framework (kunit-style)
-- [ ] Integration tests (QEMU smoke tests)
+- [x] Integration tests (QEMU smoke tests) — `scripts/qemu-test.sh`
 - [ ] Coverage reporting (gcov)
 - [ ] Kconfig / menuconfig build configuration
 - [ ] ISOLINUX/GRUB/Limine boot support
@@ -602,10 +601,10 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [ ] Cross-compiler build scripts (crosstool-NG style)
 - [ ] Docker / container support (via namespaces + cgroups)
 - [ ] Self-hosted build (building DIT-OS on DIT-OS)
-- [ ] CI/CD with QEMU boot tests on every commit
+- [x] CI/CD with QEMU boot tests on every commit
 - [ ] Debuginfod / symbol server
 - [ ] Documentation site (architecture, API, driver writing)
-- [ ] Coding style checker in CI
+- [x] Coding style checker in CI
 
 ### Phase 15: Production Hardening
 - [ ] Kernel lives in a separate address space (higher-half kernel)

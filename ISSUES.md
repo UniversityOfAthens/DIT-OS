@@ -2,85 +2,64 @@
 
 This file catalogs all known issues across the codebase, organized by severity.
 Generated from a comprehensive audit of kernel, bootloader, userland, build system, and configuration.
+Fixed issues are removed from this file; see `CHANGELOG.md` for what was fixed and when.
+
+**Note on bootloader modules**: the active build assembles only `stage1.asm`,
+`stage2.asm` and `loader.asm`. The other files in `bootloader/src/stage2/`
+(`a20.asm`, `disk.asm`, `png.asm`, `memory.asm`, ...) and `bootloader/src/uefi/`
+are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ---
 
 ## CRITICAL — Will cause boot failure, crashes, or compile errors
 
-### C5. No user pointer validation in syscall implementations
+### C5. User pointers are validated, but user and kernel memory are not separated
 
 | Field | Value |
 |-------|-------|
-| **Files** | `kernel/syscall/sys_read.cpp`, `sys_write.cpp`, `sys_open.cpp`, `sys_getdents.cpp` |
-| **Issue** | All syscall implementations directly dereference user-supplied buffer pointers without using `copy_from_user` / `copy_to_user`. A malicious user process can read/write arbitrary kernel memory. `sys_open.cpp` has a `copy_user_path()` helper that uses `volatile` but still directly dereferences without address-space validation. |
-| **Violates** | AGENTS.md Security Rule 1: "Never dereference user-space pointers directly." |
-| **Fix** | Implement `copy_from_user()` / `copy_to_user()` with address-space boundary checks and use them in all syscall handlers. |
-
+| **Files** | `kernel/include/mm/uaccess.hpp`, `kernel/arch/x86_64/mm/uaccess.cpp` |
+| **Issue** | Every pointer-taking syscall (`read`, `write`, `open`, `getdents`) now goes through `copy_from_user` / `copy_to_user` / `strncpy_from_user`, which reject NULL, low memory, wraparound and ranges outside `[USER_SPACE_START, USER_SPACE_END)`. But userland still runs in ring 0 inside the kernel image (I3), so its buffers live in kernel memory and the user window has to include the kernel. A buggy or malicious user program can still pass a pointer to kernel data. |
+| **Fix** | Run user programs in ring 3 with their own page tables (user pages below `USER_SPACE_END`, kernel mapped supervisor-only), then shrink the window so it excludes the kernel. The helpers and all call sites are already in place. |
 
 ### C9. PNG decoder header chunk lookup always fails
 
 | Field | Value |
 |-------|-------|
-| **File** | `bootloader/src/common/png.asm` |
+| **File** | `bootloader/src/stage2/png.asm` |
 | **Lines** | 38 (never-initialized `png_target_chunk`) |
 | **Issue** | `png_target_chunk` is never initialized (remains 0), so `png_find_chunk` can never find any chunk. Additionally, `zlib_decompress` at line 191 is a stub that does nothing. PNG images are never decoded. |
 | **Fix** | Implement proper chunk-type matching and a working zlib decompressor, or remove the dead code. |
-
-### C10. CMake uses host compiler instead of cross-compiler
-
-| Field | Value |
-|-------|-------|
-| **File** | `CMakeLists.txt` |
-| **Lines** | 55, 83 |
-| **Issue** | Uses bare `ld` and `g++` instead of `i686-elf-ld` / `i686-elf-g++`. Will fail on systems without multilib support or where `ld` defaults to 64-bit output. No `CROSS_COMPILE` or toolchain prefix variable. |
-| **Fix** | Add a toolchain file or set the cross-compiler prefix. Use `i686-elf-g++`, `i686-elf-ld`, etc. |
-
-### C11. `flake.nix` provides no cross-compiler
-
-| Field | Value |
-|-------|-------|
-| **File** | `flake.nix` |
-| **Issue** | Only native `gcc13` is provided. AGENTS.md mandates `i686-elf-gcc`/`i686-elf-g++` for kernel compilation. Building from the Nix environment requires a manually installed cross-compiler. |
-| **Fix** | Add `pkgs.pkgsCross.i686-embedded.buildPackages.gcc13` or similar cross-compiler derivation to the flake. |
+| **Note** | `png.asm` is not assembled into the current build, so this cannot break boot today. |
 
 ### C13. Disk LBA segment hardcoded to 0
 
 | Field | Value |
 |-------|-------|
-| **File** | `bootloader/src/common/disk.asm` |
+| **File** | `bootloader/src/stage2/disk.asm` |
 | **Line** | 47 |
 | **Issue** | `mov word [si+6], 0` always sets the buffer segment to 0 for LBA reads, ignoring any caller-specified segment. Data may be written to the wrong memory location if the caller expects a different segment. |
 | **Fix** | Use the segment value passed by the caller, or document that the segment is always 0. |
+| **Note** | `disk.asm` is not assembled into the current build; `stage2.asm` has its own `read_lba`. |
 
 ---
 
 ## HIGH — Will cause build failures, incorrect behavior, or significant confusion
 
-### H1. `.clang-format` enforces wrong brace style
+### H1. `.clang-format` only partly matches the Allman brace rule
 
 | Field | Value |
 |-------|-------|
 | **File** | `.clang-format` |
-| **Line** | 3 |
-| **Issue** | `BasedOnStyle: LLVM` uses **attached braces** (`if () {`), but AGENTS.md mandates **Allman style** (brace on new line). Running `clang-format` will reformat all code to the wrong style. |
-| **Fix** | Add `BreakBeforeBraces: Allman` override (or change to `BasedOnStyle: Linux` which uses Allman). |
-
-### H2. `.clang-format` missing `UseTab: Never`
-
-| Field | Value |
-|-------|-------|
-| **File** | `.clang-format` |
-| **Line** | 10-11 |
-| **Issue** | Comment says "UseTab: Never is often the default, but it's good to be explicit" but the actual `UseTab: Never` setting is absent. |
-| **Fix** | Add `UseTab: Never` to the configuration. |
+| **Issue** | `BreakBeforeBraces: Custom` breaks before function and namespace braces, but keeps control statements, structs, enums and classes attached (`if (x) {`). AGENTS.md mandates full Allman style. The codebase follows the config, not AGENTS.md. |
+| **Fix** | Decide which is canonical: switch to `BreakBeforeBraces: Allman` and reformat everything in one commit, or update AGENTS.md to describe the current style. |
 
 ### H3. Missing referenced scripts
 
 | Field | Value |
 |-------|-------|
 | **Scripts** | `scripts/check-toolchain.sh`, `scripts/run-qemu-debug.sh`, `scripts/gdb.sh` |
-| **Issue** | These scripts are referenced by `AGENTS.md` and `.cursor/rules/` files but do not exist. The toolchain check, GDB debugging workflow, and QEMU debug mode are undocumented/inaccessible. |
-| **Fix** | Create the missing scripts or update the documentation to remove references. |
+| **Issue** | AGENTS.md no longer references them, but `.cursor/rules/linker-and-build.mdc` and `.cursor/rules/testing.mdc` still do. The debug workflow exists as `make -C bootloader debug`. |
+| **Fix** | Create the scripts or update the Cursor rules to point at the Makefile targets. |
 
 ### H4. `config/` directory completely empty
 
@@ -103,9 +82,9 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | Field | Value |
 |-------|-------|
 | **File** | `bootloader/src/common/constants.inc` |
-| **Lines** | 6, 10 |
-| **Issue** | `STAGE2_LOAD = 0x1000` (should be `0x7E00`), `STAGE2_SECTORS = 16` (should be `9`). These constants contradict the actual bootloader values in `boot.hpp` and `stage1.asm`. |
-| **Fix** | Update to match `boot.hpp`: `STAGE2_LOAD = 0x7E00`, `STAGE2_SECTORS = 9`. |
+| **Line** | 6 |
+| **Issue** | `STAGE2_LOAD = 0x1000` (should be `0x7E00`). It contradicts `boot.hpp` and `stage1.asm`. (`STAGE2_SECTORS` is already fixed at 9.) |
+| **Fix** | Set `STAGE2_LOAD = 0x7E00`. |
 
 ### H10. Loader sector count mismatch (stage2 loads only 2 sectors)
 
@@ -148,23 +127,6 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Issue** | These files return `-1` from their init functions immediately. No actual driver logic is implemented. |
 | **Fix** | Implement proper drivers or remove the stubs and add `-ENODEV` returns. |
 
-### H15. Busy-wait in serial read with `pause` instead of `hlt`/yield
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/syscall/sys_read.cpp` |
-| **Line** | 27 |
-| **Issue** | When no serial input is available, the loop uses `__asm__ volatile("pause")` which is a hint instruction that doesn't reduce power on all CPUs. Should use `sti; hlt` to sleep until the next interrupt, or yield to the scheduler. |
-| **Fix** | Replace `pause` with `sti; hlt` or `sched_yield()`. |
-
-### H16. Toolchain mismatch: documentation vs. reality
-
-| Field | Value |
-|-------|-------|
-| **Polarity** | `AGENTS.md` documents `i686-elf-gcc`/`i686-elf-g++` as the toolchain, but `kernel/Makefile` and `CMakeLists.txt` use host `g++`/`gcc` with `-m32`. |
-| **Issue** | Either the docs are wrong or the build system is wrong. On systems without 32-bit multilib support, the current build fails. |
-| **Fix** | Standardize: either switch to `i686-elf-*` cross-compiler everywhere and update the build system, or update documentation to reflect the host-compiler approach. |
-
 ### H17. Userland compiled with `-ffreestanding` (contradicts guidelines)
 
 | Field | Value |
@@ -181,15 +143,6 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Files** | All `.cpp` and `.hpp` files in `bootloader/src/stage2/` |
 | **Issue** | `bootloader/src/stage2/Makefile` only builds the flat binary from `stage2.asm`. The C++ files (`gdt.cpp`, `paging.cpp`, `stage2.cpp`, etc.) are never compiled or linked. The `stage2.ld` linker script exists but is unused. This is misleading dead code. |
 | **Fix** | Either wire up the ELF-linked C++ build path or remove the unused files. |
-
-### H19. Loader sets EAX to multiboot magic (should not)
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/loader/loader.asm` |
-| **Line** | 164 |
-| **Issue** | `mov eax, MB_MAGIC` (0x2BADB002) sets EAX before jumping to the kernel. Per the Multiboot spec, the **bootloader receives** the magic value — it does not set it for the kernel. The kernel checks EAX on entry. Setting EAX to a fixed value defeats this check and would confuse a Multiboot-compliant kernel. |
-| **Fix** | Remove the `mov eax, ...` instruction before the kernel jump (or ensure the kernel doesn't check EAX if not using Multiboot). |
 
 ### H20. `loader.asm` hardcodes 18 sectors/track, 2 heads (CHS geometry)
 
@@ -211,23 +164,6 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Files** | Hundreds of locations across `core/printk.cpp`, `boot/main.cpp`, `console.cpp`, `vfs.cpp`, `ramfs.cpp`, `pci.cpp`, `ata.cpp`, `floppy.cpp`, `keyboard.cpp`, `sys_read.cpp`, `sys_write.cpp`, `fd.cpp` etc. |
 | **Issue** | Raw `int`, `unsigned int`, `long` are used instead of `u32`/`s32`/`u16` as required by AGENTS.md type conventions. |
 | **Fix** | Replace with properly-sized types per `kernel/include/types.hpp`. |
-
-### M2. `heap_free()` is a silent no-op
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/arch/x86_64/mm/heap.cpp` |
-| **Lines** | 27-29 |
-| **Issue** | The bump allocator's `heap_free()` accepts any pointer and silently does nothing. Any code that frees memory and expects reuse will silently leak. |
-| **Fix** | At minimum, add a warning or assertion when `kfree` is called. Implement proper free once PMM/VMM is wired. |
-
-### M3. Missing final newlines in ~15 files
-
-| Field | Value |
-|-------|-------|
-| **Files** | `sys_getpid.cpp`, `sys_fork.cpp`, `pid.cpp`, `exit.cpp`, `fork.cpp`, `mutex.cpp`, `vga.hpp`, `color.hpp`, `serial.hpp`, `ata.hpp`, `floppy.hpp`, `pci_ids.hpp`, `ioctl.hpp`, `framebuffer.hpp`, `io.hpp` |
-| **Issue** | POSIX requires files to end with a newline. GCC may warn with `-Wnewline-eof`. |
-| **Fix** | Append newlines to all affected files. |
 
 ### M4. Duplicated `kstrcmp` in VFS and ramfs
 
@@ -254,13 +190,13 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Issue** | `config_init()` takes no action. Config struct `s_config` has reasonable defaults from its initializer but is never populated from the command line or boot info. |
 | **Fix** | Implement actual config parsing from kernel command line or bootloader info. |
 
-### M7. `syscall_table.cpp` mixes symbolic and hardcoded errno values
+### M7. Drivers return bare `-1` instead of errno values
 
 | Field | Value |
 |-------|-------|
-| **File** | `kernel/syscall/syscall_table.cpp`, `kernel/syscall/fd.cpp` |
-| **Issue** | Some returns use `-EINVAL`, `-EBADF` correctly, but `syscall_table.cpp:23` uses `return -22; /* -EINVAL */` and `sys_fork.cpp:11` uses `return -38; /* -ENOSYS */`. Hardcoded values are fragile. |
-| **Fix** | Replace all hardcoded negative numbers with symbolic `-ERRNO` constants. |
+| **Files** | `kernel/arch/x86_64/dev/ata.cpp`, `ahci.cpp`, `nvme.cpp`, `floppy.cpp`, `serial.cpp`, `kernel/arch/x86_64/mm/vmm.cpp` |
+| **Issue** | The syscall layer now uses symbolic errno values, but drivers and the VMM still return `-1`, which callers cannot distinguish (`-EPERM` by accident). |
+| **Fix** | Return specific negative errno values (`-ENODEV`, `-EIO`, `-EINVAL`, ...). |
 
 ### M8. Missing `DT_*` dirent type enum in `namespace fs`
 
@@ -289,23 +225,6 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Issue** | Only checks `num == 0` but doesn't validate that the sector count is ≤ 255 (per ATA single-command limit). Oversized requests cause excessive loop iterations. |
 | **Fix** | Add `if (num == 0 || num > 255) return -EINVAL;` and handle 0=256 per ATA spec. |
 
-### M11. All shell scripts use `set -e` instead of `set -euo pipefail`
-
-| Field | Value |
-|-------|-------|
-| **Files** | `scripts/build.sh`, `scripts/create-disk.sh`, `scripts/run-qemu.sh`, `bootloader/scripts/sign.sh`, `bootloader/scripts/build.sh` |
-| **Issue** | AGENTS.md mandates `set -euo pipefail` for all shell scripts, but none use it. Without `-u`, undefined variables silently resolve to empty strings. Without `-o pipefail`, pipeline errors are silently ignored. |
-| **Fix** | Add `set -euo pipefail` and `IFS=$'\n\t'` to all shell scripts. |
-
-### M12. `scripts/create-disk.sh` hides `dd` errors
-
-| Field | Value |
-|-------|-------|
-| **File** | `scripts/create-disk.sh` |
-| **Lines** | 17-21 |
-| **Issue** | All `dd` commands redirect stderr to `/dev/null`. If a disk write fails (e.g., out of space), the error is silently hidden and subsequent operations continue with incomplete data. |
-| **Fix** | Remove `2>/dev/null` or add explicit error checking after each `dd`. |
-
 ### M13. `scripts/create-disk.sh` uses magic numbers for disk layout
 
 | Field | Value |
@@ -314,14 +233,6 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Lines** | 16-21 |
 | **Issue** | Sector counts and offsets (2880, 2, 11, 37) are hardcoded instead of using named constants. Must stay in sync with `bootloader/Makefile`, `constants.inc`, and `boot.hpp`. |
 | **Fix** | Derive values from a shared configuration source (e.g., a `disk_layout.sh` that reads from `boot.hpp`). |
-
-### M14. `.gitignore` does not exclude `kernel/build/`
-
-| Field | Value |
-|-------|-------|
-| **File** | `.gitignore` |
-| **Issue** | `build/` only matches the CMake build directory at root. `kernel/build/` (where the kernel Makefile puts object files) is not excluded. |
-| **Fix** | Add `kernel/build/` to `.gitignore`. |
 
 ### M15. Missing include directory referenced in build flags
 
@@ -369,7 +280,7 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 
 | Field | Value |
 |-------|-------|
-| **File** | `bootloader/src/common/png.asm` |
+| **File** | `bootloader/src/stage2/png.asm` |
 | **Lines** | 129, 136 |
 | **Issue** | `movzx ecx, word [png_chunk_length]` truncates 32-bit chunk lengths to 16 bits. Chunks larger than 64 KB (IHDR, IDAT) will overflow and cause incorrect reads. |
 | **Fix** | Use full 32-bit `mov ecx, [png_chunk_length]` instead of `movzx` from 16 bits. |
@@ -378,7 +289,7 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 
 | Field | Value |
 |-------|-------|
-| **File** | `bootloader/src/common/a20.asm` |
+| **File** | `bootloader/src/stage2/a20.asm` |
 | **Lines** | 7-9 |
 | **Issue** | Only port 0x92 (fast A20) is used. No fallback to keyboard controller (method 1) or BIOS int 0x15 AX=0x2401. Some systems do not support the fast A20 method. |
 | **Fix** | Add fallback paths for keyboard controller and BIOS A20 methods. |
@@ -395,7 +306,7 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 
 | Field | Value |
 |-------|-------|
-| **File** | `bootloader/src/common/uefi.asm` |
+| **File** | `bootloader/src/uefi/uefi.asm` |
 | **Line** | 22 |
 | **Issue** | COFF header says `dw 2` (2 sections), but there are 3 section headers (.text, .data, .reloc). A PE loader may skip the .reloc section, causing relocation failures. |
 | **Fix** | Change `dw 2` to `dw 3` to match the actual number of sections. |
@@ -404,7 +315,7 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 
 | Field | Value |
 |-------|-------|
-| **File** | `bootloader/src/common/uefi.asm` |
+| **File** | `bootloader/src/uefi/uefi.asm` |
 | **Lines** | 84-106 |
 | **Issue** | All section headers have `RawSize = 0` and `VirtualSize = 0`. No actual code or data is produced. The PE file is structurally incomplete. |
 | **Fix** | Set proper sizes in the section headers. |
@@ -413,7 +324,7 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 
 | Field | Value |
 |-------|-------|
-| **File** | `bootloader/src/common/memory.asm` (ASM) vs `bootloader/include/memory.hpp:25` (C++) |
+| **File** | `bootloader/src/stage2/memory.asm` (ASM) vs `bootloader/include/memory.hpp:25` (C++) |
 | **Issue** | ASM function expects a FAR pointer (segment:offset) passed via registers `di` (offset) and `bx` (segment). The C declaration `int memory_map_e820(E820Entry *entries, int max_count)` passes a NEAR pointer. The calling conventions don't match. |
 | **Fix** | Standardize on one calling convention (preferably NEAR with the flat binary's segment setup). |
 
@@ -443,22 +354,6 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Issue** | `char chunk[256]` — adequate for ramfs but would cause many read syscalls for larger files. |
 | **Fix** | Increase buffer size or make it a configurable constant. |
 
-### M29. Stale build artifacts checked into repo
-
-| Field | Value |
-|-------|-------|
-| **Directories** | `userland/libc/build/`, `userland/bin/build/` |
-| **Issue** | Object files (`.o`), executables, and libraries (`.a`) are checked into the repository alongside orphaned source directories. Some `.o` files have no corresponding source. Build is not reproducible from the checked-in sources. |
-| **Fix** | Remove build artifacts from version control. Add them to `.gitignore`. |
-
-### M30. `linker.ld` uses `ENTRY(kernel_entry)` but multiboot header may conflict
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/arch/x86_64/boot/linker.ld` |
-| **Issue** | The linker script specifies `ENTRY(kernel_entry)` but also links `multiboot.asm` and `multiboot2.asm` which place their own headers at the start of `.text`. Multiboot headers must be within the first 8192 bytes of the kernel image — the linker script order determines whether they are. |
-| **Fix** | Verify and document the expected section ordering. |
-
 ### M31. Missing `KERNEL_PACKED` on ABI-boundary structs
 
 | Field | Value |
@@ -467,30 +362,21 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Issue** | Structs that cross the user/kernel boundary (dirent, stat) lack `__attribute__((packed))` / `KERNEL_PACKED`. If compiler padding differs between kernel and userland, data will be misaligned. |
 | **Fix** | Add `KERNEL_PACKED` to all ABI structs. |
 
-### M32. Boot console prints appear before serial init completes
+### M35. Userland `malloc` never frees memory
 
 | Field | Value |
 |-------|-------|
-| **File** | `kernel/arch/x86_64/boot/main.cpp` |
-| **Issue** | Early boot messages are printed to VGA before serial initialization is guaranteed to complete. On real hardware, serial may miss the first few messages. |
-| **Fix** | Ensure serial is fully initialized before any console output, or buffer early messages. |
+| **File** | `userland/libc/src/stdlib/malloc.c` |
+| **Issue** | A 64 KB bump allocator whose `free()` is a no-op, the same bug the kernel heap had. Nothing calls it yet, but any userland program that allocates in a loop will run out. |
+| **Fix** | Reuse the kernel heap's free-list design, or implement `brk`/`mmap` and a real allocator. |
 
-### M33. `entry.asm` does not clear .bss properly
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/arch/x86_64/boot/entry.asm` |
-| **Issue** | The BSS-clearing logic may not handle all edge cases (e.g., BSS not 4-byte aligned, or zero-length BSS). |
-| **Fix** | Review and harden the BSS clearing loop. |
-
-### M34. `multiboot.asm` sets VBE mode `0x010F` without checking if VBE is available
+### M36. Exiting the init task leaves the system with nothing to run
 
 | Field | Value |
 |-------|-------|
-| **File** | `kernel/arch/x86_64/boot/multiboot.asm` |
-| **Line** | 196 |
-| **Issue** | The multiboot header requests VBE mode `0x010F` unconditionally. If the bootloader (or BIOS, in the unlikely event this is used with GRUB) doesn't support VBE, this may cause the boot to fail or behave unexpectedly. |
-| **Fix** | Make VBE mode conditional or document as dead code. |
+| **Files** | `kernel/sched/exit.cpp`, `userland/bin/init.c` |
+| **Issue** | If the shell returns (instead of the `exit` builtin powering off QEMU), `init` exits, `task_exit()` removes it, and the idle task halts forever with no runnable task and no message. PID 1 exiting should be fatal and visible. |
+| **Fix** | Panic when PID 1 exits, or have init restart the shell. |
 
 ---
 
@@ -534,12 +420,6 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **File** | `bootloader/include/config.hpp:4` |
 | **Issue** | Uses `#include <stdint.h>` (angle brackets, system header) while other bootloader headers use `#include "types.hpp"`. Inconsistency. |
 
-### L6. Some files use `#pragma once` instead of include guards
-
-| Field | Value |
-|-------|-------|
-| **Files** | Check `kernel/include/` for any use of `#pragma once`. AGENTS.md mandates `#ifndef`/`#define`/`#endif`. |
-
 ### L7. No compile-time assertion for userland/kernel struct layout compatibility
 
 | Field | Value |
@@ -568,14 +448,7 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | Field | Value |
 |-------|-------|
 | **File** | `.gitignore` |
-| **Issue** | Missing entries for `kernel/build/`, `*.swp`, `*.swo`, `*.swx` (vim swap), `*~`, `.directory`, `.DS_Store`, `Thumbs.db`, `.cache/`, `compile_commands.json`, `.vscode/`, `.idea/`. |
-
-### L11. `entry.asm` uses hardcoded segment values
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/arch/x86_64/boot/entry.asm` |
-| **Issue** | Segment selectors (e.g., `0x10` for data segment) are hardcoded instead of using named constants. |
+| **Issue** | Missing entries for `*.swp`, `*.swo`, `*~`, `.DS_Store`, `.cache/`, `compile_commands.json`, `.vscode/`, `.idea/`, and `*.d` dependency files outside `build/`. |
 
 ### L12. Manual byte-zeroing instead of `memset`
 
@@ -599,19 +472,12 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Line** | 444-445 |
 | **Issue** | The DAP segment increment logic (`add word [dap_segment], 0x1000`) works, but assumes a particular segment setup that may not hold if other code modifies segment registers. |
 
-### L15. `flake.nix` has stale nixpkgs pin (nixos-24.11 vs expected 25.05)
-
-| Field | Value |
-|-------|-------|
-| **File** | `flake.nix:4` |
-| **Issue** | Pinned to `nixos-24.11`. As of May 2026, `nixos-25.05` may be available. |
-
-### L16. `flake.nix` missing formatter, checks, and devShell hook
+### L16. `flake.nix` missing formatter and checks
 
 | Field | Value |
 |-------|-------|
 | **File** | `flake.nix` |
-| **Issue** | No `formatter` output (for `nix fmt`), no `checks` (for `nix flake check`), and no shell hook (for `nix develop` post-setup). |
+| **Issue** | No `formatter` output (for `nix fmt`) and no `checks` (for `nix flake check`, e.g. build the disk image and boot it in QEMU). |
 
 ### L17. No `ENOSYS` in userland errno
 
@@ -620,13 +486,23 @@ Generated from a comprehensive audit of kernel, bootloader, userland, build syst
 | **Files** | Userland `errno.h` (doesn't exist) |
 | **Issue** | Until userland has an errno.h, users cannot programmatically check syscall errors. |
 
+### L18. Kernel version string does not match releases
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/arch/x86_64/boot/main.cpp`, `kernel/core/version.cpp` |
+| **Issue** | The kernel prints `DIT-OS 0.1.0`, but releases are versioned `0.0.x-alpha` in `CHANGELOG.md`. |
+
+### L19. Stage1 stores the boot drive before setting `DS`
+
+| Field | Value |
+|-------|-------|
+| **File** | `bootloader/src/stage1/stage1.asm` |
+| **Issue** | `mov [boot_drive], dl` runs before `DS` is zeroed, so on a BIOS that enters with `DS != 0` the drive number is written to the wrong address and the stage2 read uses garbage. Stage1 also never normalises `CS` with a far jump. |
+
 ---
 
 ## INFO — Known design decisions, planned features, or documentation gaps
-
-### I1. Two shell implementations coexist
-
-Kernel has `kernel/sched/shell.cpp` (bootstrap stub) and userland has `userland/shell/main.c`. Both are compiled into the kernel. AGENTS.md explains this is intentional — the kernel stub is for early boot debugging, the userland shell is the real shell.
 
 ### I2. 10 syscalls defined but unimplemented
 
@@ -634,7 +510,7 @@ Kernel has `kernel/sched/shell.cpp` (bootstrap stub) and userland has `userland/
 
 ### I3. Userland is compiled into the kernel (temporary)
 
-Per AGENTS.md and Makefile comments, userland code is compiled and linked into the kernel binary for now. True userspace separation (ring 3, separate page tables) is not yet implemented.
+Per AGENTS.md and Makefile comments, userland code is compiled and linked into the kernel binary for now. It runs in ring 0 and calls the syscall layer through direct C wrappers (`dit_sys_*`), not `int 0x80`. True userspace separation (ring 3, separate page tables) is not yet implemented, which is why C5's pointer checks cannot exclude kernel memory yet.
 
 ### I4. `config/` directory and its 15+ files are documented but unimplemented
 
@@ -666,26 +542,26 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 | Area | Critical | High | Medium | Low/Info |
 |------|----------|------|--------|----------|
-| **Bootloader (ASM)** | C9, C13 | H9, H10, H11, H12, H19, H20 | M20, M21, M22, M23, M24, M25, M26 | L14 |
-| **Bootloader (C++)** | — | H12 | — | L5 |
-| **Kernel (Core)** | C5 | H15 | M2, M5, M6, M7, M8, M32, M34 | L6, L10, L12 |
-| **Kernel (Sched)** | — | H8 | M1 | L13 |
+| **Bootloader (ASM)** | C9, C13 (unassembled) | H9, H10, H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
+| **Bootloader (C++)** | — | H12, H18 | — | L5 |
+| **Kernel (Core)** | C5 | — | M5, M6, M7, M8 | L12, L18 |
+| **Kernel (Sched)** | — | H8 | M1, M36 | L13 |
 | **Kernel (FS)** | — | — | M4, M9, M31 | L12 |
-| **Kernel (MM)** | — | — | M2, M10 | — |
-| **Kernel (Dev)** | — | H13, H14 | M10 | L8, L9 |
-| **Kernel (Syscall)** | C5 | H15 | M1, M27 | — |
-| **Kernel (Arch)** | — | H15 | M1, M33 | L11 |
-| **Userland** | — | — | M17, M18, M19 | L1, L2, L3, L4, L7 |
-| **Build System** | C10, C11 | H1, H2, H3, H16, H17 | M11, M12, M13, M14, M15, M30 | L15, L16 |
+| **Kernel (MM)** | — | — | M10 | — |
+| **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
+| **Kernel (Syscall)** | C5 | — | M1, M27 | — |
+| **Kernel (Arch)** | — | — | M1 | — |
+| **Userland** | — | — | M17, M18, M19, M28, M35 | L1, L2, L3, L4, L7, L17 |
+| **Build System** | — | H1, H3, H17 | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | H4 | — | I4, I5, I6, I7 |
-| **Docs/Conventions** | — | — | M16 | I1, I2, I3, I8, I9 |
+| **Docs/Conventions** | — | — | M16 | I2, I3, I9, I10 |
 
 ---
 
 ## Top 5 Most Important Fixes (remaining)
 
-1. **C5 — No user pointer validation**: All syscall handlers directly dereference user addresses without `copy_from_user`/`copy_to_user`. Security hole.
-2. **C10, C11 — Cross-compiler**: Build system won't work on systems without 32-bit multilib support.
-3. **C9 — PNG decoder is broken**: `zlib_decompress` stub, `png_target_chunk` never initialized (dead code path).
-4. **H1, H2 — `.clang-format` wrong**: LLVM attached braces instead of Allman; missing `UseTab: Never`.
-5. **H8 — Mutex not exported**: `Mutex` struct defined in `.cpp` only, `mutex_lock`/`unlock` are dead code.
+1. **C5 / I3 — Ring 3 userland**: pointer validation is in place, but user programs still run in ring 0 inside the kernel image, so the user window must include kernel memory.
+2. **M36 — PID 1 exit**: the system silently idles if init exits.
+3. **H8 — Mutex not exported**: `Mutex` struct defined in `.cpp` only, `mutex_lock`/`unlock` are dead code.
+4. **H1 — Brace style**: `.clang-format` and AGENTS.md disagree; pick one.
+5. **H9 — `STAGE2_LOAD`**: wrong constant in `constants.inc`.

@@ -1,6 +1,9 @@
 # DIT-OS Custom Bootloader - Full boot path (ELF kernel via loader)
 
 NASM = nasm
+# Same toolchain choice as kernel/Makefile (host objcopy handles elf32 too)
+CROSS_COMPILE ?= $(if $(shell command -v i686-elf-objcopy 2>/dev/null),i686-elf-,)
+OBJCOPY = $(CROSS_COMPILE)objcopy
 
 SRC_DIR = src
 BUILD_DIR = build
@@ -14,6 +17,8 @@ STAGE1_OUT = $(BUILD_DIR)/stage1.bin
 STAGE2_OUT = $(BUILD_DIR)/stage2.bin
 LOADER_OUT = $(BUILD_DIR)/loader.bin
 KERNEL_OUT = $(BUILD_DIR)/kernel.bin
+# Stripped copy of kernel.bin written to disk (kernel.bin keeps symbols for GDB)
+KERNEL_IMG = $(BUILD_DIR)/kernel.img
 DISK_IMAGE = $(BUILD_DIR)/disk.img
 
 # Disk layout: 0=stage1, 2-10=stage2 (9 sectors), 11-36=loader, 37+=kernel
@@ -21,7 +26,9 @@ DISK_SECTOR_STAGE2  = 2
 DISK_SECTOR_LOADER  = 11
 DISK_SECTOR_KERNEL  = 37
 LOADER_SECTORS      = 26
+# Sectors stage2 reads for the kernel; passed to stage2.asm and checked below
 KERNEL_SECTORS      = 200
+SECTOR_SIZE         = 512
 
 STAGE1_SRC = $(STAGE1_DIR)/stage1.asm
 STAGE2_SRC = $(STAGE2_DIR)/stage2.asm
@@ -42,8 +49,8 @@ all: dirs $(DISK_IMAGE)
 $(STAGE1_OUT): $(STAGE1_SRC)
 	$(NASM) $(NASM_BIN) -o $@ $<
 
-$(STAGE2_OUT): $(STAGE2_SRC)
-	$(NASM) $(NASM_BIN) -o $@ $<
+$(STAGE2_OUT): $(STAGE2_SRC) Makefile
+	$(NASM) $(NASM_BIN) -DKERNEL_SECTORS=$(KERNEL_SECTORS) -o $@ $<
 
 $(LOADER_OUT): dirs
 	$(MAKE) -C $(LOADER_DIR) all
@@ -55,12 +62,22 @@ $(KERNEL_OUT): FORCE
 
 FORCE:
 
-$(DISK_IMAGE): $(STAGE1_OUT) $(STAGE2_OUT) $(LOADER_OUT) $(KERNEL_OUT)
-	@dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null
-	@dd if=$(STAGE1_OUT) of=$@ conv=notrunc 2>/dev/null
-	@dd if=$(STAGE2_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_STAGE2) conv=notrunc 2>/dev/null
-	@dd if=$(LOADER_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_LOADER) conv=notrunc 2>/dev/null
-	@dd if=$(KERNEL_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_KERNEL) conv=notrunc 2>/dev/null
+# Stage2 loads exactly KERNEL_SECTORS; a bigger image would boot truncated.
+$(KERNEL_IMG): $(KERNEL_OUT)
+	$(OBJCOPY) --strip-all $< $@
+	@size=$$(wc -c < $@); max=$$(( $(KERNEL_SECTORS) * $(SECTOR_SIZE) )); \
+	if [ "$$size" -gt "$$max" ]; then \
+		echo "ERROR: kernel image is $$size bytes, stage2 loads only" \
+			"$$max (KERNEL_SECTORS=$(KERNEL_SECTORS))" >&2; \
+		rm -f $@; exit 1; \
+	fi
+
+$(DISK_IMAGE): $(STAGE1_OUT) $(STAGE2_OUT) $(LOADER_OUT) $(KERNEL_IMG)
+	@dd if=/dev/zero of=$@ bs=512 count=2880 status=none
+	@dd if=$(STAGE1_OUT) of=$@ conv=notrunc status=none
+	@dd if=$(STAGE2_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_STAGE2) conv=notrunc status=none
+	@dd if=$(LOADER_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_LOADER) conv=notrunc status=none
+	@dd if=$(KERNEL_IMG) of=$@ bs=512 seek=$(DISK_SECTOR_KERNEL) conv=notrunc status=none
 	@echo "Disk image: $@"
 
 disk: dirs $(DISK_IMAGE)

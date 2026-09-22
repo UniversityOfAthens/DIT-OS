@@ -21,22 +21,22 @@ DIT-OS/
 │   │   └── feature_request.md
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   └── workflows/
-│       ├── build.yml       # CI build workflow
+│       ├── ci.yml          # Build, boot test (host GCC, Nix), CMake wrapper
 │       ├── hello.yaml      # Example/test workflow
-│       ├── release.yml     # Release workflow
-│       └── test.yml        # Test workflow
+│       ├── lint.yml        # clang-format, shellcheck, conventions, actionlint
+│       └── release.yml     # Tag-driven release (boot-tested, CHANGELOG notes)
 ├── .gitignore
 ├── AGENTS.md               # AI agent guidelines (authoritative)
 ├── AUTHORS.md
 ├── CHANGELOG.md
-├── CMakeLists.txt           # CMake support (experimental, uses host compiler not i686-elf)
+├── CMakeLists.txt           # Thin CMake wrapper that calls the Makefiles
 ├── ISSUES.md                # Generated issue tracker
 ├── LICENSE
 ├── PROJECT_STRUCTURE.md     # This file
 ├── README.md
 ├── TODO.md                  # Task tracking (50+ unchecked items)
 ├── flake.lock
-├── flake.nix                # Nix flake (native gcc13 only, no i686-elf cross-compiler)
+├── flake.nix                # Nix dev shells: default (host GCC), .#cross (i686-elf)
 │
 ├── boot/                    # GRUB boot files (alternative boot path)
 │   └── grub/
@@ -48,7 +48,7 @@ DIT-OS/
 │
 ├── bootloader/
 │   ├── Makefile             # Top-level: builds disk.img, runs QEMU
-│   ├── build/               # Build output (disk.img, stage*.bin, kernel.bin)
+│   ├── build/               # Build output (disk.img, stage*.bin, kernel.bin, kernel.img)
 │   ├── config/
 │   │   └── boot.cfg         # Bootloader configuration
 │   ├── include/             # Shared C++ headers
@@ -273,7 +273,8 @@ DIT-OS/
 ├── scripts/
 │   ├── build.sh                 # Build kernel + bootloader + disk image
 │   ├── create-disk.sh           # Create floppy disk image (dd)
-│   └── run-qemu.sh              # Run QEMU (serial stdio, 32MB)
+│   ├── run-qemu.sh              # Run QEMU (serial stdio, 32MB)
+│   └── qemu-test.sh             # QEMU integration test (used by CI)
 │
 ├── tests/                       # EMPTY — no tests yet
 │

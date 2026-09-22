@@ -20,76 +20,76 @@ FONT_WIDTH equ 8
 global draw_char
 draw_char:
     pusha
-    
+
     ; Get font data address
     and eax, 0xFF           ; Clear upper bits
     sub al, 32              ; Font starts at space (32)
     cmp al, 95              ; Max char (127-32=95)
     ja .done
-    
+
     mov ebx, FONT_HEIGHT
     mul ebx                 ; EAX = offset into font table
     add eax, font_data
     mov ebp, eax            ; EBP = font data pointer
-    
+
     ; Draw character
     mov edi, edx            ; EDI = y position
     mov ecx, FONT_HEIGHT    ; 16 rows
-    
+
 .row_loop:
     push ecx
     mov al, [ebp]           ; Get font row
     inc ebp
-    
+
     mov ebx, ecx
     dec ebx                 ; EBX = row index (15 to 0)
-    
+
     ; Calculate pixel Y: y + (15 - row)
     push edx
     mov ecx, 15
     sub ecx, ebx
     add ecx, edx
-    
+
     ; Draw 8 pixels for this row
     mov edx, 8              ; 8 columns
     push eax
-    
+
 .col_loop:
     test al, 0x80           ; Check leftmost bit
     jz .skip_pixel
-    
+
     ; Draw pixel at (x + (8 - col), y + row)
     push eax
     push ebx
     push ecx
     push edx
-    
+
     ; X position
     mov eax, 8
     sub eax, edx            ; Column offset
     add eax, [esp + 16]     ; Add x position (saved on stack)
     mov ecx, eax
-    
+
     ; Y position already in ECX from earlier
     mov eax, esi            ; Color
     call plot_pixel
-    
+
     pop edx
     pop ecx
     pop ebx
     pop eax
-    
+
 .skip_pixel:
     shl al, 1               ; Next bit
     dec edx
     jnz .col_loop
-    
+
     pop eax
     pop edx
     pop ecx
     dec ecx
     jnz .row_loop
-    
+
 .done:
     popa
     ret
@@ -104,30 +104,30 @@ draw_string:
     mov edi, ecx            ; EDI = current x position (saved)
     mov ebp, edx            ; EBP = y position
     mov dword [font_color], ebx  ; Save color to memory
-    
+
 .loop:
     lodsb
     test al, al
     jz .done
-    
+
     ; Draw character
     push esi
     push edi
-    
+
     ; AL already has character
     mov ecx, edi            ; X position
     mov edx, ebp            ; Y position
     mov esi, [font_color]   ; Color from memory
     call draw_char
-    
+
     pop edi
     pop esi
-    
+
     ; Advance x position
     add edi, FONT_WIDTH + 1 ; +1 for spacing
-    
+
     jmp .loop
-    
+
 .done:
     popa
     ret
@@ -144,16 +144,16 @@ global string_width
 string_width:
     push esi
     push ecx
-    
+
     xor ecx, ecx
-    
+
 .loop:
     lodsb
     test al, al
     jz .done
     add ecx, FONT_WIDTH + 1
     jmp .loop
-    
+
 .done:
     mov eax, ecx
     pop ecx

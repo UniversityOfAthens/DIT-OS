@@ -4,7 +4,11 @@
 bits 16
 ORG 0x7E00
 
-KERNEL_SECTORS equ 200       ; Sectors to load for kernel (85KB current + headroom)
+; Sectors to load for the kernel image; bootloader/Makefile passes it and
+; fails the build if the image is bigger.
+%ifndef KERNEL_SECTORS
+%error "KERNEL_SECTORS must be passed with -DKERNEL_SECTORS=N"
+%endif
 COM1_BASE equ 0x3F8
 COM_LSR   equ 5
 COM_DATA  equ 0
@@ -14,7 +18,7 @@ COM_DLH   equ 1
 
 _start:
     mov [boot_drive], dl
-    
+
     cli
     xor ax, ax
     mov ds, ax
@@ -22,21 +26,21 @@ _start:
     mov ss, ax
     mov sp, 0x9000
     sti
-    
+
     call serial_init
     call clear_screen
-    
+
     mov si, msg_stage2
     call print_both
-    
+
     mov byte [selection], 0
-    
+
 main_loop:
     call draw_menu
-    
+
 .input:
     call read_key
-    
+
     cmp ah, 0x48    ; Up arrow
     je .up
     cmp ah, 0x50    ; Down arrow
@@ -60,7 +64,7 @@ main_loop:
  .set_2:
     mov byte [selection], 2
     jmp main_loop
-    
+
  .up:
     cmp byte [selection], 0
     jne .up_dec
@@ -70,7 +74,7 @@ main_loop:
  .up_dec:
     dec byte [selection]
     jmp main_loop
- 
+
  .down:
     cmp byte [selection], 2
     jne .down_inc
@@ -80,7 +84,7 @@ main_loop:
  .down_inc:
     inc byte [selection]
     jmp main_loop
-    
+
 .select:
     call boot_selection
     jmp main_loop
@@ -88,7 +92,7 @@ main_loop:
 draw_menu:
     pusha
     call clear_screen
-    
+
     mov si, msg_title
     call print_both
     mov si, msg_subtitle
@@ -97,9 +101,9 @@ draw_menu:
     call print_both
     mov si, msg_crlf
     call print_both
-    
+
     movzx ax, byte [selection]
-    
+
     cmp ax, 0
     je .show0
     mov si, msg_space
@@ -111,7 +115,7 @@ draw_menu:
 .p0:
     mov si, msg_opt0
     call print_both
-    
+
     cmp ax, 1
     je .show1
     mov si, msg_space
@@ -123,7 +127,7 @@ draw_menu:
 .p1:
     mov si, msg_opt1
     call print_both
-    
+
     cmp ax, 2
     je .show2
     mov si, msg_space
@@ -146,20 +150,20 @@ draw_menu:
 
 boot_selection:
     pusha
-    
+
     movzx ax, byte [selection]
-    
+
     cmp ax, 0
     je .boot_normal
-    
+
     cmp ax, 1
     je .boot_recovery
-    
+
     cmp ax, 2
     je .reboot
-    
+
     jmp .done
-    
+
 .boot_normal:
     mov si, msg_loading
     call print_both
@@ -170,7 +174,7 @@ boot_selection:
     mov dword [dap_lba], 11
     call read_lba
     jc .error
-    ; Load kernel ELF (110 sectors from LBA 37) to 0x2000:0 = 0x20000
+    ; Load kernel ELF (KERNEL_SECTORS from LBA 37) to 0x2000:0 = 0x20000
     mov word [dap_count], KERNEL_SECTORS
     mov word [dap_offset], 0x0000
     mov word [dap_segment], 0x2000
@@ -190,22 +194,22 @@ boot_selection:
     mov ax, 0
     push ax
     retf
-    
+
 .boot_recovery:
     mov si, msg_recovery
     call print_string
     jmp .done
-    
+
 .reboot:
     mov si, msg_reboot
     call print_string
     xor ax, ax
     int 0x19
-    
+
 .error:
     mov si, msg_error
     call print_string
-    
+
 .done:
     popa
     ret

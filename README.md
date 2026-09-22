@@ -17,97 +17,141 @@ Quick install (Debian/Ubuntu):
 sudo apt install nasm build-essential make qemu-system-x86
 ```
 
-## Build and run (current way)
+With Nix you can use the flake instead: `nix develop` opens a shell with
+everything above plus `gdb`, `clang-tools` and `xxd`. `nix develop .#cross`
+also adds the `i686-elf` cross-compiler (built from source the first time, so
+it takes a while).
 
-We use the **custom bootloader** (no GRUB). Build the bootloader and disk image, then run in QEMU.
+## Build and run
 
-### 1. Build everything (recommended)
+DIT-OS boots with its own bootloader (no GRUB). `kernel/Makefile` uses the
+`i686-elf-*` cross-compiler when it is on your `PATH` and otherwise falls back
+to the host `gcc`/`g++` in 32-bit mode (`-m32 -march=i686`), so a normal
+`build-essential` install is enough. Force a choice with
+`make CROSS_COMPILE=i686-elf-` or `make CROSS_COMPILE=`. Warnings are errors
+(`-Werror`).
+
+### 1. Build
 
 From the project root:
 
 ```bash
-# Build kernel (ELF → bootloader/build/kernel.bin)
-make -C kernel
-
-# Build bootloader + disk image (stage1 + stage2 + kernel on floppy image)
-make -C bootloader all
+rm -rf bootloader/build kernel/build   # clean build (recommended)
+make -C kernel                         # kernel ELF -> bootloader/build/kernel.bin
+make -C bootloader all                 # stage1, stage2, loader, disk image
 ```
 
-Or use the bootloader’s script (if present):
+`make -C bootloader all` also rebuilds the kernel, so on its own it is enough
+for everyday work. `./scripts/build.sh` runs both steps.
 
-```bash
-./bootloader/scripts/build.sh all
-```
+Build outputs in `bootloader/build/`:
+
+| File | What it is |
+|------|------------|
+| `stage1.bin` | 512-byte MBR |
+| `stage2.bin` | Boot menu, loads the loader and kernel |
+| `loader.bin` | Enters protected mode, loads the kernel ELF, jumps to it |
+| `kernel.bin` | Kernel ELF with symbols (use this with GDB) |
+| `kernel.img` | Stripped copy of `kernel.bin` that is written to the disk |
+| `disk.img` | 1.44 MB floppy image |
+
+Disk layout: stage1 at sector 0, stage2 at sectors 2–10, loader at 11–36,
+kernel from sector 37. Stage2 reads a fixed number of kernel sectors
+(`KERNEL_SECTORS` in `bootloader/Makefile`, currently 200 = 100 KB); the build
+fails if `kernel.img` is bigger.
 
 ### 2. Run in QEMU
-
-From the project root:
 
 ```bash
 make -C bootloader run
 ```
 
-Or from the bootloader directory:
+or `./scripts/run-qemu.sh`, which builds first if needed and boots a snapshot
+so the disk image is never modified.
+
+QEMU runs without a window (`-display none`); everything appears in your
+terminal through the serial port:
+
+1. Stage1 and stage2 messages, then the boot menu (**Boot DIT-OS**,
+   **Recovery Mode**, **Reboot**). Use the arrow keys or `1`/`2`/`3`, then
+   Enter.
+2. The loader prints `LOEK` (loader started, protected mode, ELF found,
+   jumping to kernel).
+3. Kernel boot log: CPU setup (GDT, IDT, TSS, PIC), drivers (serial, keyboard,
+   mouse, timer, RTC), scheduler and ramfs.
+4. The shell prompt, `user@dit:~$`.
+
+Shell commands:
+
+| Command | What it does |
+|---------|--------------|
+| `ls [path]` | List a directory (default `/`) |
+| `cat <file>` | Print a file, e.g. `cat hello.txt` |
+| `echo <text>` | Print text |
+| `export NAME=value` | Set `USER`, `HOST`, `PWD` or `PS1` (prompt) |
+| `exit` | Power off QEMU |
+
+Line editing: **Tab** completes command names (first word) and file paths
+(later words); press it on an ambiguous prefix to list the candidates.
+**Backspace** deletes, **Ctrl+C** discards the current line.
+
+To quit QEMU at any point, press **Ctrl+A** then **X**.
+
+If the kernel hits a CPU exception, it prints a `KERNEL PANIC` report with the
+exception name, error code and `EIP` to the terminal, then halts.
+
+### 3. Test
 
 ```bash
-cd bootloader && make run
+scripts/qemu-test.sh
 ```
 
-This starts QEMU with the floppy disk image (`bootloader/build/disk.img`) and no graphical window (`-nographic`). You should see the stage1 message, then the stage2 menu (e.g. “Boot DIT-OS”, “Recovery Mode”, “Reboot”). Choose **Boot DIT-OS** to load the kernel.
+Boots the disk image in QEMU and drives the shell over the serial port (boot
+menu, commands, tab completion, a stress run, `exit`). It prints `PASS` per
+step and exits non-zero with the end of the serial log on failure. CI runs it
+on every push.
 
-### What “Boot DIT-OS” does today
-
-The disk image is built with the **minimal kernel** (`kernel/kernel.asm`): a small binary loaded at 0x10000. When you select **Boot DIT-OS**:
-
-1. Stage2 loads 64 sectors from the disk (starting at sector 23) into memory at **0x10000** and jumps to it.
-2. The minimal kernel runs in 16-bit, then sets up a GDT, enables the A20 line, and switches to **protected mode**.
-3. It prints a short message (e.g. “DIT-OS Kernel loaded!” and “PM!”) to the VGA text buffer, then **halts**.
-
-So you do get into protected mode with basic CPU setup (GDT). The **full kernel** (ELF with multiboot, `init.cpp`, `main.cpp`, IDT, etc.) is built by `make -C kernel` but is **not** currently put on the disk or started by the bootloader. That kernel is intended to run at **0x100000** with multiboot magic in EAX/EBX; wiring that in would require stage2 to load the ELF and jump with that convention. Full CPU management (IDT, interrupts, etc.) lives in that full kernel and is not used until that path is implemented.
-
-### 3. Debug (QEMU + GDB)
+### 4. Debug (QEMU + GDB)
 
 ```bash
 make -C bootloader debug
 ```
 
-Then in another terminal, attach GDB to QEMU (e.g. `target remote :1234`).
+QEMU starts paused and waits for GDB on port 1234. In another terminal:
+
+```bash
+gdb -ex "target remote :1234" \
+    -ex "symbol-file bootloader/build/kernel.bin" \
+    -ex "break kernel_main" \
+    -ex "continue"
+```
+
+The boot menu still needs Enter in the QEMU terminal before `kernel_main` is
+reached.
 
 ## Build options
 
-- **Kernel only**  
-  `make -C kernel`  
-  Output: `bootloader/build/kernel.bin`
+- **Kernel only**: `make -C kernel` (output: `bootloader/build/kernel.bin`)
+- **Disk image only**: `make -C bootloader disk`
+- **Clean**: `make -C kernel clean` and `make -C bootloader clean`
 
-- **Bootloader disk only** (uses existing `kernel.bin`; if missing, the bootloader Makefile builds a minimal `kernel/kernel.asm` stub)  
-  `make -C bootloader disk`
+## Alternative: CMake
 
-- **Clean**  
-  `make -C kernel clean`  
-  `make -C bootloader clean`
-
-## Alternative: CMake (kernel only)
-
-You can build the kernel with CMake instead of the kernel Makefile:
+`CMakeLists.txt` is a thin wrapper that calls the Makefiles, for IDEs that
+expect a CMake project:
 
 ```bash
-mkdir build && cd build
-cmake ..
-make kernel
-```
-
-The kernel binary is still written to `bootloader/build/kernel.bin`. After that, build the disk and run as above:
-
-```bash
-make -C bootloader all
-make -C bootloader run
+cmake -S . -B build
+cmake --build build                  # kernel + bootloader + disk image
+cmake --build build --target run     # boot in QEMU (also: debug, os-clean)
 ```
 
 ## Project layout (brief)
 
 - **bootloader/** – Stage1 (512-byte MBR), Stage2 (menu, load kernel), scripts, headers. Builds `build/disk.img`.
-- **kernel/** – x86_64 kernel (boot, CPU, multiboot, init, main). Builds ELF to `bootloader/build/kernel.bin`.
-- **PROJECT_STRUCTURE.md** – Full layout. **TODO.md** – Task list (custom bootloader is primary; GRUB optional).
+- **kernel/** – 32-bit x86 kernel (the `arch/x86_64` directory name is historical): CPU setup, drivers, scheduler, syscalls, VFS and ramfs. Builds ELF to `bootloader/build/kernel.bin`.
+- **userland/** – Shell, init and a small libc. Currently linked into the kernel image and run as the init task.
+- **PROJECT_STRUCTURE.md** – Full layout. **TODO.md** – Task list. **ISSUES.md** – Known bugs. **CHANGELOG.md** – Release history.
 
 ## Developers
 

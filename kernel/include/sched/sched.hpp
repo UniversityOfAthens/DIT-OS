@@ -23,17 +23,32 @@ void run_queue_add(Task* t);
 /** Remove task from run queue; returns new head */
 Task* run_queue_remove(Task* t);
 
-/** Flag set by timer ISR, checked at safe points to invoke schedule() */
-extern volatile uint32_t s_need_resched;
-
 /** Pick next task from run queue (round-robin). Returns idle if none. */
 Task* schedule_next();
 
-/** Called every timer tick (and on yield): switch to next task if needed */
+/** Yield: switch to the next runnable task, if any (cooperative). */
 void schedule();
 
-/** Check if reschedule is needed and yield if so (call from safe points) */
-void maybe_yield();
+/** True if a task other than idle is runnable. Call with IRQs disabled. */
+bool has_other_runnable();
+
+/** Tasks blocked until an event (linked through Task::next while blocked). */
+struct WaitQueue {
+    Task* head;
+};
+
+/** Block the current task on @wq until wake_up_all(@wq). Must be called with
+ * interrupts disabled (so the wakeup cannot be missed between checking the
+ * condition and sleeping); returns with interrupts still disabled. */
+void sleep_on(WaitQueue* wq);
+
+/** Make every task sleeping on @wq runnable. Safe to call from an IRQ. */
+void wake_up_all(WaitQueue* wq);
+
+/** Build @t's initial context so switch_to() starts it at @entry on @stack.
+ * Returns false if the stack is too small. */
+bool task_init(Task* t, void (*entry)(), uint32_t* stack, uint32_t stack_size,
+               uint32_t pid);
 
 /** Create a new task with entry_point and stack; add to run queue */
 Task* task_create(void (*entry)(), uint32_t* stack, uint32_t stack_size);
@@ -53,7 +68,7 @@ extern Task* idle_task;
 /** Initialize scheduler: create idle task, run queue */
 void sched_init();
 
-/** Create init task and start scheduler (does not return in current context) */
+/** Start scheduling: leaves the boot stack for good (does not return) */
 void sched_start(void (*init_entry)());
 
 /** Idle task setup (called from sched_init) */

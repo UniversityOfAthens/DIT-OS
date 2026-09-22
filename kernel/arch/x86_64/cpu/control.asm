@@ -8,6 +8,7 @@ section .text
 
 global read_cr0_impl
 global write_cr0_impl
+global read_cr2_impl
 global read_cr3_impl
 global write_cr3_impl
 global read_cr4_impl
@@ -20,6 +21,10 @@ read_cr0_impl:
 write_cr0_impl:
     mov eax, [esp + 4]
     mov cr0, eax
+    ret
+
+read_cr2_impl:
+    mov eax, cr2
     ret
 
 read_cr3_impl:
