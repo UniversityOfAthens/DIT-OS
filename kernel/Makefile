@@ -47,6 +47,7 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(SYSCALL_DIR)/sys_read.cpp $(SYSCALL_DIR)/sys_write.cpp $(SYSCALL_DIR)/sys_exit.cpp \
 	$(SYSCALL_DIR)/sys_open.cpp $(SYSCALL_DIR)/sys_close.cpp $(SYSCALL_DIR)/sys_getdents.cpp \
 	$(SYSCALL_DIR)/sys_getpid.cpp $(SYSCALL_DIR)/sys_fork.cpp \
+	$(SYSCALL_DIR)/sys_ioctl.cpp $(SYSCALL_DIR)/tty.cpp \
 	$(SYSCALL_DIR)/syscall_wrappers.cpp \
 	$(SYSCALL_DIR)/userland_syscall_cwrap.cpp \
 	$(FS_DIR)/vfs.cpp $(FS_DIR)/ramfs/ramfs.cpp $(FS_DIR)/ramfs/inode.cpp \
@@ -66,6 +67,7 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 C_SOURCES = \
 	../userland/bin/init.c \
 	../userland/shell/main.c \
+	../userland/shell/readline.c \
 	../userland/libc/src/stdlib/malloc.c \
 	../userland/libc/src/stdlib/exit.c \
 	../userland/libc/src/stdio/printf.c

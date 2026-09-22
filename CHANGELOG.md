@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Shell tab completion: the first word completes builtin commands, later
+  words complete file paths (a `/` is added after directories); an ambiguous
+  prefix is extended to the longest common prefix, then the candidates are
+  listed. Ctrl+C discards the current line and arrow keys no longer insert
+  escape-sequence garbage.
+- Console TTY modes: `ioctl(0, TTY_IOC_SETMODE, mode)` switches echo and
+  canonical (line-edited) input on or off, so programs can read raw keys.
+  `SYS_ioctl` is now implemented for fds 0-2.
+
 - `nix develop .#cross`: dev shell with the `i686-elf` cross-compiler.
 - `CROSS_COMPILE` make variable; `kernel/Makefile` uses `i686-elf-*`
   automatically when it is on `PATH` and the host GCC otherwise.

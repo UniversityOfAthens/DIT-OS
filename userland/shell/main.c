@@ -1,5 +1,6 @@
 // DIT-OS Userland - Minimal shell loop with Bash-like prompt customization
 
+#include "readline.h"
 #include "syscall.h"
 
 enum { MAX_VAR = 64, MAX_LINE = 128, MAX_PROMPT = 256, MAX_PATH = 128 };
@@ -8,6 +9,12 @@ static char g_user[MAX_VAR] = "user";
 static char g_host[MAX_VAR] = "dit";
 static char g_pwd[MAX_VAR] = "~";
 static char g_ps1[MAX_VAR] = "\\u@\\h:\\w\\$ ";
+
+/* Builtins offered by tab completion (keep in sync with the dispatch in
+ * userland_shell_main). */
+static const char* const s_commands[] = {
+    "cat", "echo", "exit", "export", "ls", 0,
+};
 
 static inline void outw(unsigned short port, unsigned short val)
 {
@@ -329,15 +336,12 @@ void userland_shell_main(void)
     char prompt[MAX_PROMPT];
 
     load_ditrc_defaults();
-    render_prompt(prompt, MAX_PROMPT);
-    write_str(prompt);
+    readline_init();
 
     for (;;) {
-        int n = read(0, buf, sizeof(buf) - 1);
-        if (n <= 0)
+        render_prompt(prompt, MAX_PROMPT);
+        if (readline(prompt, buf, sizeof(buf), s_commands) < 0)
             continue;
-
-        buf[n] = '\0';
         trim_input_line(buf);
 
         if (cmd_is(buf, "exit")) {
@@ -366,8 +370,5 @@ void userland_shell_main(void)
         } else if (starts_with(buf, "export ")) {
             apply_export_line(buf);
         }
-
-        render_prompt(prompt, MAX_PROMPT);
-        write_str(prompt);
     }
 }

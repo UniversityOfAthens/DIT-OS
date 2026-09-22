@@ -91,6 +91,10 @@ Shell commands:
 | `export NAME=value` | Set `USER`, `HOST`, `PWD` or `PS1` (prompt) |
 | `exit` | Power off QEMU |
 
+Line editing: **Tab** completes command names (first word) and file paths
+(later words); press it on an ambiguous prefix to list the candidates.
+**Backspace** deletes, **Ctrl+C** discards the current line.
+
 To quit QEMU at any point, press **Ctrl+A** then **X**.
 
 If the kernel hits a CPU exception, it prints a `KERNEL PANIC` report with the
