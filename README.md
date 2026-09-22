@@ -18,13 +18,18 @@ sudo apt install nasm build-essential make qemu-system-x86
 ```
 
 With Nix you can use the flake instead: `nix develop` opens a shell with
-everything above plus `gdb`, `clang-tools` and `xxd`.
+everything above plus `gdb`, `clang-tools` and `xxd`. `nix develop .#cross`
+also adds the `i686-elf` cross-compiler (built from source the first time, so
+it takes a while).
 
 ## Build and run
 
-DIT-OS boots with its own bootloader (no GRUB). The kernel and userland are
-built with the host `gcc`/`g++` in 32-bit mode (`-m32`); no cross-compiler is
-needed yet.
+DIT-OS boots with its own bootloader (no GRUB). `kernel/Makefile` uses the
+`i686-elf-*` cross-compiler when it is on your `PATH` and otherwise falls back
+to the host `gcc`/`g++` in 32-bit mode (`-m32 -march=i686`), so a normal
+`build-essential` install is enough. Force a choice with
+`make CROSS_COMPILE=i686-elf-` or `make CROSS_COMPILE=`. Warnings are errors
+(`-Werror`).
 
 ### 1. Build
 
@@ -115,16 +120,16 @@ reached.
 - **Disk image only**: `make -C bootloader disk`
 - **Clean**: `make -C kernel clean` and `make -C bootloader clean`
 
-## Alternative: CMake (kernel only, experimental)
+## Alternative: CMake
+
+`CMakeLists.txt` is a thin wrapper that calls the Makefiles, for IDEs that
+expect a CMake project:
 
 ```bash
-mkdir build && cd build
-cmake ..
-make kernel
+cmake -S . -B build
+cmake --build build                  # kernel + bootloader + disk image
+cmake --build build --target run     # boot in QEMU (also: debug, os-clean)
 ```
-
-The CMake build does not yet compile the userland shell, so the Makefiles are
-the supported path.
 
 ## Project layout (brief)
 

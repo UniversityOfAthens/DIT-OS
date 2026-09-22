@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `nix develop .#cross`: dev shell with the `i686-elf` cross-compiler.
+- `CROSS_COMPILE` make variable; `kernel/Makefile` uses `i686-elf-*`
+  automatically when it is on `PATH` and the host GCC otherwise.
+
+### Changed
+
+- The kernel builds with `-O2 -Werror` and generates dependency files
+  (`-MMD -MP`), so header edits rebuild what includes them.
+- `CMakeLists.txt` is now a thin wrapper over the Makefiles (targets `kernel`,
+  `disk`, `run`, `debug`, `os-clean`) instead of a second, broken build that
+  compiled 7 of the kernel's source files.
+
+### Fixed
+
+- `nix develop` builds hung at CPU init: Nix's GCC emits SSE for `-m32` code,
+  which faults because the kernel never enables SSE. Kernel code is now built
+  with `-march=i686 -mgeneral-regs-only`, whatever the compiler's default.
+- The Nix dev shell no longer applies userspace hardening flags to the kernel.
+- Userland `printf("%d")` negated `INT_MIN` with undefined behaviour.
+
+### Removed
+
+- Dead code that `-Werror` now rejects: the old kernel bootstrap shell loop,
+  an unused BSS-clearing function and an unused inode allocator.
+
 ## [0.0.8-alpha] - 2026-09-22
 
 Memory, stack and crash-reporting fixes found in a code audit.
@@ -219,6 +248,7 @@ Project setup.
 - GRUB configuration and the DIT boot theme with Ubuntu PF2 fonts.
 - Bootloader configuration file.
 
+[Unreleased]: https://github.com/UniversityOfAthens/DIT-OS/compare/72c4520...HEAD
 [0.0.8-alpha]: https://github.com/UniversityOfAthens/DIT-OS/compare/d55cb7d...bc5a947
 [0.0.7-alpha]: https://github.com/UniversityOfAthens/DIT-OS/compare/4be1fe6...d55cb7d
 [0.0.6-alpha]: https://github.com/UniversityOfAthens/DIT-OS/compare/79c0f18...4be1fe6

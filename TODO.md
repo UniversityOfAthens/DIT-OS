@@ -16,8 +16,8 @@ See `ISSUES.md` for full details. These are the blockers:
 - [x] **E820 uninitialized EBX** — added `xor ebx, ebx` before loop
 - [x] **`kernel_stack_top` treated as value, not address** — changed to array declaration
 - [ ] **No `copy_from_user`/`copy_to_user`** — user pointer validation missing in all syscalls
-- [ ] **CMake uses host compiler** not `i686-elf-*` (`CMakeLists.txt:55,83`)
-- [ ] **flake.nix has no cross-compiler** — only native gcc13 provided
+- [x] **CMake uses host compiler** — CMake now wraps the Makefiles, which pick `i686-elf-*` when available
+- [x] **flake.nix has no cross-compiler** — `nix develop .#cross` adds it; default shell fixed (hardening off, no SSE)
 
 ---
 
@@ -316,18 +316,16 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [x] `kernel/Makefile` — Builds kernel ELF + compiles userland sources
 - [x] `bootloader/Makefile` — Assembles disk.img, runs QEMU
 - [x] All sub-Makefiles for stage1, stage2, loader, core, ramfs
-- [ ] Standardize on cross-compiler (i686-elf-*) or document host-gcc approach
+- [x] Standardize on cross-compiler (i686-elf-*) or document host-gcc approach — auto-detected, `CROSS_COMPILE` override
+- [x] Kernel build uses `-O2 -Werror -MMD -MP -march=i686 -mgeneral-regs-only`
 
 ### CMake
-- [x] `CMakeLists.txt`
-- [ ] Fix to use `i686-elf-g++` not host `g++`
-- [ ] Add `enable_language(ASM_NASM)` for NASM support
-- [ ] Add proper clean target for custom command outputs
+- [x] `CMakeLists.txt` — thin wrapper over the Makefiles (targets: kernel, disk, run, debug, os-clean)
 
 ### Nix flake
 - [x] `flake.nix` + `flake.lock`
-- [ ] Add `i686-elf-gcc` cross-compiler package
-- [ ] Add xorriso, grub, mtools, clang-tools packages
+- [x] Add `i686-elf-gcc` cross-compiler package (`devShells.cross`)
+- [ ] Add grub package (xorriso, mtools, clang-tools already added)
 - [ ] Add formatter and check outputs
 
 ### Scripts
@@ -400,7 +398,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [ ] Add `copy_from_user`/`copy_to_user` for syscall security
 - [ ] Fix heap_free to actually free memory (slab/buddy allocator)
 - [ ] Implement proper VMM with page fault handling and demand paging
-- [ ] Standardize cross-compiler toolchain (i686-elf-*) in all build paths
+- [x] Standardize cross-compiler toolchain (i686-elf-*) in all build paths
 - [ ] Fix shell scripts with `set -euo pipefail`
 - [ ] Export Mutex struct to header
 - [ ] Fix `.clang-format` and run as part of CI

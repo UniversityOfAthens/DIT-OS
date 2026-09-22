@@ -554,9 +554,11 @@ struct FileOps {
 | Kernel | `i686-elf-gcc`, `i686-elf-g++` | 32-bit, freestanding |
 | Userland | `i686-elf-gcc` | Links against custom libc, NOT freestanding |
 
-**Current state**: the Makefiles still use the host `gcc`/`g++`/`ld` with
-`-m32` (this is also what CI installs). Moving to `i686-elf-*` is tracked in
-`TODO.md`; `scripts/check-toolchain.sh` does not exist yet.
+**Current state**: `kernel/Makefile` uses `i686-elf-*` when it is on `PATH`
+(e.g. `nix develop .#cross`) and otherwise the host `gcc`/`g++`/`ld` with
+`-m32` (this is what CI installs). Override with `CROSS_COMPILE=`. Both paths
+use `-march=i686 -mgeneral-regs-only` so no compiler can emit SSE/x87 code.
+`scripts/check-toolchain.sh` does not exist yet.
 
 ### Compiler Flags
 

@@ -29,14 +29,14 @@ DIT-OS/
 ├── AGENTS.md               # AI agent guidelines (authoritative)
 ├── AUTHORS.md
 ├── CHANGELOG.md
-├── CMakeLists.txt           # CMake support (experimental, uses host compiler not i686-elf)
+├── CMakeLists.txt           # Thin CMake wrapper that calls the Makefiles
 ├── ISSUES.md                # Generated issue tracker
 ├── LICENSE
 ├── PROJECT_STRUCTURE.md     # This file
 ├── README.md
 ├── TODO.md                  # Task tracking (50+ unchecked items)
 ├── flake.lock
-├── flake.nix                # Nix flake (native gcc13 only, no i686-elf cross-compiler)
+├── flake.nix                # Nix dev shells: default (host GCC), .#cross (i686-elf)
 │
 ├── boot/                    # GRUB boot files (alternative boot path)
 │   └── grub/
