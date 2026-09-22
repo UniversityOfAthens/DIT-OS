@@ -23,6 +23,8 @@ constexpr uint32_t TTY_IOC_SETMODE = _IO('T', 2);
 static_assert(TTY_IOC_GETMODE == 0x5401 && TTY_IOC_SETMODE == 0x5402,
               "must match userland/include/syscall.h");
 
+/** Hook the TTY up to COM1 receive interrupts (call once at boot). */
+void tty_init();
 /** True if @fd refers to the console TTY. */
 bool tty_is_console_fd(int fd);
 uint32_t tty_get_mode();

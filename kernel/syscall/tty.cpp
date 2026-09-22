@@ -3,6 +3,7 @@
 #include "syscall/tty.hpp"
 #include "dev/serial.hpp"
 #include "sched/sched.hpp"
+#include "arch/x86_64/irqflags.hpp"
 #include "errno_defs.hpp"
 #include <stdint.h>
 
@@ -14,6 +15,18 @@ constexpr char KEY_BACKSPACE = '\b';
 constexpr char KEY_DELETE = 0x7F;
 
 static uint32_t s_mode = TTY_MODE_DEFAULT;
+static sched::WaitQueue s_rx_wait; // readers waiting for console input
+
+// COM1 IRQ context: new bytes are buffered, wake any blocked reader.
+static void tty_rx_ready()
+{
+    sched::wake_up_all(&s_rx_wait);
+}
+
+void tty_init()
+{
+    dev::serial_enable_rx_irq(tty_rx_ready);
+}
 
 bool tty_is_console_fd(int fd)
 {
@@ -33,15 +46,19 @@ int tty_set_mode(uint32_t mode)
     return 0;
 }
 
-// Wait until the console has a byte and return it.
+// Sleep until the console has a byte and return it. Checking the buffer and
+// going to sleep happen with IRQs off, so a byte arriving in between still
+// wakes us.
 static char tty_wait_byte()
 {
     for (;;) {
-        int c = dev::serial_getchar(0);
+        uint32_t flags = arch::irq_save();
+        int c = dev::serial_rx_pop();
+        if (c < 0)
+            sched::sleep_on(&s_rx_wait);
+        arch::irq_restore(flags);
         if (c >= 0)
-            return static_cast<char>(c & 0xFF);
-        sched::maybe_yield();
-        __asm__ volatile("pause");
+            return static_cast<char>(c);
     }
 }
 
@@ -86,10 +103,10 @@ static int tty_read_raw(char* buf, uint32_t count)
     buf[n++] = tty_wait_byte();
     tty_echo(buf[0]);
     while (n < count) {
-        int c = dev::serial_getchar(0);
+        int c = dev::serial_rx_pop();
         if (c < 0)
             break;
-        buf[n] = static_cast<char>(c & 0xFF);
+        buf[n] = static_cast<char>(c);
         tty_echo(buf[n]);
         n++;
     }

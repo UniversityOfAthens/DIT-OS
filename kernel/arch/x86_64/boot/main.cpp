@@ -156,7 +156,8 @@ extern "C" void kernel_main()
     print_both("    VGA buffer: 0x000B8000\n\n");
 
     print_both("[*] Serial/Input drivers...\n");
-    dev::serial_init();
+    // Serial was initialized first thing; re-running serial_init() here
+    // would switch the COM1 receive interrupt back off.
     dev::serial_puts("  Serial (COM1) OK\n");
     print("  Serial (COM1) OK\n");
     dev::keyboard_init();
@@ -185,6 +186,7 @@ extern "C" void kernel_main()
     print_both(db);
     print_both("\n");
     arch::pic_unmask(0);
+    arch::pic_unmask(dev::SERIAL_COM1_IRQ);
     print_both("[OK] Serial, keyboard, mouse, timer, RTC ready\n\n");
 
     print_both("======================================\n");
@@ -248,7 +250,10 @@ extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
 {
     if (vector == arch::IRQ_BASE + 0) {
         dev::timer_tick();
-        sched::s_need_resched = 1;
+        return;
+    }
+    if (vector == arch::IRQ_BASE + dev::SERIAL_COM1_IRQ) {
+        dev::serial_irq();
         return;
     }
     if (vector >= arch::IRQ_BASE && vector < arch::IRQ_BASE + arch::IRQ_COUNT) {

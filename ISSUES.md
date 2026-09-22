@@ -128,14 +128,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | These files return `-1` from their init functions immediately. No actual driver logic is implemented. |
 | **Fix** | Implement proper drivers or remove the stubs and add `-ENODEV` returns. |
 
-### H15. Idle and blocking stdin reads busy-wait instead of halting
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/syscall/sys_read.cpp`, `kernel/sched/sched.cpp`, `kernel/sched/idle.cpp` |
-| **Issue** | A blocking stdin read polls the serial port with `pause` and `maybe_yield()`. When it yields, the "idle" task is really the `sched_start()` loop calling `schedule()` in a tight loop: the prepared `idle_loop` (`sti; hlt`) never runs, because the first `switch_to()` saves the boot context into the idle task. The CPU never halts while waiting for input. |
-| **Fix** | Start the scheduler by switching away from the boot stack for good (so `idle_loop` actually runs), and block the reader on a wait queue woken by the serial IRQ instead of polling. |
-
 ### H17. Userland compiled with `-ffreestanding` (contradicts guidelines)
 
 | Field | Value |
@@ -409,7 +401,7 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | Field | Value |
 |-------|-------|
 | **Files** | `kernel/sched/exit.cpp`, `userland/bin/init.c` |
-| **Issue** | If the shell returns (instead of the `exit` builtin powering off QEMU), `init` exits, `task_exit()` removes it, and the scheduler spins forever with no runnable task and no message. PID 1 exiting should be fatal and visible. |
+| **Issue** | If the shell returns (instead of the `exit` builtin powering off QEMU), `init` exits, `task_exit()` removes it, and the idle task halts forever with no runnable task and no message. PID 1 exiting should be fatal and visible. |
 | **Fix** | Panic when PID 1 exits, or have init restart the shell. |
 
 ---
@@ -578,12 +570,12 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 |------|----------|------|--------|----------|
 | **Bootloader (ASM)** | C9, C13 (unassembled) | H9, H10, H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
-| **Kernel (Core)** | C5 | H15 | M5, M6, M7, M8 | L12, L18 |
-| **Kernel (Sched)** | — | H8, H15 | M1, M36 | L13 |
+| **Kernel (Core)** | C5 | — | M5, M6, M7, M8 | L12, L18 |
+| **Kernel (Sched)** | — | H8 | M1, M36 | L13 |
 | **Kernel (FS)** | — | — | M4, M9, M31 | L12 |
 | **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
-| **Kernel (Syscall)** | C5 | H15 | M1, M27 | — |
+| **Kernel (Syscall)** | C5 | — | M1, M27 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
 | **Userland** | — | — | M17, M18, M19, M28, M35 | L1, L2, L3, L4, L7, L17 |
 | **Build System** | — | H1, H3, H17 | M11, M12, M13, M15 | L10, L16 |
@@ -595,7 +587,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 ## Top 5 Most Important Fixes (remaining)
 
 1. **C5 — No user pointer validation**: All syscall handlers directly dereference user addresses without `copy_from_user`/`copy_to_user`. Needs ring 3 separation (I3) to give real protection.
-2. **H15 — Busy-waiting scheduler**: the idle task never halts and stdin reads poll the serial port.
+2. **M36 — PID 1 exit**: the system silently idles if init exits.
 3. **H8 — Mutex not exported**: `Mutex` struct defined in `.cpp` only, `mutex_lock`/`unlock` are dead code.
 4. **H1 — Brace style**: `.clang-format` and AGENTS.md disagree; pick one.
-5. **M36 — PID 1 exit**: the system silently spins if init exits.
+5. **H9 — `STAGE2_LOAD`**: wrong constant in `constants.inc`.

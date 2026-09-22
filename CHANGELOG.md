@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The CPU now halts when idle: the scheduler leaves the boot stack at start
+  so the real idle task (`sti; hlt`) runs, and reading from the console
+  sleeps on a wait queue until the COM1 interrupt wakes it instead of
+  polling the UART. QEMU went from 100% of a host core to about 1% at the
+  shell prompt.
+- COM1 input is interrupt driven and buffered (256 bytes), so fast or pasted
+  input is no longer limited by the UART's 16-byte FIFO.
+- `switch_to` saves and restores EFLAGS, and a task whose entry function
+  returns now exits cleanly instead of jumping to a garbage address.
 - The kernel builds with `-O2 -Werror` and generates dependency files
   (`-MMD -MP`), so header edits rebuild what includes them.
 - `CMakeLists.txt` is now a thin wrapper over the Makefiles (targets `kernel`,
@@ -32,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The COM1 interrupt line was never enabled (`MCR.OUT2` was cleared), and a
+  second `serial_init()` call during boot reset the UART after setup.
 - `nix develop` builds hung at CPU init: Nix's GCC emits SSE for `-m32` code,
   which faults because the kernel never enables SSE. Kernel code is now built
   with `-march=i686 -mgeneral-regs-only`, whatever the compiler's default.
@@ -40,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- `s_need_resched` / `maybe_yield()`: the timer flag was only polled by the
+  old busy-waiting stdin read.
 - Dead code that `-Werror` now rejects: the old kernel bootstrap shell loop,
   an unused BSS-clearing function and an unused inode allocator.
 

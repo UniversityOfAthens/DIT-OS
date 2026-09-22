@@ -2,6 +2,7 @@
 
 #include "sched/sched.hpp"
 #include "sched/task.hpp"
+#include "arch/x86_64/irqflags.hpp"
 #include "core/panic.hpp"
 #include "mm/kmalloc.hpp"
 #include "dev/serial.hpp"
@@ -13,10 +14,10 @@ namespace sched
 Task* current_task = nullptr;
 Task* run_queue_head = nullptr;
 Task* idle_task = nullptr;
-volatile uint32_t s_need_resched = 0;
 
 static Task s_idle;
-static uint32_t s_idle_stack[256];
+/* Idle also takes IRQs (serial, timer) on this stack. */
+static uint32_t s_idle_stack[1024];
 /* The init task runs the shell and the whole syscall/VFS path on this stack. */
 static uint32_t s_init_stack[4096];
 
@@ -85,11 +86,16 @@ void sched_init()
 void sched_start(void (*init_entry)())
 {
     (void)init_entry;
-    dev::serial_puts("\r\n[sched] start: current=idle, schedule()\r\n");
-    current_task = idle_task;
-    for (;;) {
-        schedule();
-    }
+    dev::serial_puts("\r\n[sched] start: leaving boot stack\r\n");
+    // Switch away from the boot context for good: it is saved into a task
+    // that is never on the run queue, so it is never resumed.
+    static Task s_boot_task;
+    arch::irq_save();
+    current_task = &s_boot_task;
+    Task* first = schedule_next();
+    current_task = first;
+    switch_to(&s_boot_task, first);
+    core::panic("sched_start: boot context resumed");
 }
 
 static void check_stack(const Task* t)
@@ -99,27 +105,59 @@ static void check_stack(const Task* t)
         core::panicf("stack overflow in task pid %u\n", t->pid);
 }
 
-void schedule()
+bool has_other_runnable()
 {
-    if (!current_task)
-        return;
+    return run_queue_head &&
+           (run_queue_head != idle_task || run_queue_head->next);
+}
 
-    Task* next = schedule_next();
-
-    if (next == current_task)
-        return;
+// Switch to the next task on the run queue. Interrupts must be disabled.
+static void switch_to_next()
+{
     Task* prev = current_task;
+    Task* next = schedule_next();
+    if (next == prev)
+        return;
     check_stack(prev);
     current_task = next;
     switch_to(prev, next);
 }
 
-void maybe_yield()
+void schedule()
 {
-    if (s_need_resched) {
-        s_need_resched = 0;
-        schedule();
+    if (!current_task)
+        return;
+    // The run queue is also changed by IRQs (wake_up_all), so keep them off
+    // while picking and switching; switch_to saves and restores EFLAGS.
+    uint32_t flags = arch::irq_save();
+    switch_to_next();
+    arch::irq_restore(flags);
+}
+
+void sleep_on(WaitQueue* wq)
+{
+    Task* t = current_task;
+    if (!t || t == idle_task)
+        core::panic("sleep_on: no task context to block");
+    t->state = TaskState::Blocked;
+    run_queue_remove(t);
+    t->next = wq->head;
+    wq->head = t;
+    switch_to_next();
+}
+
+void wake_up_all(WaitQueue* wq)
+{
+    uint32_t flags = arch::irq_save();
+    Task* t = wq->head;
+    wq->head = nullptr;
+    while (t) {
+        Task* next = t->next;
+        t->state = TaskState::Runnable;
+        run_queue_add(t);
+        t = next;
     }
+    arch::irq_restore(flags);
 }
 
 } // namespace sched

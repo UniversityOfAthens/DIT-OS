@@ -6,6 +6,7 @@
 #include "syscall/syscall_defs.hpp"
 #include "syscall/syscall_trace.hpp"
 #include "syscall/fd.hpp"
+#include "syscall/tty.hpp"
 #include <stdint.h>
 
 namespace syscall
@@ -24,6 +25,7 @@ extern SyscallResult sys_ioctl_impl(const SyscallArgs* args);
 void init()
 {
     fd_init();
+    tty_init();
     syscall_set_handler(SYS_read, sys_read_impl);
     syscall_set_handler(SYS_write, sys_write_impl);
     syscall_set_handler(SYS_exit, sys_exit_impl);

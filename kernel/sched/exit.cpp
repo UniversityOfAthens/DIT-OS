@@ -2,6 +2,7 @@
 
 #include "sched/sched.hpp"
 #include "sched/task.hpp"
+#include "arch/x86_64/irqflags.hpp"
 #include <stdint.h>
 
 namespace sched
@@ -14,6 +15,9 @@ void task_exit(int code)
         for (;;)
             asm volatile("hlt");
 
+    // IRQs stay off: the run queue is shared with wake_up_all(), and this
+    // context is never resumed to restore them.
+    arch::irq_save();
     Task* prev = current_task;
     prev->state = TaskState::Exited;
 
