@@ -75,18 +75,18 @@ theme_file_loaded: db 0
 global load_theme_from_file
 load_theme_from_file:
     pusha
-    
+
     ; Try to load the theme file
     ; This would use the filesystem to read the file
     ; For now, just use defaults
-    
+
     ; Try to load background image
     mov esi, theme_bg_image_path
     call try_load_background_image
-    
+
     ; Mark theme as loaded from file
     mov byte [theme_file_loaded], 1
-    
+
     popad
     ret
 
@@ -98,10 +98,10 @@ load_theme_from_file:
 global load_background_image
 load_background_image:
     pushad
-    
+
     ; FAT32 filesystem not available in current build
     ; Would require proper linker setup
-    
+
     stc
     popad
     ret
@@ -112,12 +112,12 @@ load_background_image:
 ; =============================================================================
 try_load_background_image:
     pushad
-    
+
     ; Background image loading requires:
     ; 1. FAT32 filesystem driver (fat32.asm - available but not linked)
     ; 2. File system initialization
     ; 3. BMP/PNG decoder integration
-    
+
     ; For now, skip
     popad
     ret
@@ -130,10 +130,10 @@ try_load_background_image:
 global parse_theme_config
 parse_theme_config:
     pusha
-    
+
     mov [theme_data_ptr], esi
     mov [theme_data_size], ecx
-    
+
 .parse_loop:
     ; Skip whitespace
 .skip_ws:
@@ -149,16 +149,16 @@ parse_theme_config:
     je .skip_ws
     test ecx, ecx
     jz .done
-    
+
     ; Check for comment
     cmp al, '#'
     je .skip_line
-    
+
     ; Save start of key
     dec esi
     inc ecx
     mov edi, parse_buffer
-    
+
 .key_loop:
     lodsb
     dec ecx
@@ -170,10 +170,10 @@ parse_theme_config:
     je .found_eq
     stosb
     jmp .key_loop
-    
+
 .found_eq:
     mov byte [edi], 0
-    
+
     ; Skip whitespace after =
 .skip_ws2:
     lodsb
@@ -182,18 +182,18 @@ parse_theme_config:
     je .skip_ws2
     cmp al, 9
     je .skip_ws2
-    
+
     ; Now at value
     dec esi
     inc ecx
-    
+
     ; Parse based on key
     mov edi, parse_buffer
-    
+
     ; Check each key
     call check_theme_key
     jc .parsed
-    
+
     ; Skip to next line
 .skip_line:
     test ecx, ecx
@@ -202,12 +202,12 @@ parse_theme_config:
     dec ecx
     cmp al, 10
     jne .skip_line
-    
+
     jmp .parse_loop
-    
+
 .parsed:
     jmp .skip_line
-    
+
 .done:
     popad
     ret
@@ -223,7 +223,7 @@ parse_buffer:       times 64 db 0
 ; Check and parse theme keys
 check_theme_key:
     push edi
-    
+
     ; BG_COLOR
     mov edi, parse_buffer
     cmp byte [edi], 'B'
@@ -235,7 +235,7 @@ check_theme_key:
     mov [theme_bg_color], eax
     stc
     ret
-    
+
 .not_bg:
     ; HEADER_COLOR
     cmp dword [edi], 'HEAD'
@@ -247,7 +247,7 @@ check_theme_key:
     mov [theme_header_color], eax
     stc
     ret
-    
+
 .not_header:
     ; TITLE_TEXT
     cmp dword [edi], 'TITL'
@@ -259,7 +259,7 @@ check_theme_key:
     mov [theme_title_text_ptr], esi
     stc
     ret
-    
+
 .not_title:
     ; MENU_BG_COLOR
     cmp dword [edi], 'MENU'
@@ -271,7 +271,7 @@ check_theme_key:
     mov [theme_menu_bg_color], eax
     stc
     ret
-    
+
 .not_menu:
     pop edi
     clc
@@ -281,7 +281,7 @@ check_theme_key:
 parse_hex_color_theme:
     push ebx
     xor ebx, ebx
-    
+
     ; Skip 0x or 0X
     cmp byte [esi], '0'
     jne .no_px
@@ -289,20 +289,20 @@ parse_hex_color_theme:
     je .has_px
     cmp byte [esi+1], 'X'
     jne .no_px
-    
+
 .has_px:
     add esi, 2
-    
+
 .no_px:
     ; Parse hex digits
 .hex_loop:
     test ecx, ecx
     jz .done
-    
+
     mov al, [esi]
     inc esi
     dec ecx
-    
+
     cmp al, '0'
     jb .done
     cmp al, '9'
@@ -315,27 +315,27 @@ parse_hex_color_theme:
     jb .done
     cmp al, 'f'
     ja .done
-    
+
     sub al, 0x20
-    
+
 .upper:
     sub al, 'A' - 10
     jmp .add_digit
-    
+
 .digit:
     sub al, '0'
-    
+
 .add_digit:
     shl ebx, 4
     or bl, al
     jmp .hex_loop
-    
+
 .done:
     ; Convert to ARGB (assume RRGGBB -> AABBGGRR)
     shl ebx, 8
     or ebx, 0xFF
     mov eax, ebx
-    
+
     pop ebx
     ret
 
@@ -345,10 +345,10 @@ parse_hex_color_theme:
 global load_theme
 load_theme:
     pusha
-    
+
     ; Already have defaults in data section
     mov byte [theme_loaded], 1
-    
+
     popad
     ret
 
@@ -358,24 +358,24 @@ load_theme:
 global render_theme_background
 render_theme_background:
     pusha
-    
+
     ; Check if we should load background image
     cmp byte [theme_use_bg_image], 1
     jne .color_background
-    
+
     ; Try to load background image
     mov esi, theme_bg_image_path
     call load_background_image
     jc .color_background
-    
+
     ; Successfully loaded background image
     jmp .done
-    
+
 .color_background:
     ; Clear screen with background color
     mov eax, [theme_bg_color]
     call clear_graphics_screen
-    
+
     ; Draw header bar
     mov ecx, 0
     mov edx, 0
@@ -383,7 +383,7 @@ render_theme_background:
     movzx edi, word [theme_header_height]
     mov eax, [theme_header_color]
     call draw_rect
-    
+
     ; Draw menu background
     movzx ecx, word [theme_menu_x]
     movzx edx, word [theme_menu_y]
@@ -391,7 +391,7 @@ render_theme_background:
     movzx edi, word [theme_menu_height]
     mov eax, [theme_menu_bg_color]
     call draw_rect
-    
+
     ; Draw menu border (top)
     movzx ecx, word [theme_menu_x]
     movzx edx, word [theme_menu_y]
@@ -399,7 +399,7 @@ render_theme_background:
     mov edi, 1              ; Border height
     mov eax, [theme_menu_border_color]
     call draw_rect
-    
+
     ; Draw menu border (bottom)
     movzx ecx, word [theme_menu_x]
     movzx edx, word [theme_menu_y]
@@ -410,7 +410,7 @@ render_theme_background:
     mov edi, 1
     mov eax, [theme_menu_border_color]
     call draw_rect
-    
+
     ; Draw menu border (left)
     movzx ecx, word [theme_menu_x]
     movzx edx, word [theme_menu_y]
@@ -418,7 +418,7 @@ render_theme_background:
     movzx edi, word [theme_menu_height]
     mov eax, [theme_menu_border_color]
     call draw_rect
-    
+
     ; Draw menu border (right)
     movzx ecx, word [theme_menu_x]
     movzx eax, word [theme_menu_width]
@@ -429,7 +429,7 @@ render_theme_background:
     movzx edi, word [theme_menu_height]
     mov eax, [theme_menu_border_color]
     call draw_rect
-    
+
 .done:
     popa
     ret
@@ -440,17 +440,17 @@ render_theme_background:
 global render_theme_title
 render_theme_title:
     pusha
-    
+
     mov esi, [theme_title_text_ptr]
     test esi, esi
     jz .done
-    
+
     movzx ecx, word [theme_title_x]
     movzx edx, word [theme_title_y]
     mov ebx, [theme_title_color]
-    
+
     call draw_string
-    
+
 .done:
     popa
     ret
@@ -461,7 +461,7 @@ render_theme_title:
 global render_theme_footer
 render_theme_footer:
     pusha
-    
+
     ; Draw footer bar
     mov ecx, 0
     movzx edx, word [theme_screen_height]
@@ -471,19 +471,19 @@ render_theme_footer:
     movzx edi, word [theme_footer_height]
     mov eax, [theme_footer_color]
     call draw_rect
-    
+
     ; Draw footer text
     mov esi, [theme_footer_text_ptr]
     test esi, esi
     jz .done
-    
+
     mov ecx, 100
     movzx edx, word [theme_screen_height]
     sub edx, 30
     mov ebx, 0xFF888888
-    
+
     call draw_string
-    
+
 .done:
     popa
     ret
@@ -495,21 +495,21 @@ render_theme_footer:
 global render_theme_menu_item
 render_theme_menu_item:
     pusha
-    
+
     ; Calculate Y position
     movzx eax, word [theme_item_height]
     mul bx
     add eax, [theme_menu_y]
     mov edx, eax
-    
+
     ; Check if selected
     cmp bl, [menu_selection]
     jne .not_selected
-    
+
     ; Draw selection highlight background
     push ebx
     push esi
-    
+
     movzx ecx, word [theme_menu_x]
     add ecx, 10
     movzx esi, word [theme_menu_width]
@@ -518,17 +518,17 @@ render_theme_menu_item:
     sub edi, 10
     mov eax, [theme_item_sel_bg]
     call draw_rect
-    
+
     pop esi
     pop ebx
-    
+
     ; Use selected colors
     mov ebx, [theme_item_sel_color]
     jmp .draw_text
-    
+
 .not_selected:
     mov ebx, [theme_item_color]
-    
+
 .draw_text:
     push ebx
     movzx ecx, word [theme_menu_x]
@@ -538,13 +538,13 @@ render_theme_menu_item:
     add edx, [theme_menu_y]
     add edx, 10
     pop ebx
-    
+
     call draw_string
-    
+
     ; Draw selection arrow for selected item
     cmp bl, [menu_selection]
     jne .done
-    
+
     push esi
     movzx ecx, word [theme_menu_x]
     add ecx, 20
@@ -556,7 +556,7 @@ render_theme_menu_item:
     mov al, '>'
     call draw_char
     pop esi
-    
+
 .done:
     popa
     ret
@@ -568,21 +568,21 @@ render_theme_menu_item:
 global render_timeout_bar
 render_timeout_bar:
     pusha
-    
+
     cmp byte [theme_timeout_bar], 0
     je .done
-    
+
     test ebx, ebx
     jz .done
     test ecx, ecx
     jz .done
-    
+
     ; Calculate bar width (ebx * menu_width / ecx)
     movzx eax, word [theme_menu_width]
     mul ebx
     div ecx
     movzx esi, ax
-    
+
     ; Draw timeout bar at bottom of menu
     movzx ecx, word [theme_menu_x]
     movzx edx, word [theme_menu_y]
@@ -594,7 +594,7 @@ render_timeout_bar:
     movzx edi, word [theme_timeout_height]
     mov eax, [theme_timeout_color]
     call draw_rect
-    
+
 .done:
     popa
     ret

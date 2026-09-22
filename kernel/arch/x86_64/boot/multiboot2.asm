@@ -3,6 +3,8 @@
 ; Specification: https://www.gnu.org/software/grub/manual/multiboot2/
 ; =============================================================================
 
+BITS 32
+
 section .multiboot2
 align 8
 

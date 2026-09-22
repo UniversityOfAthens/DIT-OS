@@ -18,7 +18,7 @@ COM_DLH   equ 1
 
 _start:
     mov [boot_drive], dl
-    
+
     cli
     xor ax, ax
     mov ds, ax
@@ -26,21 +26,21 @@ _start:
     mov ss, ax
     mov sp, 0x9000
     sti
-    
+
     call serial_init
     call clear_screen
-    
+
     mov si, msg_stage2
     call print_both
-    
+
     mov byte [selection], 0
-    
+
 main_loop:
     call draw_menu
-    
+
 .input:
     call read_key
-    
+
     cmp ah, 0x48    ; Up arrow
     je .up
     cmp ah, 0x50    ; Down arrow
@@ -64,7 +64,7 @@ main_loop:
  .set_2:
     mov byte [selection], 2
     jmp main_loop
-    
+
  .up:
     cmp byte [selection], 0
     jne .up_dec
@@ -74,7 +74,7 @@ main_loop:
  .up_dec:
     dec byte [selection]
     jmp main_loop
- 
+
  .down:
     cmp byte [selection], 2
     jne .down_inc
@@ -84,7 +84,7 @@ main_loop:
  .down_inc:
     inc byte [selection]
     jmp main_loop
-    
+
 .select:
     call boot_selection
     jmp main_loop
@@ -92,7 +92,7 @@ main_loop:
 draw_menu:
     pusha
     call clear_screen
-    
+
     mov si, msg_title
     call print_both
     mov si, msg_subtitle
@@ -101,9 +101,9 @@ draw_menu:
     call print_both
     mov si, msg_crlf
     call print_both
-    
+
     movzx ax, byte [selection]
-    
+
     cmp ax, 0
     je .show0
     mov si, msg_space
@@ -115,7 +115,7 @@ draw_menu:
 .p0:
     mov si, msg_opt0
     call print_both
-    
+
     cmp ax, 1
     je .show1
     mov si, msg_space
@@ -127,7 +127,7 @@ draw_menu:
 .p1:
     mov si, msg_opt1
     call print_both
-    
+
     cmp ax, 2
     je .show2
     mov si, msg_space
@@ -150,20 +150,20 @@ draw_menu:
 
 boot_selection:
     pusha
-    
+
     movzx ax, byte [selection]
-    
+
     cmp ax, 0
     je .boot_normal
-    
+
     cmp ax, 1
     je .boot_recovery
-    
+
     cmp ax, 2
     je .reboot
-    
+
     jmp .done
-    
+
 .boot_normal:
     mov si, msg_loading
     call print_both
@@ -194,22 +194,22 @@ boot_selection:
     mov ax, 0
     push ax
     retf
-    
+
 .boot_recovery:
     mov si, msg_recovery
     call print_string
     jmp .done
-    
+
 .reboot:
     mov si, msg_reboot
     call print_string
     xor ax, ax
     int 0x19
-    
+
 .error:
     mov si, msg_error
     call print_string
-    
+
 .done:
     popa
     ret

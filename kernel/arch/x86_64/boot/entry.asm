@@ -29,7 +29,7 @@ _start:
     ; Jump to C++ kernel
     extern kernel_main
     call kernel_main
-    
+
     ; Should never return
     jmp $
 

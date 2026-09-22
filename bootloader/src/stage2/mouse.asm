@@ -55,32 +55,32 @@ screen_center_y: dw 240
 ; =============================================================================
 mouse_init:
     pusha
-    
+
     mov si, .msg_start
     call print_string
-    
+
     ; Enable auxiliary PS/2 device
     mov al, PS2_CMD_ENABLE
     out MOUSE_CMD, al
-    
+
     ; Send mouse enable command
     mov al, MOUSE_ENABBLE
     call mouse_send_command
-    
+
     ; Set sample rate (40 reports/sec)
     mov al, 0xC8
     call mouse_send_command
-    
+
     ; Set resolution (8 counts per mm)
     mov al, 0x03
     call mouse_send_command
-    
+
     ; Mark as available
     mov byte [mouse_available], 1
-    
+
     mov si, .msg_ok
     call print_string
-    
+
     popa
     ret
 
@@ -92,36 +92,36 @@ mouse_init:
 ; =============================================================================
 mouse_send_command:
     pusha
-    
+
     ; Wait for input buffer to be empty
 .wait1:
     in al, MOUSE_STATUS
     and al, 0x02
     jnz .wait1
-    
+
     ; Send command
     mov al, PS2_CMD_WRITEAUX
     out MOUSE_CMD, al
-    
+
 .wait2:
     in al, MOUSE_STATUS
     and al, 0x02
     jnz .wait2
-    
+
     ; Send data
     popa
     out MOUSE_PORT, al
     pusha
-    
+
     ; Wait for data
 .wait3:
     in al, MOUSE_STATUS
     and al, 0x01
     jz .wait3
-    
+
     ; Read response (ACK)
     in al, MOUSE_PORT
-    
+
     popa
     ret
 
@@ -132,10 +132,10 @@ mouse_enable:
     pusha
     cmp byte [mouse_available], 0
     je .done
-    
+
     mov al, MOUSE_ENABBLE
     call mouse_send_command
-    
+
 .done:
     popa
     ret
@@ -147,10 +147,10 @@ mouse_disable:
     pusha
     cmp byte [mouse_available], 0
     je .done
-    
+
     mov al, MOUSE_DISABLE
     call mouse_send_command
-    
+
 .done:
     popa
     ret
@@ -161,13 +161,13 @@ mouse_disable:
 ; =============================================================================
 mouse_handle_packet:
     pusha
-    
+
     movzx ebx, byte [mouse_packet_byte]
-    
+
     ; First byte
     cmp bl, 0
     jne .byte1
-    
+
     ; Check for overflow
     test al, MOUSE_X_OVERFLOW
     jz .no_xovf
@@ -177,23 +177,23 @@ mouse_handle_packet:
     jz .no_yovf
     mov byte [mouse_y_overflow], 1
 .no_yovf:
-    
+
     ; Save flags
     mov [mouse_x_sign], al
     and al, MOUSE_X_SIGN
     mov [mouse_x_sign], al
-    
+
     movzx eax, byte [mouse_x_sign]
     and al, MOUSE_Y_SIGN
     mov [mouse_y_sign], al
-    
+
     ; Buttons
     and bl, MOUSE_BUTTON_LEFT | MOUSE_BUTTON_RIGHT | MOUSE_BUTTON_MIDDLE
     mov [mouse_buttons], bl
-    
+
     inc byte [mouse_packet_byte]
     jmp .done
-    
+
 .byte1:
     ; Second byte - X movement
     movzx eax, al
@@ -201,14 +201,14 @@ mouse_handle_packet:
     jz .x_positive
     or eax, 0xFFFFFF00
 .x_positive:
-    
+
     ; Add to position (scaled)
     shl eax, 1
     add [mouse_x], ax
-    
+
     inc byte [mouse_packet_byte]
     jmp .done
-    
+
 .byte2:
     ; Third byte - Y movement
     movzx eax, al
@@ -216,14 +216,14 @@ mouse_handle_packet:
     jz .y_positive
     or eax, 0xFFFFFF00
 .y_positive:
-    
+
     ; Subtract from position (Y is inverted on screen)
     shl eax, 1
     sub [mouse_y], ax
-    
+
     ; Reset packet counter
     mov byte [mouse_packet_byte], 0
-    
+
     ; Clamp to screen bounds
     cmp word [mouse_x], 0
     jl .clamp_x
@@ -232,7 +232,7 @@ mouse_handle_packet:
     jmp .x_ok
 .clamp_x:
     mov word [mouse_x], 320
-    
+
 .x_ok:
     cmp word [mouse_y], 0
     jl .clamp_y
@@ -241,11 +241,11 @@ mouse_handle_packet:
     jmp .y_ok
 .clamp_y:
     mov word [mouse_y], 240
-    
+
 .y_ok:
     ; Signal packet ready
     mov byte [mouse_packet_ready], 1
-    
+
 .done:
     popa
     ret
@@ -256,13 +256,13 @@ mouse_handle_packet:
 ; =============================================================================
 mouse_get_position:
     pusha
-    
+
     mov ax, [mouse_x]
     mov bx, [mouse_y]
     mov cl, [mouse_buttons]
-    
+
     mov byte [mouse_packet_ready], 0
-    
+
     popa
     ret
 
@@ -271,29 +271,29 @@ mouse_get_position:
 ; =============================================================================
 mouse_poll:
     pusha
-    
+
     cmp byte [mouse_available], 0
     je .done
-    
+
     ; Check if there's data
     in al, MOUSE_STATUS
     and al, 0x01
     jz .done
-    
+
     ; Read data
     in al, MOUSE_PORT
-    
+
     ; Check for mouse data (bit 5 of status)
     in ah, MOUSE_STATUS
     test ah, 0x20
     jnz .is_mouse_data
-    
+
     ; Keyboard data, ignore
     jmp .done
-    
+
 .is_mouse_data:
     call mouse_handle_packet
-    
+
 .done:
     popa
     ret

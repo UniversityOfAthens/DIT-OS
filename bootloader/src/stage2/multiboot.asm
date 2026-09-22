@@ -76,17 +76,17 @@ endstruc
 global multiboot_detect_memory
 multiboot_detect_memory:
     push ebx
-    
+
     ; Use BIOS int 0x15, AH=0x88 for memory size
     mov ah, 0x88
     int 0x15
-    
+
     ; AX = memory above 1MB in KB
     movzx eax, ax
-    
+
     ; EDX = 0 for now (simplified)
     xor edx, edx
-    
+
     pop ebx
     ret
 
@@ -98,14 +98,14 @@ multiboot_detect_memory:
 global multiboot_get_memory_map
 multiboot_get_memory_map:
     pushad
-    
+
     ; Set up buffer
     mov [mmap_buffer], edi
-    
+
     ; Use BIOS int 0x15, EAX=0xE820
     xor ebx, ebx                    ; Continuation value
     xor ecx, ecx                    ; Entry count
-    
+
 .mmap_loop:
     mov eax, 0xE820
     mov edx, 0x534D4150            ; 'SMAP'
@@ -114,27 +114,27 @@ multiboot_get_memory_map:
     mov edi, [mmap_buffer]
     imul ecx, ecx, MMapEntry_size
     add edi, ecx
-    
+
     mov ecx, 24                     ; Entry size
     push ebx
     int 0x15
     pop ebx
-    
+
     jc .done                       ; Error or done
-    
+
     test eax, eax
     jz .done
-    
+
     ; Check for 'SMAP' signature
     cmp edx, 0x534D4150
     jne .done
-    
+
     inc word [mmap_entry_count]
-    
+
     ; Check continuation
     test ebx, ebx
     jnz .mmap_loop
-    
+
 .done:
     movzx ecx, word [mmap_entry_count]
     popad
@@ -151,55 +151,55 @@ mmap_entry_count:  dw 0
 global multiboot_setup_info
 multiboot_setup_info:
     pushad
-    
+
     ; Allocate Multiboot info structure
     mov edi, multiboot_info
-    
+
     ; Set flags
     mov eax, MB_FLAG_MEM | MB_FLAG_CMDLINE | MB_FLAG_MMAP | MB_FLAG_VBE
     mov [edi + MultibootInfo.flags], eax
-    
+
     ; Get memory info
     call multiboot_detect_memory
     mov [edi + MultibootInfo.mem_lower], eax
     mov [edi + MultibootInfo.mem_upper], edx
-    
+
     ; Set boot device (simplified - hardcoded)
     mov dword [edi + MultibootInfo.boot_device], 0x80FF0000
-    
+
     ; Set command line
     test esi, esi
     jz .no_cmdline
     mov [edi + MultibootInfo.cmdline], esi
 .no_cmdline:
-    
+
     ; Get memory map
     lea esi, [edi + 1024]          ; Buffer after info struct
     mov [mmap_buffer], esi
     call multiboot_get_memory_map
-    
+
     mov esi, [mmap_buffer]
     mov [edi + MultibootInfo.mmap_addr], esi
-    
+
     ; Calculate total size
     movzx eax, word [mmap_entry_count]
     imul eax, eax, MMapEntry_size
     mov [edi + MultibootInfo.mmap_length], eax
-    
+
     ; Set VBE info if in graphics mode
     cmp byte [graphics_available], 1
     jne .no_vbe
-    
+
     mov eax, [framebuffer_addr]
     mov [edi + MultibootInfo.vbe_mode_info], eax
-    
+
     mov word [edi + MultibootInfo.vbe_mode], 0x010F  ; 800x600x32
 .no_vbe:
-    
+
     ; Set boot loader name
     mov esi, multiboot_loader_name
     mov [edi + MultibootInfo.boot_loader_name], esi
-    
+
     popad
     ret
 
@@ -210,17 +210,17 @@ multiboot_setup_info:
 global multiboot_boot_kernel
 multiboot_boot_kernel:
     pushad
-    
+
     ; Set up registers for kernel
     mov ebx, edi            ; Multiboot info
     mov eax, 0x2BADB002     ; Multiboot magic
-    
+
     ; Disable interrupts
     cli
-    
+
     ; Jump to kernel
     jmp esi
-    
+
     ; Should not return
     hlt
 
@@ -240,7 +240,7 @@ multiboot_header:
     dd MULTIBOOT_HEADER_MAGIC
     dd MULTIBOOT_HEADER_FLAGS
     dd MULTIBOOT_HEADER_CHECKSUM
-    
+
 ; Variables for external access
 global mb_info_ptr
 mb_info_ptr: dd multiboot_info

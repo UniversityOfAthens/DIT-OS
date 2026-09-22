@@ -74,7 +74,7 @@ set_cursor:
     ret
 
 ; =============================================================================
-; Disk I/O Functions  
+; Disk I/O Functions
 ; =============================================================================
 
 GLOBAL read_sectors
@@ -83,21 +83,21 @@ read_sectors:
     mov si, .retry_msg
     call print_string
     popa
-    
+
 .retry:
     pusha
     mov ah, 0x02
     int 0x13
     jnc .success
-    
+
     dec dx
     jnz .retry
-    
+
     call .error
     popa
     stc
     ret
-    
+
 .success:
     popa
     clc
@@ -128,7 +128,7 @@ plot_pixel:
     shr ebx, 3
     mul ebx
     add edi, eax
-    
+
     mov [edi], bx
     popa
     ret
@@ -144,7 +144,7 @@ clear_graphics_screen:
     shr ebx, 3
     mul ebx
     xchg ecx, eax
-    
+
     mov ah, [bg_color]
     mov al, [bg_color+1]
     mov bx, ax
@@ -183,11 +183,11 @@ check_vesa:
     int 0x10
     cmp ax, 0x004F
     jne .not_available
-    
+
     mov si, vbe_info_block
     cmp dword [si], 0x32454256
     jne .not_available
-    
+
     mov byte [graphics_available], 1
     mov si, .msg_ok
     call print_string
@@ -216,7 +216,7 @@ set_graphics_mode:
     int 0x10
     cmp ax, 0x004F
     jne .fail
-    
+
     movzx eax, word [vbe_mode_info+16]
     mov [framebuffer_addr], eax
     movzx eax, word [vbe_mode_info+18]
@@ -225,7 +225,7 @@ set_graphics_mode:
     mov [screen_height], eax
     mov al, [vbe_mode_info+25]
     mov [bits_per_pixel], al
-    
+
     mov si, .msg_ok
     call print_string
     popa
@@ -252,7 +252,7 @@ GLOBAL draw_graphics_menu
 draw_graphics_menu:
     pusha
     call clear_graphics_screen
-    
+
     mov si, .msg
     call print_string
     popa
