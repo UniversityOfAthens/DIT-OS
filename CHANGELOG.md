@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prefix is extended to the longest common prefix, then the candidates are
   listed. Ctrl+C discards the current line and arrow keys no longer insert
   escape-sequence garbage.
+- `scripts/qemu-test.sh`: QEMU integration test that drives the shell over
+  serial and waits for output instead of sleeping (boot, `echo`, `cat`, `ls`,
+  tab completion, a 100-command stress run, poweroff on `exit`).
+- CI: new `ci.yml` builds with `-Werror`, checks the disk layout and that
+  the kernel has no SSE/x87 code, runs the integration test with host GCC
+  and inside `nix develop`, and builds through the CMake wrapper.
+- Lint: pinned clang-format 20.1.8, shellcheck with strict mode enforced,
+  BITS directives, no `#pragma once`, whitespace and final newlines,
+  kernel/userland syscall numbers, and actionlint for the workflows.
 - Console TTY modes: `ioctl(0, TTY_IOC_SETMODE, mode)` switches echo and
   canonical (line-edited) input on or off, so programs can read raw keys.
   `SYS_ioctl` is now implemented for fds 0-2.
@@ -24,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `build.yml` and `test.yml` are replaced by `ci.yml`. Their smoke tests
+  could not fail: they looked for `OK` (already in the boot log) and
+  `HELLO` (present in the echoed input).
+- `release.yml` now builds and boot-tests before publishing, takes its notes
+  from the matching `CHANGELOG.md` section, marks `-alpha` tags as
+  pre-releases, and requests `contents: write` explicitly.
+- All shell scripts use `set -euo pipefail`; `dd` errors are no longer
+  hidden in `create-disk.sh`, `sign.sh` or the bootloader Makefile.
 - The CPU now halts when idle: the scheduler leaves the boot stack at start
   so the real idle task (`sti; hlt`) runs, and reading from the console
   sleeps on a wait queue until the COM1 interrupt wakes it instead of
@@ -41,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The NASM lint check always passed (`grep "[BITS]"` matched any line with a
+  B, I, T or S); it now checks for real `BITS` directives.
+- `printk("%d")` overflowed on `INT32_MIN`.
 - The COM1 interrupt line was never enabled (`MCR.OUT2` was cleared), and a
   second `serial_init()` call during boot reset the UART after setup.
 - `nix develop` builds hung at CPU init: Nix's GCC emits SSE for `-m32` code,

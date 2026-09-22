@@ -742,9 +742,25 @@ gdb \
 
 ### Integration Tests
 
-- Launch QEMU and check serial output
-- Must complete within 10 seconds (use `timeout`)
-- Exit 0 = pass, non-zero = fail
+- `scripts/qemu-test.sh [disk.img]` boots the image in QEMU and drives the
+  shell over serial: boot menu, `echo`, `cat`, `ls`, tab completion, a
+  repeated-command stress run and `exit` (QEMU must power off)
+- It waits for expected output (per-step timeout, `QEMU_TEST_TIMEOUT`)
+  instead of fixed sleeps; anchor new checks with `^` so the echoed input
+  line cannot satisfy them
+- Exit 0 = pass, non-zero = fail (the end of the serial log is printed)
+- CI runs it on every push and pull request (`.github/workflows/ci.yml`),
+  both with host GCC and inside `nix develop`
+
+### CI Workflows
+
+| Workflow | Runs | Checks |
+|----------|------|--------|
+| `ci.yml` | push to main/dev, PRs | clean `-Werror` build, disk layout, no SSE/x87 in the kernel, `qemu-test.sh` (host GCC and Nix shell), CMake wrapper |
+| `lint.yml` | push to main/dev, PRs | clang-format 20.1.8 (pinned), shellcheck + strict mode, BITS directives, no `#pragma once`, whitespace/newlines, syscall numbers match, actionlint |
+| `release.yml` | `v*` tags | build, `qemu-test.sh`, notes from the matching `CHANGELOG.md` section, pre-release for `-alpha` tags |
+
+Run the formatter CI uses with `pipx run clang-format==20.1.8 -i <files>`.
 
 ### Common Failure Modes
 

@@ -3,53 +3,71 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    name: Build, test and publish
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Install build dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential make nasm
+          sudo apt-get install -y --no-install-recommends \
+            build-essential nasm qemu-system-x86
 
-      - name: Clean and build
+      - name: Build (clean)
         run: |
-          rm -rf bootloader/build kernel/build
+          rm -rf kernel/build bootloader/build
           make -C kernel -j"$(nproc)"
           make -C bootloader all
 
-      - name: Package release artifacts
+      - name: QEMU integration test
+        env:
+          QEMU_TEST_TIMEOUT: "60"
+        run: scripts/qemu-test.sh
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::CHANGELOG.md has no section for [$version]"
+            exit 1
+          fi
+          cat release-notes.md
+
+      - name: Package artifacts
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
           mkdir -p release
-          cp bootloader/build/disk.img release/DIT-OS.img
-          cp bootloader/build/kernel.bin release/DIT-OS.kernel
-          cp bootloader/build/stage1.bin release/
-          cp bootloader/build/stage2.bin release/
-          cp bootloader/build/loader.bin release/
-          echo "DIT-OS $(git describe --tags 2>/dev/null || echo 'dev')" > release/VERSION
-          sha256sum release/* > release/SHA256SUMS
+          cp bootloader/build/disk.img "release/DIT-OS-${TAG}.img"
+          cp bootloader/build/kernel.bin "release/DIT-OS-${TAG}-kernel.elf"
+          cp bootloader/build/stage1.bin bootloader/build/stage2.bin \
+             bootloader/build/loader.bin release/
+          (cd release && sha256sum -- * > SHA256SUMS)
           cat release/SHA256SUMS
 
-      - name: Create GitHub Release
+      - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: |
-            ## DIT-OS ${{ github.ref_name }}
-
-            ### Artifacts
-            - `DIT-OS.img` — Bootable floppy disk image
-            - `DIT-OS.kernel` — Kernel ELF binary
-            - Bootloader stage binaries
-          draft: false
-          prerelease: false
+          name: DIT-OS ${{ github.ref_name }}
+          body_path: release-notes.md
+          # 0.0.x-alpha style tags are pre-releases
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: release/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

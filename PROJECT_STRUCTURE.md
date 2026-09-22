@@ -21,10 +21,10 @@ DIT-OS/
 │   │   └── feature_request.md
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   └── workflows/
-│       ├── build.yml       # CI build workflow
+│       ├── ci.yml          # Build, boot test (host GCC, Nix), CMake wrapper
 │       ├── hello.yaml      # Example/test workflow
-│       ├── release.yml     # Release workflow
-│       └── test.yml        # Test workflow
+│       ├── lint.yml        # clang-format, shellcheck, conventions, actionlint
+│       └── release.yml     # Tag-driven release (boot-tested, CHANGELOG notes)
 ├── .gitignore
 ├── AGENTS.md               # AI agent guidelines (authoritative)
 ├── AUTHORS.md
@@ -273,7 +273,8 @@ DIT-OS/
 ├── scripts/
 │   ├── build.sh                 # Build kernel + bootloader + disk image
 │   ├── create-disk.sh           # Create floppy disk image (dd)
-│   └── run-qemu.sh              # Run QEMU (serial stdio, 32MB)
+│   ├── run-qemu.sh              # Run QEMU (serial stdio, 32MB)
+│   └── qemu-test.sh             # QEMU integration test (used by CI)
 │
 ├── tests/                       # EMPTY — no tests yet
 │

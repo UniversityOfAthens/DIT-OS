@@ -166,14 +166,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | Raw `int`, `unsigned int`, `long` are used instead of `u32`/`s32`/`u16` as required by AGENTS.md type conventions. |
 | **Fix** | Replace with properly-sized types per `kernel/include/types.hpp`. |
 
-### M3. Missing final newlines
-
-| Field | Value |
-|-------|-------|
-| **Files** | `bootloader/src/stage2/a20.asm`, `disk.asm`, `menu.asm`, `pmode.asm`, `stage2.cpp`, `kernel/arch/x86_64/dev/floppy.cpp` |
-| **Issue** | POSIX requires files to end with a newline. AGENTS.md requires a final newline. |
-| **Fix** | Append newlines to all affected files. |
-
 ### M4. Duplicated `kstrcmp` in VFS and ramfs
 
 | Field | Value |
@@ -233,23 +225,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Line** | 48 |
 | **Issue** | Only checks `num == 0` but doesn't validate that the sector count is ≤ 255 (per ATA single-command limit). Oversized requests cause excessive loop iterations. |
 | **Fix** | Add `if (num == 0 || num > 255) return -EINVAL;` and handle 0=256 per ATA spec. |
-
-### M11. All shell scripts use `set -e` instead of `set -euo pipefail`
-
-| Field | Value |
-|-------|-------|
-| **Files** | `scripts/build.sh`, `scripts/create-disk.sh`, `scripts/run-qemu.sh`, `bootloader/scripts/sign.sh`, `bootloader/scripts/build.sh` |
-| **Issue** | AGENTS.md mandates `set -euo pipefail` for all shell scripts, but none use it. Without `-u`, undefined variables silently resolve to empty strings. Without `-o pipefail`, pipeline errors are silently ignored. |
-| **Fix** | Add `set -euo pipefail` and `IFS=$'\n\t'` to all shell scripts. |
-
-### M12. `scripts/create-disk.sh` hides `dd` errors
-
-| Field | Value |
-|-------|-------|
-| **File** | `scripts/create-disk.sh` |
-| **Lines** | 17-21 |
-| **Issue** | All `dd` commands redirect stderr to `/dev/null`. If a disk write fails (e.g., out of space), the error is silently hidden and subsequent operations continue with incomplete data. |
-| **Fix** | Remove `2>/dev/null` or add explicit error checking after each `dd`. |
 
 ### M13. `scripts/create-disk.sh` uses magic numbers for disk layout
 
@@ -578,9 +553,9 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Syscall)** | C5 | — | M1, M27 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
 | **Userland** | — | — | M17, M18, M19, M28, M35 | L1, L2, L3, L4, L7, L17 |
-| **Build System** | — | H1, H3, H17 | M11, M12, M13, M15 | L10, L16 |
+| **Build System** | — | H1, H3, H17 | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | H4 | — | I4, I5, I6, I7 |
-| **Docs/Conventions** | — | — | M3, M16 | I2, I3, I9, I10 |
+| **Docs/Conventions** | — | — | M16 | I2, I3, I9, I10 |
 
 ---
 

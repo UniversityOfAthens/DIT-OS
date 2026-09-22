@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and boot test (host GCC)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential nasm qemu-system-x86
+
+      - name: Build (clean, -Werror)
+        run: |
+          rm -rf kernel/build bootloader/build
+          make -C kernel -j"$(nproc)"
+          make -C bootloader all
+
+      - name: Check disk image layout
+        run: |
+          set -euo pipefail
+          img=bootloader/build/disk.img
+          sector() { awk -v k="$1" '$1 == k { print $3 }' bootloader/Makefile; }
+          at() { xxd -s "$1" -l "$2" -p "$img"; }
+          kernel_sector="$(sector DISK_SECTOR_KERNEL)"
+          stage2_sector="$(sector DISK_SECTOR_STAGE2)"
+          [ "$(stat -c %s "$img")" -eq $((2880 * 512)) ] \
+            || { echo "::error::disk.img is not a 1.44 MB floppy image"; exit 1; }
+          [ "$(at 510 2)" = "55aa" ] \
+            || { echo "::error::MBR signature 0x55AA missing"; exit 1; }
+          cmp -n "$(stat -c %s bootloader/build/stage2.bin)" \
+            bootloader/build/stage2.bin <(tail -c +$((stage2_sector * 512 + 1)) "$img") \
+            || { echo "::error::stage2 not at sector $stage2_sector"; exit 1; }
+          [ "$(at $((kernel_sector * 512)) 4)" = "7f454c46" ] \
+            || { echo "::error::kernel ELF not at sector $kernel_sector"; exit 1; }
+          echo "Layout OK: stage2 at $stage2_sector, kernel at $kernel_sector"
+
+      - name: Check kernel has no SSE/x87 instructions
+        run: |
+          count="$(objdump -d bootloader/build/kernel.bin | grep -cE 'xmm|%mm[0-7]|%st\(' || true)"
+          [ "$count" -eq 0 ] \
+            || { echo "::error::kernel contains $count SSE/MMX/x87 instructions"; exit 1; }
+
+      - name: QEMU integration test
+        env:
+          QEMU_TEST_LOG: ${{ runner.temp }}/serial.log
+          QEMU_TEST_TIMEOUT: "60"
+        run: scripts/qemu-test.sh
+
+      - name: Upload serial log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: serial-log
+          path: ${{ runner.temp }}/serial.log
+          if-no-files-found: ignore
+
+      - name: Upload disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: dit-os-${{ github.sha }}
+          path: |
+            bootloader/build/disk.img
+            bootloader/build/kernel.bin
+          retention-days: 14
+
+  nix:
+    name: Nix dev shell build and boot test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Evaluate flake (including the cross shell, without building it)
+        run: |
+          nix flake show
+          nix eval .#devShells.x86_64-linux.cross.drvPath
+
+      - name: Build and boot test inside nix develop
+        env:
+          QEMU_TEST_TIMEOUT: "60"
+        run: |
+          nix develop --command bash -c '
+            set -euo pipefail
+            rm -rf kernel/build bootloader/build
+            make -C bootloader all
+            scripts/qemu-test.sh
+          '
+
+  cmake:
+    name: CMake wrapper
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential nasm cmake
+
+      - name: Configure and build through CMake
+        run: |
+          cmake -S . -B build-cmake
+          cmake --build build-cmake
+          test -f bootloader/build/disk.img

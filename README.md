@@ -100,7 +100,18 @@ To quit QEMU at any point, press **Ctrl+A** then **X**.
 If the kernel hits a CPU exception, it prints a `KERNEL PANIC` report with the
 exception name, error code and `EIP` to the terminal, then halts.
 
-### 3. Debug (QEMU + GDB)
+### 3. Test
+
+```bash
+scripts/qemu-test.sh
+```
+
+Boots the disk image in QEMU and drives the shell over the serial port (boot
+menu, commands, tab completion, a stress run, `exit`). It prints `PASS` per
+step and exits non-zero with the end of the serial log on failure. CI runs it
+on every push.
+
+### 4. Debug (QEMU + GDB)
 
 ```bash
 make -C bootloader debug

@@ -29,8 +29,8 @@ See `ISSUES.md` for full details. These are the blockers:
 - [x] **Fix conflicting `serial_init` declarations** — removed dead `kernel.h` and `arch/serial.h`
 - [ ] **Export `Mutex` struct** from `kernel/sched/mutex.cpp` to a header so it's usable
 - [ ] **Add `-ENOSYS` handler** for unimplemented syscalls in `syscall_table.cpp` instead of null pointers
-- [ ] **Fix `scripts/create-disk.sh`** — stop hiding `dd` errors with `2>/dev/null`
-- [ ] **Fix all shell scripts** — add `set -euo pipefail` and `IFS=$'\n\t'`
+- [x] **Fix `scripts/create-disk.sh`** — stop hiding `dd` errors with `2>/dev/null`
+- [x] **Fix all shell scripts** — add `set -euo pipefail` and `IFS=$'\n\t'`
 - [ ] **Add `kernel/build/` to `.gitignore`**
 
 ---
@@ -330,23 +330,24 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 
 ### Scripts
 - [x] `scripts/build.sh`
-- [x] `scripts/create-disk.sh` — Hides dd errors
+- [x] `scripts/create-disk.sh`
+- [x] `scripts/qemu-test.sh` — QEMU integration test (boot, shell commands, tab completion, stress, poweroff)
 - [x] `scripts/run-qemu.sh`
 - [ ] `scripts/check-toolchain.sh` — Referenced in docs but doesn't exist
 - [ ] `scripts/run-qemu-debug.sh`
 - [ ] `scripts/gdb.sh`
-- [ ] Add `set -euo pipefail` to all scripts
-- [ ] Add `readonly` for constants
-- [ ] Fix create-disk.sh to not hide dd errors
+- [x] Add `set -euo pipefail` to all scripts (enforced by the lint workflow)
+- [x] Add `readonly` for constants
+- [x] Fix create-disk.sh to not hide dd errors
 
 ---
 
 ## INFRASTRUCTURE
 
 ### GitHub / CI/CD
-- [x] `.github/workflows/build.yml`
-- [x] `.github/workflows/test.yml`
-- [x] `.github/workflows/release.yml`
+- [x] `.github/workflows/ci.yml` — build, layout/SSE checks, QEMU integration test, Nix shell, CMake wrapper
+- [x] `.github/workflows/lint.yml` — clang-format (pinned), shellcheck, source conventions, actionlint
+- [x] `.github/workflows/release.yml` — tag-driven, boot-tested, notes from CHANGELOG.md
 - [x] `.github/workflows/hello.yaml`
 - [x] `.github/ISSUE_TEMPLATE/bug_report.md`
 - [x] `.github/ISSUE_TEMPLATE/feature_request.md`
@@ -399,7 +400,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [ ] Fix heap_free to actually free memory (slab/buddy allocator)
 - [ ] Implement proper VMM with page fault handling and demand paging
 - [x] Standardize cross-compiler toolchain (i686-elf-*) in all build paths
-- [ ] Fix shell scripts with `set -euo pipefail`
+- [x] Fix shell scripts with `set -euo pipefail`
 - [ ] Export Mutex struct to header
 - [ ] Fix `.clang-format` and run as part of CI
 
@@ -590,7 +591,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 
 ### Phase 14: Tooling & Infrastructure
 - [ ] Unit test framework (kunit-style)
-- [ ] Integration tests (QEMU smoke tests)
+- [x] Integration tests (QEMU smoke tests) — `scripts/qemu-test.sh`
 - [ ] Coverage reporting (gcov)
 - [ ] Kconfig / menuconfig build configuration
 - [ ] ISOLINUX/GRUB/Limine boot support
@@ -600,10 +601,10 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [ ] Cross-compiler build scripts (crosstool-NG style)
 - [ ] Docker / container support (via namespaces + cgroups)
 - [ ] Self-hosted build (building DIT-OS on DIT-OS)
-- [ ] CI/CD with QEMU boot tests on every commit
+- [x] CI/CD with QEMU boot tests on every commit
 - [ ] Debuginfod / symbol server
 - [ ] Documentation site (architecture, API, driver writing)
-- [ ] Coding style checker in CI
+- [x] Coding style checker in CI
 
 ### Phase 15: Production Hardening
 - [ ] Kernel lives in a separate address space (higher-half kernel)
