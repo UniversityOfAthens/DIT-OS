@@ -1,6 +1,7 @@
 // =============================================================================
 // DIT-OS Kernel - Early Initialization
-// Runs before main kernel logic: BSS clear, multiboot validation, early setup.
+// Runs before main kernel logic: multiboot validation, early setup (BSS is
+// cleared by entry.asm).
 // =============================================================================
 
 #include <stdint.h>
@@ -10,10 +11,6 @@
 extern "C" uint32_t boot_magic;
 extern "C" uint32_t boot_info;
 
-// From linker.ld
-extern "C" uint8_t __bss_start[];
-extern "C" uint8_t __bss_end[];
-
 namespace boot
 {
 
@@ -22,14 +19,6 @@ constexpr uint32_t MULTIBOOT1_MAGIC = 0x2BADB002;
 
 // Multiboot2 magic (passed in EAX when using Multiboot2)
 constexpr uint32_t MULTIBOOT2_MAGIC = 0x36d76289;
-
-// Clear BSS segment (uninitialized data) to zero
-static void clear_bss()
-{
-    for (uint8_t* p = __bss_start; p < __bss_end; ++p) {
-        *p = 0;
-    }
-}
 
 // Validate multiboot and return boot loader type (1 or 2), or 0 if invalid
 static uint32_t check_multiboot()

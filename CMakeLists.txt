@@ -1,88 +1,49 @@
 cmake_minimum_required(VERSION 3.10)
-project(DIT-OS LANGUAGES CXX)
 
-# DIT-OS: custom bootloader (stage1 + stage2) + kernel.
-# This file builds the kernel only. Use bootloader/Makefile for disk image and run.
+# DIT-OS: thin CMake wrapper around the Makefiles, which are the single source
+# of truth for sources, flags and toolchain choice (kernel/Makefile picks
+# i686-elf-* when installed, otherwise host GCC with -m32).
+#
+#   cmake -S . -B build
+#   cmake --build build                  # kernel + bootloader + disk image
+#   cmake --build build --target run     # boot in QEMU
+project(DIT-OS NONE)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_program(GNU_MAKE NAMES gmake make)
+if(NOT GNU_MAKE)
+    message(FATAL_ERROR "GNU make is required to build DIT-OS")
+endif()
 
-# Paths (match kernel/Makefile layout)
 set(KERNEL_DIR ${CMAKE_SOURCE_DIR}/kernel)
-set(ARCH_DIR ${KERNEL_DIR}/arch/x86_64)
-set(BOOT_DIR ${ARCH_DIR}/boot)
-set(CPU_DIR ${ARCH_DIR}/cpu)
-set(INCLUDE_DIR ${KERNEL_DIR}/include)
+set(BOOTLOADER_DIR ${CMAKE_SOURCE_DIR}/bootloader)
 
-# Kernel output: bootloader build dir (for disk image)
-set(KERNEL_OUTPUT ${CMAKE_SOURCE_DIR}/bootloader/build/kernel.bin)
-
-# Assembly sources (multiboot, entry, GDT, IDT)
-set(ASM_SOURCES
-    ${BOOT_DIR}/multiboot.asm
-    ${BOOT_DIR}/multiboot2.asm
-    ${BOOT_DIR}/entry.asm
-    ${CPU_DIR}/gdt.asm
-    ${CPU_DIR}/idt.asm
+add_custom_target(kernel
+    COMMAND ${GNU_MAKE} -C ${KERNEL_DIR}
+    COMMENT "Building kernel (bootloader/build/kernel.bin)"
+    USES_TERMINAL
 )
 
-# C++ sources (early init + main)
-set(CPP_SOURCES
-    ${BOOT_DIR}/init.cpp
-    ${BOOT_DIR}/main.cpp
+add_custom_target(disk ALL
+    COMMAND ${GNU_MAKE} -C ${BOOTLOADER_DIR} all
+    COMMENT "Building bootloader and disk image (bootloader/build/disk.img)"
+    DEPENDS kernel
+    USES_TERMINAL
 )
 
-# Object file names (in build dir; NAME_WE = base name without extension)
-set(ASM_OBJECTS)
-foreach(src ${ASM_SOURCES})
-    get_filename_component(name_we ${src} NAME_WE)
-    list(APPEND ASM_OBJECTS ${CMAKE_BINARY_DIR}/${name_we}.o)
-endforeach()
-
-set(CPP_OBJECTS)
-foreach(src ${CPP_SOURCES})
-    get_filename_component(name_we ${src} NAME_WE)
-    list(APPEND CPP_OBJECTS ${CMAKE_BINARY_DIR}/${name_we}.o)
-endforeach()
-
-# Include directories for C++ (match kernel Makefile)
-set(KERNEL_CXX_FLAGS -I${KERNEL_DIR}/include -I${CMAKE_SOURCE_DIR}/include)
-
-# Custom command: link kernel ELF
-add_custom_command(
-    OUTPUT ${KERNEL_OUTPUT}
-    COMMAND ${CMAKE_COMMAND} -E echo "Linking kernel..."
-    COMMAND ld -m elf_i386 -T ${BOOT_DIR}/linker.ld -o ${KERNEL_OUTPUT} ${ASM_OBJECTS} ${CPP_OBJECTS}
-    COMMAND ${CMAKE_COMMAND} -E echo "Kernel built: ${KERNEL_OUTPUT}"
-    DEPENDS ${ASM_OBJECTS} ${CPP_OBJECTS}
-    COMMENT "Linking kernel"
-    VERBATIM
+add_custom_target(run
+    COMMAND ${GNU_MAKE} -C ${BOOTLOADER_DIR} run
+    DEPENDS disk
+    USES_TERMINAL
 )
 
-add_custom_target(kernel ALL DEPENDS ${KERNEL_OUTPUT})
+add_custom_target(debug
+    COMMAND ${GNU_MAKE} -C ${BOOTLOADER_DIR} debug
+    DEPENDS disk
+    USES_TERMINAL
+)
 
-# Assemble .asm
-foreach(src ${ASM_SOURCES})
-    get_filename_component(name_we ${src} NAME_WE)
-    set(obj ${CMAKE_BINARY_DIR}/${name_we}.o)
-    add_custom_command(
-        OUTPUT ${obj}
-        COMMAND nasm -f elf32 -g -o ${obj} ${src}
-        COMMENT "Assembling ${name_we}.asm"
-        DEPENDS ${src}
-        VERBATIM
-    )
-endforeach()
-
-# Compile .cpp (ffreestanding, no RTTI/exceptions, 32-bit)
-foreach(src ${CPP_SOURCES})
-    get_filename_component(name_we ${src} NAME_WE)
-    set(obj ${CMAKE_BINARY_DIR}/${name_we}.o)
-    add_custom_command(
-        OUTPUT ${obj}
-        COMMAND g++ -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -Wall -Wextra -m32 ${KERNEL_CXX_FLAGS} -c -o ${obj} ${src}
-        COMMENT "Compiling ${name_we}.cpp"
-        DEPENDS ${src}
-        VERBATIM
-    )
-endforeach()
+add_custom_target(os-clean
+    COMMAND ${GNU_MAKE} -C ${KERNEL_DIR} clean
+    COMMAND ${GNU_MAKE} -C ${BOOTLOADER_DIR} clean
+    COMMENT "Removing kernel and bootloader build outputs"
+)

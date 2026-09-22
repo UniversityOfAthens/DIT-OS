@@ -64,16 +64,6 @@ static dentry* alloc_dentry()
     return d;
 }
 
-static inode* alloc_inode()
-{
-    inode* ino = (inode*)mm::kmalloc(sizeof(inode));
-    if (!ino)
-        return nullptr;
-    for (uint32_t i = 0; i < sizeof(inode); i++)
-        ((uint8_t*)ino)[i] = 0;
-    return ino;
-}
-
 static inode* traverse_path(const char* path, dentry** out_dentry)
 {
     if (!path || path[0] != '/')

@@ -12,16 +12,6 @@ static void putc(char c)
     write(1, &c, 1);
 }
 
-static void puts_cstr(const char* s)
-{
-    if (!s)
-        s = "(null)";
-    unsigned i = 0;
-    while (s[i])
-        i++;
-    write(1, s, i);
-}
-
 static void utoa(uint32_t v, unsigned base, char* out, unsigned* out_len)
 {
     static const char digits[] = "0123456789abcdef";
@@ -87,7 +77,8 @@ int printf(const char* fmt, ...)
 
         if (*p == 'd') {
             int v = va_arg(ap, int);
-            uint32_t uv = (v < 0) ? (uint32_t)(-v) : (uint32_t)v;
+            /* Negate in unsigned arithmetic: -v overflows for INT_MIN. */
+            uint32_t uv = (v < 0) ? 0u - (uint32_t)v : (uint32_t)v;
             unsigned sign = (v < 0) ? 1 : 0;
             utoa(uv, 10, num_buf, &num_len);
             if (sign) {

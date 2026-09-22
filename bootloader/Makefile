@@ -1,7 +1,9 @@
 # DIT-OS Custom Bootloader - Full boot path (ELF kernel via loader)
 
 NASM = nasm
-OBJCOPY = objcopy
+# Same toolchain choice as kernel/Makefile (host objcopy handles elf32 too)
+CROSS_COMPILE ?= $(if $(shell command -v i686-elf-objcopy 2>/dev/null),i686-elf-,)
+OBJCOPY = $(CROSS_COMPILE)objcopy
 
 SRC_DIR = src
 BUILD_DIR = build
