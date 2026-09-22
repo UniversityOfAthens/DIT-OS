@@ -48,7 +48,7 @@ DIT-OS/
 │
 ├── bootloader/
 │   ├── Makefile             # Top-level: builds disk.img, runs QEMU
-│   ├── build/               # Build output (disk.img, stage*.bin, kernel.bin)
+│   ├── build/               # Build output (disk.img, stage*.bin, kernel.bin, kernel.img)
 │   ├── config/
 │   │   └── boot.cfg         # Bootloader configuration
 │   ├── include/             # Shared C++ headers
