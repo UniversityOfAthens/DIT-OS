@@ -59,6 +59,7 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(CPU_DIR)/mtrr.cpp $(CPU_DIR)/pat.cpp $(CPU_DIR)/cpufeatures.cpp $(CPU_DIR)/arch.cpp \
 	$(MM_DIR)/paging.cpp $(MM_DIR)/pmm.cpp $(MM_DIR)/vmm.cpp $(MM_DIR)/heap.cpp $(MM_DIR)/dma.cpp \
 	$(MM_DIR)/slab.cpp $(MM_DIR)/memblock.cpp $(MM_DIR)/early_mm.cpp \
+	$(MM_DIR)/uaccess.cpp \
 	$(DEV_DIR)/serial.cpp $(DEV_DIR)/keyboard.cpp $(DEV_DIR)/mouse.cpp $(DEV_DIR)/timer.cpp $(DEV_DIR)/rtc.cpp \
 	$(DEV_DIR)/pci.cpp $(DEV_DIR)/ata.cpp $(DEV_DIR)/ahci.cpp $(DEV_DIR)/nvme.cpp $(DEV_DIR)/floppy.cpp \
 	$(GFX_DIR)/vga.cpp $(GFX_DIR)/framebuffer.cpp

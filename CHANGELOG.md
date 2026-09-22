@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lint: pinned clang-format 20.1.8, shellcheck with strict mode enforced,
   BITS directives, no `#pragma once`, whitespace and final newlines,
   kernel/userland syscall numbers, and actionlint for the workflows.
+- `copy_from_user` / `copy_to_user` / `strncpy_from_user` (`mm/uaccess`):
+  `read`, `write`, `open` and `getdents` validate user pointers and return
+  `-EFAULT` for NULL, low memory, wraparound or out-of-window ranges, and
+  `open` returns `-ENAMETOOLONG` for over-long paths. `read`/`write` copy
+  through a kernel bounce buffer so drivers and filesystems only see kernel
+  memory. Userland still runs in ring 0, so the window includes the kernel
+  until ring 3 lands.
 - Console TTY modes: `ioctl(0, TTY_IOC_SETMODE, mode)` switches echo and
   canonical (line-edited) input on or off, so programs can read raw keys.
   `SYS_ioctl` is now implemented for fds 0-2.

@@ -15,7 +15,7 @@ See `ISSUES.md` for full details. These are the blockers:
 - [x] **`disk.asm` retry count uses address as counter** — changed to `mov si, 3`
 - [x] **E820 uninitialized EBX** — added `xor ebx, ebx` before loop
 - [x] **`kernel_stack_top` treated as value, not address** — changed to array declaration
-- [ ] **No `copy_from_user`/`copy_to_user`** — user pointer validation missing in all syscalls
+- [x] **No `copy_from_user`/`copy_to_user`** — `mm::copy_from_user` / `copy_to_user` / `strncpy_from_user` in all pointer-taking syscalls; real isolation still needs ring 3 (ISSUES.md C5)
 - [x] **CMake uses host compiler** — CMake now wraps the Makefiles, which pick `i686-elf-*` when available
 - [x] **flake.nix has no cross-compiler** — `nix develop .#cross` adds it; default shell fixed (hardening off, no SSE)
 
@@ -163,7 +163,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/arch/x86_64/mm/mtrr.asm`
 - [ ] Implement proper VMM with page fault handling
 - [ ] Implement proper slab/buddy allocator
-- [ ] Implement `copy_from_user` / `copy_to_user` with address-space checks
+- [x] Implement `copy_from_user` / `copy_to_user` with address-space checks (`kernel/arch/x86_64/mm/uaccess.cpp`)
 - [ ] Make `heap_free` actually free memory
 
 ### Architecture — Device Drivers
@@ -250,7 +250,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/syscall/sys_getdents.cpp`
 - [x] `kernel/syscall/sys_fork.cpp` — STUB (returns -ENOSYS)
 - [ ] Implement: stat, fstat, execve, waitpid, mmap, munmap, brk, kill, ioctl
-- [ ] Add `copy_from_user` / `copy_to_user` to all syscall handlers
+- [x] Add `copy_from_user` / `copy_to_user` to all syscall handlers
 
 ### Kernel include headers
 All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the full list.
@@ -396,7 +396,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 ## PRODUCTION-LEVEL ROADMAP
 
 ### Phase 1: Stabilize (current bugs — priority)
-- [ ] Add `copy_from_user`/`copy_to_user` for syscall security
+- [x] Add `copy_from_user`/`copy_to_user` for syscall security
 - [ ] Fix heap_free to actually free memory (slab/buddy allocator)
 - [ ] Implement proper VMM with page fault handling and demand paging
 - [x] Standardize cross-compiler toolchain (i686-elf-*) in all build paths

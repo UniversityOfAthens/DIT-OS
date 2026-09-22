@@ -13,14 +13,13 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ## CRITICAL — Will cause boot failure, crashes, or compile errors
 
-### C5. No user pointer validation in syscall implementations
+### C5. User pointers are validated, but user and kernel memory are not separated
 
 | Field | Value |
 |-------|-------|
-| **Files** | `kernel/syscall/sys_read.cpp`, `sys_write.cpp`, `sys_open.cpp`, `sys_getdents.cpp` |
-| **Issue** | All syscall implementations directly dereference user-supplied buffer pointers without using `copy_from_user` / `copy_to_user`. A malicious user process can read/write arbitrary kernel memory. `sys_open.cpp` has a `copy_user_path()` helper that uses `volatile` but still directly dereferences without address-space validation. |
-| **Violates** | AGENTS.md Security Rule 1: "Never dereference user-space pointers directly." |
-| **Fix** | Implement `copy_from_user()` / `copy_to_user()` with address-space boundary checks and use them in all syscall handlers. |
+| **Files** | `kernel/include/mm/uaccess.hpp`, `kernel/arch/x86_64/mm/uaccess.cpp` |
+| **Issue** | Every pointer-taking syscall (`read`, `write`, `open`, `getdents`) now goes through `copy_from_user` / `copy_to_user` / `strncpy_from_user`, which reject NULL, low memory, wraparound and ranges outside `[USER_SPACE_START, USER_SPACE_END)`. But userland still runs in ring 0 inside the kernel image (I3), so its buffers live in kernel memory and the user window has to include the kernel. A buggy or malicious user program can still pass a pointer to kernel data. |
+| **Fix** | Run user programs in ring 3 with their own page tables (user pages below `USER_SPACE_END`, kernel mapped supervisor-only), then shrink the window so it excludes the kernel. The helpers and all call sites are already in place. |
 
 ### C9. PNG decoder header chunk lookup always fails
 
@@ -511,7 +510,7 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ### I3. Userland is compiled into the kernel (temporary)
 
-Per AGENTS.md and Makefile comments, userland code is compiled and linked into the kernel binary for now. It runs in ring 0 and calls the syscall layer through direct C wrappers (`dit_sys_*`), not `int 0x80`. True userspace separation (ring 3, separate page tables) is not yet implemented, which is also why C5 cannot give real protection yet.
+Per AGENTS.md and Makefile comments, userland code is compiled and linked into the kernel binary for now. It runs in ring 0 and calls the syscall layer through direct C wrappers (`dit_sys_*`), not `int 0x80`. True userspace separation (ring 3, separate page tables) is not yet implemented, which is why C5's pointer checks cannot exclude kernel memory yet.
 
 ### I4. `config/` directory and its 15+ files are documented but unimplemented
 
@@ -561,7 +560,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 5 Most Important Fixes (remaining)
 
-1. **C5 — No user pointer validation**: All syscall handlers directly dereference user addresses without `copy_from_user`/`copy_to_user`. Needs ring 3 separation (I3) to give real protection.
+1. **C5 / I3 — Ring 3 userland**: pointer validation is in place, but user programs still run in ring 0 inside the kernel image, so the user window must include kernel memory.
 2. **M36 — PID 1 exit**: the system silently idles if init exits.
 3. **H8 — Mutex not exported**: `Mutex` struct defined in `.cpp` only, `mutex_lock`/`unlock` are dead code.
 4. **H1 — Brace style**: `.clang-format` and AGENTS.md disagree; pick one.
