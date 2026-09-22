@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # DIT-OS Main build script: kernel (ELF) + bootloader + disk image for full boot.
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly ROOT
 cd "$ROOT"
 
 echo "[build] Building kernel (ELF)..."

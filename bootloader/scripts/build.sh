@@ -4,11 +4,14 @@
 # Builds stage1 + stage2 and optionally the disk image.
 # =============================================================================
 
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 BOOTLOADER_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BUILD_DIR="$BOOTLOADER_ROOT/build"
+readonly BOOTLOADER_ROOT
+readonly BUILD_DIR="$BOOTLOADER_ROOT/build"
 
 usage() {
     echo "Usage: $0 [all|stage1|stage2|disk|clean]"
@@ -44,8 +47,8 @@ main() {
             exit 0
             ;;
         *)
-            echo "Unknown target: $1"
-            usage
+            >&2 echo "Unknown target: $1"
+            >&2 usage
             exit 1
             ;;
     esac

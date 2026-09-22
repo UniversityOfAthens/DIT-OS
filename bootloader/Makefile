@@ -73,11 +73,11 @@ $(KERNEL_IMG): $(KERNEL_OUT)
 	fi
 
 $(DISK_IMAGE): $(STAGE1_OUT) $(STAGE2_OUT) $(LOADER_OUT) $(KERNEL_IMG)
-	@dd if=/dev/zero of=$@ bs=512 count=2880 2>/dev/null
-	@dd if=$(STAGE1_OUT) of=$@ conv=notrunc 2>/dev/null
-	@dd if=$(STAGE2_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_STAGE2) conv=notrunc 2>/dev/null
-	@dd if=$(LOADER_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_LOADER) conv=notrunc 2>/dev/null
-	@dd if=$(KERNEL_IMG) of=$@ bs=512 seek=$(DISK_SECTOR_KERNEL) conv=notrunc 2>/dev/null
+	@dd if=/dev/zero of=$@ bs=512 count=2880 status=none
+	@dd if=$(STAGE1_OUT) of=$@ conv=notrunc status=none
+	@dd if=$(STAGE2_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_STAGE2) conv=notrunc status=none
+	@dd if=$(LOADER_OUT) of=$@ bs=512 seek=$(DISK_SECTOR_LOADER) conv=notrunc status=none
+	@dd if=$(KERNEL_IMG) of=$@ bs=512 seek=$(DISK_SECTOR_KERNEL) conv=notrunc status=none
 	@echo "Disk image: $@"
 
 disk: dirs $(DISK_IMAGE)
