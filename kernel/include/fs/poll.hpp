@@ -16,7 +16,8 @@ namespace fs
 #define POLLRDNORM POLLIN
 #define POLLWRNORM POLLOUT
 
-struct pollfd {
+struct pollfd
+{
     int fd;
     uint16_t events; /* requested events */
     uint16_t revents; /* returned events */

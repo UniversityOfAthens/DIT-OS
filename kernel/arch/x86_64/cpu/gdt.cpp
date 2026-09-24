@@ -12,7 +12,7 @@ extern "C" arch::Tss tss;
 namespace arch
 {
 
-static uint8_t gdt[4 * 8] __attribute__((aligned(8)));
+static uint8_t gdt[6 * 8] __attribute__((aligned(8)));
 static uint8_t gdt_desc[6] __attribute__((aligned(2)));
 
 static void write_gdt_entry(uint8_t* base, int index, uint32_t base_addr,
@@ -42,6 +42,8 @@ void gdt_load()
     write_gdt_entry(gdt, 2, 0, 0xFFFFF, 0x92, 0xCF); // data
     write_gdt_entry(gdt, 3, tss_addr, 103, 0x89,
                     0x40); // TSS (limit 104-1, type 0x89)
+    write_gdt_entry(gdt, 4, 0, 0xFFFFF, 0xFA, 0xCF);
+    write_gdt_entry(gdt, 5, 0, 0xFFFFF, 0xF2, 0xCF);
 
     uint16_t limit = sizeof(gdt) - 1;
     uint32_t base = reinterpret_cast<uint32_t>(gdt);

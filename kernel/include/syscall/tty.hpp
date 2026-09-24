@@ -20,7 +20,9 @@ constexpr uint32_t TTY_MODE_DEFAULT = TTY_MODE_ECHO | TTY_MODE_CANON;
  * value (not a pointer). */
 constexpr uint32_t TTY_IOC_GETMODE = _IO('T', 1);
 constexpr uint32_t TTY_IOC_SETMODE = _IO('T', 2);
-static_assert(TTY_IOC_GETMODE == 0x5401 && TTY_IOC_SETMODE == 0x5402,
+constexpr uint32_t TTY_IOC_POWER_OFF = _IO('T', 3);
+static_assert(TTY_IOC_GETMODE == 0x5401 && TTY_IOC_SETMODE == 0x5402 &&
+                  TTY_IOC_POWER_OFF == 0x5403,
               "must match userland/include/syscall.h");
 
 /** Hook the TTY up to COM1 receive interrupts (call once at boot). */

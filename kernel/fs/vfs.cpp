@@ -30,7 +30,8 @@ static int kstrcmp(const char* a, const char* b)
         return 0;
     if (!a || !b)
         return a ? 1 : -1;
-    while (*a && (*a == *b)) {
+    while (*a && (*a == *b))
+    {
         a++;
         b++;
     }
@@ -43,7 +44,8 @@ static mount* s_root_mount = nullptr;
 
 static fs_type* find_fs_type(const char* name)
 {
-    for (fs_type* t = s_fs_types; t; t = t->next) {
+    for (fs_type* t = s_fs_types; t; t = t->next)
+    {
         if (!t->name)
             continue;
         if (kstrcmp(t->name, name) == 0)
@@ -87,7 +89,8 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
     curr_d->d_inode = curr_ino;
 
     // Special-case "/" -> root.
-    if (path[0] == '/' && path[1] == '\0') {
+    if (path[0] == '/' && path[1] == '\0')
+    {
         if (out_dentry)
             *out_dentry = curr_d;
         return curr_ino;
@@ -99,12 +102,15 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
 
     // Each dentry owns one reference on its parent, so dentry_put() on the
     // leaf releases every ancestor that is no longer shared.
-    for (;;) {
+    for (;;)
+    {
         char name[256];
         uint32_t n = 0;
 
-        while (*p && *p != '/') {
-            if (n == sizeof(name) - 1) {
+        while (*p && *p != '/')
+        {
+            if (n == sizeof(name) - 1)
+            {
                 dentry_put(curr_d); // component too long (ENAMETOOLONG)
                 return nullptr;
             }
@@ -116,15 +122,18 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
             break;
 
         /* Skip "."; treat ".." as parent directory (POSIX path semantics). */
-        if (kstrcmp(name, ".") == 0) {
+        if (kstrcmp(name, ".") == 0)
+        {
             while (*p == '/')
                 p++;
             if (!*p)
                 break;
             continue;
         }
-        if (kstrcmp(name, "..") == 0) {
-            if (curr_d->d_parent) {
+        if (kstrcmp(name, "..") == 0)
+        {
+            if (curr_d->d_parent)
+            {
                 dentry* old = curr_d;
                 curr_d = curr_d->d_parent;
                 curr_d->d_refcnt++; // keep parent alive past dentry_put(old)
@@ -138,13 +147,15 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
             continue;
         }
 
-        if (!curr_ino->i_ops || !curr_ino->i_ops->lookup) {
+        if (!curr_ino->i_ops || !curr_ino->i_ops->lookup)
+        {
             dentry_put(curr_d);
             return nullptr;
         }
 
         dentry* next_d = alloc_dentry();
-        if (!next_d) {
+        if (!next_d)
+        {
             dentry_put(curr_d);
             return nullptr;
         }
@@ -155,7 +166,8 @@ static inode* traverse_path(const char* path, dentry** out_dentry)
 
         // Lookup child inode by name inside curr_ino's inode ops.
         int rc = curr_ino->i_ops->lookup(curr_ino, next_d);
-        if (rc < 0 || !next_d->d_inode) {
+        if (rc < 0 || !next_d->d_inode)
+        {
             dentry_put(next_d); // also releases curr_d
             return nullptr;
         }
@@ -191,7 +203,8 @@ file* vfs_open(const char* path, int flags)
         return nullptr;
 
     file* f = (file*)mm::kmalloc(sizeof(file));
-    if (!f) {
+    if (!f)
+    {
         dentry_put(d);
         return nullptr;
     }
@@ -202,7 +215,8 @@ file* vfs_open(const char* path, int flags)
     f->f_dentry = d;
     f->f_inode = ino;
     f->f_ops = ino->i_file_ops;
-    if (f->f_ops && f->f_ops->open && f->f_ops->open(ino, f) < 0) {
+    if (f->f_ops && f->f_ops->open && f->f_ops->open(ino, f) < 0)
+    {
         dentry_put(d);
         mm::kfree(f);
         return nullptr;
@@ -244,13 +258,20 @@ int64_t vfs_lseek(file* f, int64_t offset, int whence)
     const int SEEK_END = 2;
 
     uint64_t new_pos = 0;
-    if (whence == SEEK_SET) {
+    if (whence == SEEK_SET)
+    {
         new_pos = (uint64_t)offset;
-    } else if (whence == SEEK_CUR) {
+    }
+    else if (whence == SEEK_CUR)
+    {
         new_pos = (uint64_t)((int64_t)f->f_pos + offset);
-    } else if (whence == SEEK_END) {
+    }
+    else if (whence == SEEK_END)
+    {
         new_pos = (uint64_t)f->f_inode->i_size + (uint64_t)offset;
-    } else {
+    }
+    else
+    {
         return -EINVAL;
     }
     f->f_pos = new_pos;
@@ -276,7 +297,8 @@ void dentry_put(dentry* d)
 {
     // Freeing a dentry drops the reference it holds on its parent, so walk up
     // the chain instead of recursing.
-    while (d) {
+    while (d)
+    {
         if (d->d_refcnt == 0)
             core::panic("dentry_put: refcount underflow");
         if (--d->d_refcnt > 0)
@@ -390,8 +412,10 @@ int unregister_filesystem(fs_type* type)
     if (!type)
         return -EINVAL;
     fs_type** pp = &s_fs_types;
-    while (*pp) {
-        if (*pp == type) {
+    while (*pp)
+    {
+        if (*pp == type)
+        {
             *pp = type->next;
             type->next = nullptr;
             return 0;

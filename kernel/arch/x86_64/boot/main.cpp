@@ -15,7 +15,8 @@ const int VGA_HEIGHT = 25;
 int cursor_x = 0;
 int cursor_y = 0;
 
-enum vga_color {
+enum vga_color
+{
     VGA_COLOR_BLACK = 0,
     VGA_COLOR_BLUE = 1,
     VGA_COLOR_GREEN = 2,
@@ -46,24 +47,32 @@ uint16_t vga_entry(unsigned char c, uint8_t color)
 
 void print(const char* str)
 {
-    while (*str) {
-        if (*str == '\n') {
+    while (*str)
+    {
+        if (*str == '\n')
+        {
             cursor_y++;
             cursor_x = 0;
-        } else {
+        }
+        else
+        {
             vga_buffer[cursor_y * VGA_WIDTH + cursor_x] = vga_entry(
                 *str, vga_entry_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK));
             cursor_x++;
         }
 
-        if (cursor_x >= VGA_WIDTH) {
+        if (cursor_x >= VGA_WIDTH)
+        {
             cursor_x = 0;
             cursor_y++;
         }
 
-        if (cursor_y >= VGA_HEIGHT) {
-            for (int y = 0; y < VGA_HEIGHT - 1; y++) {
-                for (int x = 0; x < VGA_WIDTH; x++) {
+        if (cursor_y >= VGA_HEIGHT)
+        {
+            for (int y = 0; y < VGA_HEIGHT - 1; y++)
+            {
+                for (int x = 0; x < VGA_WIDTH; x++)
+                {
                     vga_buffer[y * VGA_WIDTH + x] =
                         vga_buffer[(y + 1) * VGA_WIDTH + x];
                 }
@@ -80,7 +89,8 @@ void print_hex(uint32_t val)
     const char* hex = "0123456789ABCDEF";
     char buf[11] = "0x00000000";
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         buf[9 - i] = hex[(val >> (i * 4)) & 0xF];
     }
 
@@ -107,14 +117,17 @@ void init();
 }
 #include "arch/x86_64/control.hpp"
 #include "arch/x86_64/idt.hpp"
+#include "arch/x86_64/paging.hpp"
 #include "core/panic.hpp"
 #include "core/printk.hpp"
+#include "errno_defs.hpp"
 #include "dev/keyboard.hpp"
 #include "dev/mouse.hpp"
 #include "dev/rtc.hpp"
 #include "dev/serial.hpp"
 #include "dev/timer.hpp"
 #include "graphics/vga.hpp"
+#include "mm/vmm.hpp"
 #include "sched/sched.hpp"
 
 extern "C" uint32_t kernel_stack_top[];
@@ -148,6 +161,9 @@ extern "C" void kernel_main()
     print_both("[*] CPU init (GDT, IDT, TSS, PIC)...\n");
     arch::cpu_early_init();
     arch::tss_set_kernel_stack((uint32_t)kernel_stack_top);
+    mm::vmm_init();
+    arch::paging_load(mm::vmm_kernel_directory());
+    arch::paging_enable();
     syscall::init();
     print_both("[OK] CPU management ready\n\n");
 
@@ -248,19 +264,29 @@ static const char* const s_exception_names[arch::EXCEPTION_COUNT] = {
 extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
                                   uint32_t* regs)
 {
-    if (vector == arch::IRQ_BASE + 0) {
+    if (vector == arch::IRQ_BASE + 0)
+    {
         dev::timer_tick();
         return;
     }
-    if (vector == arch::IRQ_BASE + dev::SERIAL_COM1_IRQ) {
+    if (vector == arch::IRQ_BASE + dev::SERIAL_COM1_IRQ)
+    {
         dev::serial_irq();
         return;
     }
-    if (vector >= arch::IRQ_BASE && vector < arch::IRQ_BASE + arch::IRQ_COUNT) {
+    if (vector >= arch::IRQ_BASE && vector < arch::IRQ_BASE + arch::IRQ_COUNT)
+    {
         core::printk("[irq] unhandled IRQ %u\n", vector - arch::IRQ_BASE);
         return;
     }
-    if (vector < arch::EXCEPTION_COUNT) {
+    if (vector < arch::EXCEPTION_COUNT)
+    {
+        if ((regs[arch::FRAME_CS] & 3u) != 0)
+        {
+            if (vector == arch::VECTOR_PAGE_FAULT)
+                core::printk("[user] page fault at 0x%x\n", arch::read_cr2());
+            sched::task_exit(-EFAULT);
+        }
         // printk/panicf write to serial and VGA, so the report is visible
         // with -display none too.
         uint32_t cr2 = vector == arch::VECTOR_PAGE_FAULT ? arch::read_cr2() : 0;

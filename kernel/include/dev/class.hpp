@@ -7,7 +7,8 @@ namespace dev
 {
 
 /** Device class for grouping devices (block, char, net, etc.) */
-enum class DeviceClass : uint8_t {
+enum class DeviceClass : uint8_t
+{
     Block,
     Char,
     Net,

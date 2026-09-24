@@ -31,6 +31,7 @@ FS_DIR = fs
 
 # Assembly sources
 ASM_SOURCES = $(BOOT_DIR)/multiboot.asm $(BOOT_DIR)/multiboot2.asm $(BOOT_DIR)/entry.asm \
+	$(BOOT_DIR)/user_image.asm \
 	$(CPU_DIR)/gdt.asm $(CPU_DIR)/idt.asm $(CPU_DIR)/tss.asm $(CPU_DIR)/pic.asm \
 	$(CPU_DIR)/msr.asm $(CPU_DIR)/cpuid.asm $(CPU_DIR)/control.asm $(CPU_DIR)/smp.asm \
 	$(MM_DIR)/paging.asm $(MM_DIR)/tlb.asm $(MM_DIR)/mtrr.asm \
@@ -49,9 +50,8 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(SYSCALL_DIR)/sys_getpid.cpp $(SYSCALL_DIR)/sys_fork.cpp \
 	$(SYSCALL_DIR)/sys_ioctl.cpp $(SYSCALL_DIR)/tty.cpp \
 	$(SYSCALL_DIR)/syscall_wrappers.cpp \
-	$(SYSCALL_DIR)/userland_syscall_cwrap.cpp \
 	$(FS_DIR)/vfs.cpp $(FS_DIR)/ramfs/ramfs.cpp $(FS_DIR)/ramfs/inode.cpp \
-	$(SCHED_DIR)/sched.cpp $(SCHED_DIR)/task.cpp $(SCHED_DIR)/idle.cpp $(SCHED_DIR)/init_task.cpp $(SCHED_DIR)/shell.cpp \
+	$(SCHED_DIR)/sched.cpp $(SCHED_DIR)/task.cpp $(SCHED_DIR)/idle.cpp $(SCHED_DIR)/init_task.cpp \
 	$(SCHED_DIR)/pid.cpp $(SCHED_DIR)/exit.cpp $(SCHED_DIR)/fork.cpp $(SCHED_DIR)/mutex.cpp \
 	$(CPU_DIR)/gdt.cpp $(CPU_DIR)/idt.cpp $(CPU_DIR)/tss.cpp $(CPU_DIR)/pic.cpp \
 	$(CPU_DIR)/msr.cpp $(CPU_DIR)/cpuid.cpp $(CPU_DIR)/control.cpp \
@@ -64,20 +64,22 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(DEV_DIR)/pci.cpp $(DEV_DIR)/ata.cpp $(DEV_DIR)/ahci.cpp $(DEV_DIR)/nvme.cpp $(DEV_DIR)/floppy.cpp \
 	$(GFX_DIR)/vga.cpp $(GFX_DIR)/framebuffer.cpp
 
-# C sources (userland code built into the kernel for now)
-C_SOURCES = \
-	../userland/bin/init.c \
-	../userland/shell/main.c \
-	../userland/shell/readline.c \
-	../userland/libc/src/stdlib/malloc.c \
-	../userland/libc/src/stdlib/exit.c \
-	../userland/libc/src/stdio/printf.c
-
 # Object files in OBJDIR to avoid circular deps and name clashes
 ASM_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.asm,%.asm.o,$(ASM_SOURCES)))
 CPP_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.cpp,%.o,$(CPP_SOURCES)))
-# ../userland/x.c -> build/userland/x.o (keeps userland objects inside build/)
-C_OBJECTS = $(patsubst ../%.c,$(OBJDIR)/%.o,$(C_SOURCES))
+USER_IMAGE = ../userland/build/init.bin
+USERLAND_SOURCES = \
+	../userland/crt0.asm \
+	../userland/bin/init.c \
+	../userland/shell/main.c \
+	../userland/shell/readline.c \
+	../userland/shell/readline.h \
+	../userland/include/syscall.h \
+	../userland/libc/include/stdio.h \
+	../userland/libc/include/stdlib.h \
+	../userland/libc/src/stdlib/malloc.c \
+	../userland/libc/src/stdlib/exit.c \
+	../userland/libc/src/stdio/printf.c
 
 # Flags
 NASM_FLAGS = -f elf32 -g
@@ -102,13 +104,18 @@ C_FLAGS += -I../userland/include -I../userland/libc/include
 all: $(KERNEL_OUT)
 
 # Build kernel
-$(KERNEL_OUT): $(ASM_OBJECTS) $(CPP_OBJECTS) $(C_OBJECTS)
+$(KERNEL_OUT): $(USER_IMAGE) $(ASM_OBJECTS) $(CPP_OBJECTS)
 	@mkdir -p $(BUILD_DIR)
 	@echo "Linking kernel..."
-	$(LD) -m elf_i386 -T $(BOOT_DIR)/linker.ld -z noexecstack -o $@ $(ASM_OBJECTS) $(CPP_OBJECTS) $(C_OBJECTS)
+	$(LD) -m elf_i386 -T $(BOOT_DIR)/linker.ld -z noexecstack -o $@ $(ASM_OBJECTS) $(CPP_OBJECTS)
 	@echo "Kernel built: $@"
 
+$(USER_IMAGE): $(USERLAND_SOURCES) ../userland/Makefile ../userland/linker.ld
+	$(MAKE) -C ../userland
+
 # Assemble .asm files (obj dir avoids circular dependency)
+$(OBJDIR)/$(BOOT_DIR)/user_image.asm.o: $(USER_IMAGE)
+
 $(OBJDIR)/%.asm.o: %.asm Makefile
 	@mkdir -p $(dir $@)
 	@echo "Assembling $<..."
@@ -132,6 +139,7 @@ $(OBJDIR)/userland/%.o: ../userland/%.c Makefile
 .PHONY: clean
 clean:
 	rm -rf $(OBJDIR) $(KERNEL_OUT)
+	$(MAKE) -C ../userland clean
 
 .PHONY: dirs
 dirs:

@@ -7,7 +7,8 @@ namespace gfx
 {
 
 /** 32-bit ARGB (8 bits each) */
-struct Color32 {
+struct Color32
+{
     uint8_t b, g, r, a;
 };
 

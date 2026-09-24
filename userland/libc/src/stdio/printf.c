@@ -19,7 +19,8 @@ static void utoa(uint32_t v, unsigned base, char* out, unsigned* out_len)
     unsigned n = 0;
     if (v == 0)
         tmp[n++] = '0';
-    while (v && n < sizeof(tmp)) {
+    while (v && n < sizeof(tmp))
+    {
         tmp[n++] = digits[v % base];
         v /= base;
     }
@@ -40,8 +41,10 @@ int printf(const char* fmt, ...)
     char num_buf[16];
     unsigned num_len = 0;
 
-    for (const char* p = fmt; *p; p++) {
-        if (*p != '%') {
+    for (const char* p = fmt; *p; p++)
+    {
+        if (*p != '%')
+        {
             putc(*p);
             written++;
             continue;
@@ -50,20 +53,23 @@ int printf(const char* fmt, ...)
         if (!*p)
             break;
 
-        if (*p == '%') {
+        if (*p == '%')
+        {
             putc('%');
             written++;
             continue;
         }
 
-        if (*p == 'c') {
+        if (*p == 'c')
+        {
             char c = (char)va_arg(ap, int);
             putc(c);
             written++;
             continue;
         }
 
-        if (*p == 's') {
+        if (*p == 's')
+        {
             const char* s = va_arg(ap, const char*);
             if (!s)
                 s = "(null)";
@@ -75,13 +81,15 @@ int printf(const char* fmt, ...)
             continue;
         }
 
-        if (*p == 'd') {
+        if (*p == 'd')
+        {
             int v = va_arg(ap, int);
             /* Negate in unsigned arithmetic: -v overflows for INT_MIN. */
             uint32_t uv = (v < 0) ? 0u - (uint32_t)v : (uint32_t)v;
             unsigned sign = (v < 0) ? 1 : 0;
             utoa(uv, 10, num_buf, &num_len);
-            if (sign) {
+            if (sign)
+            {
                 putc('-');
                 written++;
             }
@@ -90,7 +98,8 @@ int printf(const char* fmt, ...)
             continue;
         }
 
-        if (*p == 'u') {
+        if (*p == 'u')
+        {
             uint32_t v = va_arg(ap, unsigned);
             utoa(v, 10, num_buf, &num_len);
             write(1, num_buf, num_len);
@@ -98,7 +107,8 @@ int printf(const char* fmt, ...)
             continue;
         }
 
-        if (*p == 'x') {
+        if (*p == 'x')
+        {
             uint32_t v = va_arg(ap, unsigned);
             utoa(v, 16, num_buf, &num_len);
             write(1, num_buf, num_len);

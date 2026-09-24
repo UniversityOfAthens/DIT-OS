@@ -12,7 +12,8 @@ struct dentry;
 struct file;
 
 /** Filesystem type: name and ops to mount/read superblock */
-struct fs_type {
+struct fs_type
+{
     const char* name;
     int (*get_sb)(fs_type* type, const char* dev, void* data, superblock** out);
     void (*kill_sb)(superblock* sb);

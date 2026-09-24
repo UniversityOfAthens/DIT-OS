@@ -13,7 +13,8 @@ namespace boot
 constexpr u8 ISO_VD_PRIMARY = 1;
 constexpr u8 ISO_VD_TERMINATOR = 255;
 
-class Iso9660Reader : public FSReader {
+class Iso9660Reader : public FSReader
+{
 public:
     bool init(u8 drive) override
     {

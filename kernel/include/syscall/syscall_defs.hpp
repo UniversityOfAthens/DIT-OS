@@ -13,7 +13,8 @@ namespace syscall
 constexpr unsigned SYSCALL_MAX_ARGS = 6;
 
 /** Raw arguments as passed from userspace (arch-specific layout) */
-struct SyscallArgs {
+struct SyscallArgs
+{
     uint64_t args[SYSCALL_MAX_ARGS];
 };
 

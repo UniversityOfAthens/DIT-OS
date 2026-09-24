@@ -27,7 +27,8 @@ bool elf_load(void* file, u32 size, u32* entry_out)
         return false;
 
     Elf32_Phdr* ph = (Elf32_Phdr*)((u8*)file + eh->e_phoff);
-    for (u16 i = 0; i < eh->e_phnum; i++) {
+    for (u16 i = 0; i < eh->e_phnum; i++)
+    {
         if (ph[i].p_type != PT_LOAD)
             continue;
         u32 filesz = ph[i].p_filesz;

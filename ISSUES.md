@@ -13,14 +13,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ## CRITICAL — Will cause boot failure, crashes, or compile errors
 
-### C5. User pointers are validated, but user and kernel memory are not separated
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/include/mm/uaccess.hpp`, `kernel/arch/x86_64/mm/uaccess.cpp` |
-| **Issue** | Every pointer-taking syscall (`read`, `write`, `open`, `getdents`) now goes through `copy_from_user` / `copy_to_user` / `strncpy_from_user`, which reject NULL, low memory, wraparound and ranges outside `[USER_SPACE_START, USER_SPACE_END)`. But userland still runs in ring 0 inside the kernel image (I3), so its buffers live in kernel memory and the user window has to include the kernel. A buggy or malicious user program can still pass a pointer to kernel data. |
-| **Fix** | Run user programs in ring 3 with their own page tables (user pages below `USER_SPACE_END`, kernel mapped supervisor-only), then shrink the window so it excludes the kernel. The helpers and all call sites are already in place. |
-
 ### C9. PNG decoder header chunk lookup always fails
 
 | Field | Value |
@@ -45,14 +37,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ## HIGH — Will cause build failures, incorrect behavior, or significant confusion
 
-### H1. `.clang-format` only partly matches the Allman brace rule
-
-| Field | Value |
-|-------|-------|
-| **File** | `.clang-format` |
-| **Issue** | `BreakBeforeBraces: Custom` breaks before function and namespace braces, but keeps control statements, structs, enums and classes attached (`if (x) {`). AGENTS.md mandates full Allman style. The codebase follows the config, not AGENTS.md. |
-| **Fix** | Decide which is canonical: switch to `BreakBeforeBraces: Allman` and reformat everything in one commit, or update AGENTS.md to describe the current style. |
-
 ### H3. Missing referenced scripts
 
 | Field | Value |
@@ -68,14 +52,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Directory** | `config/` |
 | **Issue** | `PROJECT_STRUCTURE.md` defines 15+ expected files (Kconfig, kernel.config, Makefile.common, arch Kconfigs, etc.) but **none exist**. No configuration system exists — all kernel features are unconditionally compiled with hardcoded defaults. |
 | **Fix** | Implement the Kconfig-based configuration system or remove references from documentation. |
-
-### H8. Mutex struct not exported — dead code
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/sched/mutex.cpp:7-9` |
-| **Issue** | The `Mutex` struct is defined only in the `.cpp` file (not in any header). No outside caller can create a `Mutex` to pass to `mutex_lock()` / `mutex_unlock()`. These functions are effectively dead code. |
-| **Fix** | Move the `Mutex` struct definition to a header (e.g., `kernel/include/sched/mutex.hpp`). |
 
 ### H9. Stage2 wrong constants in `constants.inc`
 
@@ -506,11 +482,11 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ### I2. 10 syscalls defined but unimplemented
 
-`SYS_stat`, `SYS_fstat`, `SYS_execve`, `SYS_waitpid`, `SYS_mmap`, `SYS_munmap`, `SYS_brk`, `SYS_kill`, `SYS_ioctl` are defined in the enum but have no handler (return `-ENOSYS`). Fork is a stub. Listed in `TODO.md` as planned.
+`SYS_stat`, `SYS_fstat`, `SYS_execve`, `SYS_waitpid`, `SYS_mmap`, `SYS_munmap`, `SYS_brk`, and `SYS_kill` are defined in the enum but have no handler (return `-ENOSYS`). `SYS_ioctl` is implemented for TTY mode and QEMU poweroff. Fork is a stub. Listed in `TODO.md` as planned.
 
-### I3. Userland is compiled into the kernel (temporary)
+### I3. Userland is a single standalone ring-3 image
 
-Per AGENTS.md and Makefile comments, userland code is compiled and linked into the kernel binary for now. It runs in ring 0 and calls the syscall layer through direct C wrappers (`dit_sys_*`), not `int 0x80`. True userspace separation (ring 3, separate page tables) is not yet implemented, which is why C5's pointer checks cannot exclude kernel memory yet.
+Userland is now built as a standalone ELF and entered at ring 3 through `int 0x80`. The first user task has a dedicated page directory with supervisor-only kernel mappings and user mappings for its image and stack. The process model is still intentionally limited to the init/shell task; `fork`, `execve`, and a general ELF process loader remain planned work.
 
 ### I4. `config/` directory and its 15+ files are documented but unimplemented
 
@@ -544,24 +520,21 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 |------|----------|------|--------|----------|
 | **Bootloader (ASM)** | C9, C13 (unassembled) | H9, H10, H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
-| **Kernel (Core)** | C5 | — | M5, M6, M7, M8 | L12, L18 |
-| **Kernel (Sched)** | — | H8 | M1, M36 | L13 |
+| **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L18 |
+| **Kernel (Sched)** | — | — | M1, M36 | L13 |
 | **Kernel (FS)** | — | — | M4, M9, M31 | L12 |
 | **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
-| **Kernel (Syscall)** | C5 | — | M1, M27 | — |
+| **Kernel (Syscall)** | — | — | M1, M27 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
 | **Userland** | — | — | M17, M18, M19, M28, M35 | L1, L2, L3, L4, L7, L17 |
-| **Build System** | — | H1, H3, H17 | M13, M15 | L10, L16 |
+| **Build System** | — | H3, H17 | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | H4 | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I2, I3, I9, I10 |
 
 ---
 
-## Top 5 Most Important Fixes (remaining)
+## Top 2 Most Important Fixes (remaining)
 
-1. **C5 / I3 — Ring 3 userland**: pointer validation is in place, but user programs still run in ring 0 inside the kernel image, so the user window must include kernel memory.
-2. **M36 — PID 1 exit**: the system silently idles if init exits.
-3. **H8 — Mutex not exported**: `Mutex` struct defined in `.cpp` only, `mutex_lock`/`unlock` are dead code.
-4. **H1 — Brace style**: `.clang-format` and AGENTS.md disagree; pick one.
-5. **H9 — `STAGE2_LOAD`**: wrong constant in `constants.inc`.
+1. **M36 — PID 1 exit**: the system silently idles if init exits.
+2. **H9 — `STAGE2_LOAD`**: wrong constant in `constants.inc`.

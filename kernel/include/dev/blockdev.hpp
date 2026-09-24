@@ -7,7 +7,8 @@ namespace dev
 {
 
 /** Block device interface: fixed block size, read/write by block index */
-struct BlockDev {
+struct BlockDev
+{
     /** Block size in bytes (e.g. 512) */
     uint32_t block_size;
     /** Total number of blocks */

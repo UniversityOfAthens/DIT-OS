@@ -5,5 +5,7 @@ bootloader/build/
 *.o
 *.bin
 
-# Build directory
+# Build directories
 build/
+kernel/build/
+userland/build/

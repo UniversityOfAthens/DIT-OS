@@ -10,7 +10,8 @@ constexpr u32 VGA_TEXT_BASE = 0xB8000;
 constexpr int VGA_COLS = 80;
 constexpr int VGA_ROWS = 25;
 
-enum class VGAMode : u16 {
+enum class VGAMode : u16
+{
     Text80x25 = 0x03,
     VBE = 0x114, // 800x600x32 or similar
 };

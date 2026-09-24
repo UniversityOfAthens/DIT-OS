@@ -12,7 +12,8 @@ namespace boot
 // EXT2 superblock magic
 constexpr u16 EXT2_SUPER_MAGIC = 0xEF53;
 
-class Ext2Reader : public FSReader {
+class Ext2Reader : public FSReader
+{
 public:
     bool init(u8 drive) override
     {

@@ -51,7 +51,8 @@ int tty_set_mode(uint32_t mode)
 // wakes us.
 static char tty_wait_byte()
 {
-    for (;;) {
+    for (;;)
+    {
         uint32_t flags = arch::irq_save();
         int c = dev::serial_rx_pop();
         if (c < 0)
@@ -72,10 +73,13 @@ static void tty_echo(char c)
 static int tty_read_line(char* buf, uint32_t count)
 {
     uint32_t n = 0;
-    while (n < count) {
+    while (n < count)
+    {
         char ch = tty_wait_byte();
-        if (ch == KEY_BACKSPACE || ch == KEY_DELETE) {
-            if (n > 0) {
+        if (ch == KEY_BACKSPACE || ch == KEY_DELETE)
+        {
+            if (n > 0)
+            {
                 n--;
                 tty_echo('\b');
                 tty_echo(' ');
@@ -83,7 +87,8 @@ static int tty_read_line(char* buf, uint32_t count)
             }
             continue;
         }
-        if (ch == '\r' || ch == '\n') {
+        if (ch == '\r' || ch == '\n')
+        {
             buf[n++] = '\n';
             tty_echo('\r');
             tty_echo('\n');
@@ -102,7 +107,8 @@ static int tty_read_raw(char* buf, uint32_t count)
     uint32_t n = 0;
     buf[n++] = tty_wait_byte();
     tty_echo(buf[0]);
-    while (n < count) {
+    while (n < count)
+    {
         int c = dev::serial_rx_pop();
         if (c < 0)
             break;

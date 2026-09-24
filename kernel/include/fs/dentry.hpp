@@ -9,7 +9,8 @@ namespace fs
 struct inode;
 
 /** Dentry: directory entry (name -> inode), part of path lookup cache */
-struct dentry {
+struct dentry
+{
     char d_name[256];
     inode* d_inode;
     dentry* d_parent;

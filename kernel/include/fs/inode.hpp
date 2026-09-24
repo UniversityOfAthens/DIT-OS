@@ -11,7 +11,8 @@ namespace fs
 struct superblock;
 
 /** Inode: represents a file or directory on disk (or in-memory view) */
-struct inode {
+struct inode
+{
     uint32_t i_ino;
     mode_t i_mode;
     uint32_t i_nlink;

@@ -6,7 +6,8 @@
 namespace dev
 {
 
-struct PciDev {
+struct PciDev
+{
     uint8_t bus, dev, func;
     uint16_t vendor_id, device_id;
     uint8_t class_code, subclass, prog_if;

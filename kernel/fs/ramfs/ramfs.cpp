@@ -27,17 +27,20 @@ namespace ramfs
 fs::inode* inode_create_dir(fs::superblock* sb);
 fs::inode* inode_create_file(fs::superblock* sb);
 
-struct ramfs_entry {
+struct ramfs_entry
+{
     char name[256];
     fs::inode* ino;
     ramfs_entry* next;
 };
 
-struct ramfs_dir {
+struct ramfs_dir
+{
     ramfs_entry* entries;
 };
 
-struct ramfs_file {
+struct ramfs_file
+{
     char* data;
     uint32_t size;
     uint32_t cap;
@@ -51,7 +54,8 @@ static int kstrcmp(const char* a, const char* b)
         return 0;
     if (!a || !b)
         return a ? 1 : -1;
-    while (*a && (*a == *b)) {
+    while (*a && (*a == *b))
+    {
         a++;
         b++;
     }
@@ -81,8 +85,10 @@ static int inode_lookup(fs::inode* dir, fs::dentry* target)
     if (!d)
         return -ENOENT;
 
-    for (ramfs_entry* e = d->entries; e; e = e->next) {
-        if (kstrcmp(e->name, target->d_name) == 0) {
+    for (ramfs_entry* e = d->entries; e; e = e->next)
+    {
+        if (kstrcmp(e->name, target->d_name) == 0)
+        {
             target->d_inode = e->ino;
             return 0;
         }
@@ -103,7 +109,8 @@ static int inode_create(fs::inode* dir, fs::dentry* target, int mode)
         return -ENOENT;
 
     // Disallow duplicates.
-    for (ramfs_entry* e = d->entries; e; e = e->next) {
+    for (ramfs_entry* e = d->entries; e; e = e->next)
+    {
         if (kstrcmp(e->name, target->d_name) == 0)
             return -EEXIST;
     }
@@ -143,7 +150,8 @@ static int inode_mkdir(fs::inode* dir, fs::dentry* target, int mode)
     if (!d)
         return -ENOENT;
 
-    for (ramfs_entry* e = d->entries; e; e = e->next) {
+    for (ramfs_entry* e = d->entries; e; e = e->next)
+    {
         if (kstrcmp(e->name, target->d_name) == 0)
             return -EEXIST;
     }
@@ -183,9 +191,11 @@ static int inode_unlink(fs::inode* dir, fs::dentry* target)
         return -ENOENT;
 
     ramfs_entry** pp = &d->entries;
-    while (*pp) {
+    while (*pp)
+    {
         ramfs_entry* e = *pp;
-        if (kstrcmp(e->name, target->d_name) == 0) {
+        if (kstrcmp(e->name, target->d_name) == 0)
+        {
             *pp = e->next;
             /* We intentionally do not free the inode/file data in this minimal
              * implementation. */
@@ -248,11 +258,14 @@ static int file_write(fs::file* f, const void* buf, uint32_t size)
         return -ENOSPC;
     uint32_t end_pos = (uint32_t)f->f_pos + size;
 
-    if (end_pos > rf->cap) {
+    if (end_pos > rf->cap)
+    {
         uint32_t new_cap = rf->cap ? rf->cap : 1024;
-        while (new_cap < end_pos) {
+        while (new_cap < end_pos)
+        {
             new_cap = new_cap * 2;
-            if (new_cap > s_max_file_cap) {
+            if (new_cap > s_max_file_cap)
+            {
                 new_cap = s_max_file_cap;
                 break;
             }
@@ -305,7 +318,8 @@ static int file_readdir(fs::file* f, fs::dirent* out)
 
     ramfs_entry* e = d->entries;
     uint32_t skip = (uint32_t)f->f_pos;
-    while (e && skip > 0) {
+    while (e && skip > 0)
+    {
         e = e->next;
         skip--;
     }
@@ -342,7 +356,8 @@ static void seed_text_file(fs::inode* root, const char* name, const char* text)
     for (uint32_t i = 0; i < sizeof(t); i++)
         ((uint8_t*)&t)[i] = 0;
     uint32_t j = 0;
-    while (name[j] && j < sizeof(t.d_name) - 1) {
+    while (name[j] && j < sizeof(t.d_name) - 1)
+    {
         t.d_name[j] = name[j];
         j++;
     }

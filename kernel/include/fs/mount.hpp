@@ -10,7 +10,8 @@ struct superblock;
 struct dentry;
 
 /** Mount: one per mounted filesystem */
-struct mount {
+struct mount
+{
     superblock* mnt_sb;
     dentry* mnt_mountpoint; /* dentry where this is mounted */
     dentry* mnt_root; /* root of this fs */

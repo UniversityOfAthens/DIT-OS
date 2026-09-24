@@ -7,7 +7,8 @@ namespace boot
 {
 
 // E820 memory map entry type
-enum class E820Type : u32 {
+enum class E820Type : u32
+{
     Usable = 1,
     Reserved = 2,
     ACPIReclaim = 3,
@@ -15,7 +16,8 @@ enum class E820Type : u32 {
     Bad = 5,
 };
 
-struct E820Entry {
+struct E820Entry
+{
     u64 base;
     u64 length;
     E820Type type;

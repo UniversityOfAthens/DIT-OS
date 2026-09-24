@@ -28,7 +28,8 @@ SyscallResult sys_getdents_impl(const SyscallArgs* args)
         return -EBADF;
 
     uint32_t off = 0;
-    while (off + sizeof(fs::dirent) <= count) {
+    while (off + sizeof(fs::dirent) <= count)
+    {
         fs::dirent de;
         int r = fs::vfs_readdir(f, &de);
         if (r < 0)

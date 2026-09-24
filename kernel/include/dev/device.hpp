@@ -7,7 +7,8 @@ namespace dev
 {
 
 /** Base device type for device tree and driver binding */
-struct Device {
+struct Device
+{
     const char* name;
     void* driver_data;
     Device* parent;

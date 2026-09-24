@@ -14,14 +14,16 @@ struct Task;
 /** One slot per real signal (1..31); index with (sig - 1). */
 constexpr int SIGNAL_ACTION_SLOTS = 31;
 
-enum class ProcessState : uint8_t {
+enum class ProcessState : uint8_t
+{
     Running,
     Sleeping,
     Zombie,
     Stopped,
 };
 
-struct Process {
+struct Process
+{
     int pid;
     int ppid;
     ProcessState state;

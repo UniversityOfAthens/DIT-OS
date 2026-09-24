@@ -25,7 +25,8 @@ SyscallResult sys_open_impl(const SyscallArgs* args)
         return -ENOENT;
 
     int fd = fd_install(f);
-    if (fd < 0) {
+    if (fd < 0)
+    {
         fs::vfs_close(f);
         return fd;
     }

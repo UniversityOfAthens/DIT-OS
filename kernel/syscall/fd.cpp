@@ -27,8 +27,10 @@ int fd_install(fs::file* f)
 {
     if (!f)
         return -EINVAL;
-    for (int i = FIRST_FILE_FD; i < FD_TABLE_SIZE; i++) {
-        if (g_fd[i] == nullptr) {
+    for (int i = FIRST_FILE_FD; i < FD_TABLE_SIZE; i++)
+    {
+        if (g_fd[i] == nullptr)
+        {
             g_fd[i] = f;
             return i;
         }

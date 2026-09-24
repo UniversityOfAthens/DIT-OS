@@ -57,12 +57,15 @@ void pci_read_dev(PciDev* out, uint8_t bus, uint8_t dev, uint8_t func)
 void pci_scan(void (*cb)(uint8_t bus, uint8_t dev, uint8_t func, void* ctx),
               void* ctx)
 {
-    for (uint16_t bus = 0; bus < 256; bus++) {
-        for (uint8_t dev = 0; dev < 32; dev++) {
+    for (uint16_t bus = 0; bus < 256; bus++)
+    {
+        for (uint8_t dev = 0; dev < 32; dev++)
+        {
             uint32_t v = pci_read_config((uint8_t)bus, dev, 0, 0);
             if ((v & 0xFFFFu) == 0xFFFFu)
                 continue;
-            for (uint8_t func = 0; func < 8; func++) {
+            for (uint8_t func = 0; func < 8; func++)
+            {
                 v = pci_read_config((uint8_t)bus, dev, func, 0);
                 if ((v & 0xFFFFu) == 0xFFFFu)
                     continue;
@@ -76,11 +79,14 @@ void pci_scan(void (*cb)(uint8_t bus, uint8_t dev, uint8_t func, void* ctx),
 int pci_find_class(uint32_t class_mask, PciDev* out)
 {
     uint16_t want = (uint16_t)(class_mask >> 8);
-    for (uint16_t b = 0; b < 256; b++) {
-        for (uint8_t d = 0; d < 32; d++) {
+    for (uint16_t b = 0; b < 256; b++)
+    {
+        for (uint8_t d = 0; d < 32; d++)
+        {
             if (pci_read_config((uint8_t)b, d, 0, 0) == 0xFFFFFFFFu)
                 continue;
-            for (uint8_t f = 0; f < 8; f++) {
+            for (uint8_t f = 0; f < 8; f++)
+            {
                 if (pci_read_config((uint8_t)b, d, f, 0) == 0xFFFFFFFFu)
                     continue;
                 PciDev dev;

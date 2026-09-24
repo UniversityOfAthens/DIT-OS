@@ -9,7 +9,8 @@ namespace gfx
 /** Line in a terminal buffer (fixed max length) */
 #define TERM_LINE_MAX 256
 
-struct TermLine {
+struct TermLine
+{
     char data[TERM_LINE_MAX];
     uint16_t len;
     uint8_t attr; /* default attribute for the line */
@@ -18,7 +19,8 @@ struct TermLine {
 /** Scrollback buffer: fixed number of lines */
 #define TERM_SCROLLBACK_LINES 512
 
-struct TerminalBuffer {
+struct TerminalBuffer
+{
     TermLine lines[TERM_SCROLLBACK_LINES];
     uint32_t head; /* index of first logical line */
     uint32_t count; /* number of lines in use */

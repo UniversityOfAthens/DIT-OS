@@ -14,7 +14,12 @@ void console_putchar(char c);
 void console_puts(const char* str);
 
 /** Set console output to serial only, VGA only, or both. */
-enum class ConsoleTarget { Serial, VGA, Both };
+enum class ConsoleTarget
+{
+    Serial,
+    VGA,
+    Both
+};
 void console_set_target(ConsoleTarget t);
 
 } // namespace core

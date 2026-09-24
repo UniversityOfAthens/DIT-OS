@@ -23,10 +23,12 @@ constexpr uint32_t MULTIBOOT2_MAGIC = 0x36d76289;
 // Validate multiboot and return boot loader type (1 or 2), or 0 if invalid
 static uint32_t check_multiboot()
 {
-    if (boot_magic == MULTIBOOT1_MAGIC) {
+    if (boot_magic == MULTIBOOT1_MAGIC)
+    {
         return 1;
     }
-    if (boot_magic == MULTIBOOT2_MAGIC) {
+    if (boot_magic == MULTIBOOT2_MAGIC)
+    {
         return 2;
     }
     return 0;

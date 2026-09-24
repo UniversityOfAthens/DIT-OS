@@ -3,6 +3,7 @@
 #include "syscall/syscall_defs.hpp"
 #include "syscall/fd.hpp"
 #include "syscall/tty.hpp"
+#include "sched/sched.hpp"
 #include "errno_defs.hpp"
 #include <stdint.h>
 
@@ -24,6 +25,16 @@ SyscallResult sys_ioctl_impl(const SyscallArgs* args)
         return tty_get_mode();
     if (request == TTY_IOC_SETMODE)
         return tty_set_mode(arg);
+    if (request == TTY_IOC_POWER_OFF)
+    {
+        if (sched::current_pid() != 1)
+            return -EPERM;
+        __asm__ volatile("outw %0, %1"
+                         :
+                         : "a"((uint16_t)0x2000), "Nd"((uint16_t)0x604));
+        for (;;)
+            __asm__ volatile("hlt");
+    }
     return -ENOTTY;
 }
 

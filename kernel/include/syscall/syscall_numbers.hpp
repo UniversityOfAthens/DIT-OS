@@ -9,7 +9,8 @@ namespace syscall
 /** Syscall numbers (match syscall_table and arch-specific trap dispatch).
  *  Canonical values are documented in `.cursor/rules/syscall-abi.mdc`.
  */
-enum SyscallNumber : uint32_t {
+enum SyscallNumber : uint32_t
+{
     SYS_read = 0,
     SYS_write = 1,
     SYS_open = 2,

@@ -14,8 +14,10 @@ void vga_clear(uint8_t attr)
 {
     volatile uint16_t* vga = vga_buffer();
     const uint16_t cell = vga_cell(' ', attr);
-    for (unsigned y = 0; y < VGA_HEIGHT; y++) {
-        for (unsigned x = 0; x < VGA_WIDTH; x++) {
+    for (unsigned y = 0; y < VGA_HEIGHT; y++)
+    {
+        for (unsigned x = 0; x < VGA_WIDTH; x++)
+        {
             vga[y * VGA_WIDTH + x] = cell;
         }
     }

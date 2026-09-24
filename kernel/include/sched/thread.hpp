@@ -14,7 +14,8 @@ namespace sched
  * Current kernel tasks use standalone Task*; Thread is the multi-threading
  * shape.
  */
-struct Thread {
+struct Thread
+{
     Task task;
     /** Thread id (main thread often equals process pid). */
     uint32_t tid;

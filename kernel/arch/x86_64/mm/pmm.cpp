@@ -18,8 +18,8 @@ static bool initialized;
 
 void pmm_init()
 {
-    for (size_t i = 0; i < sizeof(frame_bitmap) / sizeof(frame_bitmap[0]);
-         i++) {
+    for (size_t i = 0; i < sizeof(frame_bitmap) / sizeof(frame_bitmap[0]); i++)
+    {
         frame_bitmap[i] = 0;
     }
     total_frames_set = 0;
@@ -30,16 +30,20 @@ void* pmm_alloc(size_t num_pages)
 {
     if (!initialized || num_pages == 0)
         return nullptr;
-    for (size_t start = 0; start + num_pages <= MAX_FRAMES; start++) {
+    for (size_t start = 0; start + num_pages <= MAX_FRAMES; start++)
+    {
         size_t i;
-        for (i = 0; i < num_pages; i++) {
+        for (i = 0; i < num_pages; i++)
+        {
             size_t idx = (start + i) >> 5;
             uint32_t bit = 1u << ((start + i) & 31u);
             if (frame_bitmap[idx] & bit)
                 break;
         }
-        if (i == num_pages) {
-            for (i = 0; i < num_pages; i++) {
+        if (i == num_pages)
+        {
+            for (i = 0; i < num_pages; i++)
+            {
                 size_t idx = (start + i) >> 5;
                 uint32_t bit = 1u << ((start + i) & 31u);
                 frame_bitmap[idx] |= bit;
@@ -57,12 +61,14 @@ void pmm_free(void* physical, size_t num_pages)
         return;
     uintptr_t base = reinterpret_cast<uintptr_t>(physical);
     size_t start = base / PAGE_SIZE;
-    for (size_t i = 0; i < num_pages; i++) {
+    for (size_t i = 0; i < num_pages; i++)
+    {
         size_t idx = (start + i) >> 5;
         uint32_t bit = 1u << ((start + i) & 31u);
         frame_bitmap[idx] &= ~bit;
     }
-    if (total_frames_set >= num_pages) {
+    if (total_frames_set >= num_pages)
+    {
         total_frames_set -= num_pages;
     }
 }

@@ -9,7 +9,8 @@ static constexpr uint16_t PRI_CTL = 0x3F6;
 static constexpr uint16_t SEC_BASE = 0x170;
 static constexpr uint16_t SEC_CTL = 0x376;
 
-enum {
+enum
+{
     DATA = 0,
     SEC_CNT = 2,
     LBA_LO = 3,
@@ -18,8 +19,17 @@ enum {
     DRV = 6,
     CMD = 7
 };
-enum { CMD_IDENTIFY = 0xEC, CMD_READ = 0x20 };
-enum { STATUS_BSY = 0x80, STATUS_DRQ = 0x08, STATUS_ERR = 0x01 };
+enum
+{
+    CMD_IDENTIFY = 0xEC,
+    CMD_READ = 0x20
+};
+enum
+{
+    STATUS_BSY = 0x80,
+    STATUS_DRQ = 0x08,
+    STATUS_ERR = 0x01
+};
 
 static uint16_t base(AtaChannel ch)
 {
@@ -32,12 +42,14 @@ static uint16_t ctl(AtaChannel ch)
 
 static void wait_bsy(uint16_t b)
 {
-    while (arch::inb(b + CMD) & STATUS_BSY) {
+    while (arch::inb(b + CMD) & STATUS_BSY)
+    {
     }
 }
 static void wait_drq(uint16_t b)
 {
-    while (!(arch::inb(b + CMD) & STATUS_DRQ)) {
+    while (!(arch::inb(b + CMD) & STATUS_DRQ))
+    {
     }
 }
 
@@ -80,7 +92,8 @@ int ata_read_sectors(AtaChannel ch, AtaDrive drv, uint32_t lba, uint8_t num,
     arch::outb(b + DRV,
                0xE0u | (drv == ATA_SLAVE ? 0x10u : 0u) | (uint8_t)(lba >> 24));
     arch::outb(b + CMD, CMD_READ);
-    for (uint8_t s = 0; s < num; s++) {
+    for (uint8_t s = 0; s < num; s++)
+    {
         wait_bsy(b);
         if (arch::inb(b + CMD) & STATUS_ERR)
             return -1;

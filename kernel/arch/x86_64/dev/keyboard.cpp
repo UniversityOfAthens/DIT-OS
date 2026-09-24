@@ -60,16 +60,19 @@ int keyboard_getchar()
     if (raw < 0)
         return -1;
     uint8_t sc = static_cast<uint8_t>(raw);
-    if (sc & 0x80) {
+    if (sc & 0x80)
+    {
         if (sc == 0xAA || sc == 0xB6)
             shift_down = false;
         return -1;
     }
-    if (sc == 0x2A || sc == 0x36) {
+    if (sc == 0x2A || sc == 0x36)
+    {
         shift_down = true;
         return -1;
     }
-    if (sc == 0x3A) {
+    if (sc == 0x3A)
+    {
         caps_lock = !caps_lock;
         return -1;
     }

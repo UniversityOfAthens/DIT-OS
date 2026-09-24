@@ -3,7 +3,13 @@
 #include "readline.h"
 #include "syscall.h"
 
-enum { MAX_VAR = 64, MAX_LINE = 128, MAX_PROMPT = 256, MAX_PATH = 128 };
+enum
+{
+    MAX_VAR = 64,
+    MAX_LINE = 128,
+    MAX_PROMPT = 256,
+    MAX_PATH = 128
+};
 
 static char g_user[MAX_VAR] = "user";
 static char g_host[MAX_VAR] = "dit";
@@ -16,14 +22,9 @@ static const char* const s_commands[] = {
     "cat", "echo", "exit", "export", "ls", 0,
 };
 
-static inline void outw(unsigned short port, unsigned short val)
-{
-    __asm__ volatile("outw %0, %1" : : "a"(val), "Nd"(port));
-}
-
 static void poweroff_qemu(void)
 {
-    outw(0x604, 0x2000); /* QEMU/Bochs ACPI poweroff */
+    (void)ioctl(1, TTY_IOC_POWER_OFF, 0);
     for (;;)
         __asm__ volatile("hlt");
 }
@@ -38,7 +39,8 @@ static int str_len(const char* s)
 
 static int starts_with(const char* s, const char* pfx)
 {
-    while (*pfx) {
+    while (*pfx)
+    {
         if (*s++ != *pfx++)
             return 0;
     }
@@ -49,7 +51,8 @@ static int starts_with(const char* s, const char* pfx)
 static int cmd_is(const char* buf, const char* cmd)
 {
     const char* p = buf;
-    while (*cmd) {
+    while (*cmd)
+    {
         if (*p++ != *cmd++)
             return 0;
     }
@@ -65,7 +68,8 @@ static void write_str(const char* s)
 
 static int str_eq(const char* a, const char* b)
 {
-    while (*a && *b) {
+    while (*a && *b)
+    {
         if (*a != *b)
             return 0;
         a++;
@@ -77,8 +81,10 @@ static int str_eq(const char* a, const char* b)
 static void copy_with_unescape(char* dst, int dst_cap, const char* src)
 {
     int di = 0;
-    for (int si = 0; src[si] && di < dst_cap - 1; si++) {
-        if (src[si] == '\\' && src[si + 1]) {
+    for (int si = 0; src[si] && di < dst_cap - 1; si++)
+    {
+        if (src[si] == '\\' && src[si + 1])
+        {
             si++;
             char esc = src[si];
             if (esc == 'e')
@@ -89,16 +95,22 @@ static void copy_with_unescape(char* dst, int dst_cap, const char* src)
                 dst[di++] = '\r';
             else if (esc == '\\')
                 dst[di++] = '\\';
-            else {
+            else
+            {
                 /* Preserve prompt tokens like \u, \h, \w, \$ */
-                if (di < dst_cap - 2) {
+                if (di < dst_cap - 2)
+                {
                     dst[di++] = '\\';
                     dst[di++] = esc;
-                } else {
+                }
+                else
+                {
                     dst[di++] = esc;
                 }
             }
-        } else {
+        }
+        else
+        {
             dst[di++] = src[si];
         }
     }
@@ -120,8 +132,10 @@ static void set_var(const char* name, const char* value)
 static void render_prompt(char* out, int out_cap)
 {
     int oi = 0;
-    for (int i = 0; g_ps1[i] && oi < out_cap - 1; i++) {
-        if (g_ps1[i] == '\\' && g_ps1[i + 1]) {
+    for (int i = 0; g_ps1[i] && oi < out_cap - 1; i++)
+    {
+        if (g_ps1[i] == '\\' && g_ps1[i + 1])
+        {
             char t = g_ps1[++i];
             const char* repl = 0;
             char one[2];
@@ -131,14 +145,19 @@ static void render_prompt(char* out, int out_cap)
                 repl = g_host;
             else if (t == 'w')
                 repl = g_pwd;
-            else if (t == '$') {
+            else if (t == '$')
+            {
                 one[0] = '$';
                 one[1] = '\0';
                 repl = one;
-            } else if (t == 'e') {
+            }
+            else if (t == 'e')
+            {
                 out[oi++] = 27;
                 continue;
-            } else {
+            }
+            else
+            {
                 one[0] = t;
                 one[1] = '\0';
                 repl = one;
@@ -175,7 +194,8 @@ static void apply_export_line(const char* line)
 
     const char* value = eq + 1;
     int len = str_len(value);
-    if (len >= 2 && value[0] == '"' && value[len - 1] == '"') {
+    if (len >= 2 && value[0] == '"' && value[len - 1] == '"')
+    {
         static char tmp[MAX_VAR];
         int ti = 0;
         for (int i = 1; i < len - 1 && ti < MAX_VAR - 1; i++)
@@ -199,7 +219,8 @@ static void trim_input_line(char* buf)
 {
     int n = str_len(buf);
     while (n > 0 && (buf[n - 1] == '\n' || buf[n - 1] == '\r' ||
-                     buf[n - 1] == ' ' || buf[n - 1] == '\t')) {
+                     buf[n - 1] == ' ' || buf[n - 1] == '\t'))
+    {
         buf[n - 1] = '\0';
         n--;
     }
@@ -209,7 +230,8 @@ static void trim_trailing_path(char* s)
 {
     int n = str_len(s);
     while (n > 0 && (s[n - 1] == ' ' || s[n - 1] == '\t' || s[n - 1] == '\r' ||
-                     s[n - 1] == '\n')) {
+                     s[n - 1] == '\n'))
+    {
         s[n - 1] = '\0';
         n--;
     }
@@ -218,8 +240,10 @@ static void trim_trailing_path(char* s)
 /** Absolute path under ramfs root (leading slash). */
 static void normalize_path(char* out, int cap, const char* path)
 {
-    if (!path || !path[0]) {
-        if (cap > 1) {
+    if (!path || !path[0])
+    {
+        if (cap > 1)
+        {
             out[0] = '/';
             out[1] = '\0';
         }
@@ -227,8 +251,10 @@ static void normalize_path(char* out, int cap, const char* path)
     }
     while (*path == ' ' || *path == '\t' || *path == '\r' || *path == '\n')
         path++;
-    if (!path[0]) {
-        if (cap > 1) {
+    if (!path[0])
+    {
+        if (cap > 1)
+        {
             out[0] = '/';
             out[1] = '\0';
         }
@@ -238,16 +264,20 @@ static void normalize_path(char* out, int cap, const char* path)
      */
     while (path[0] == '.' && path[1] == '/')
         path += 2;
-    if (!path[0]) {
-        if (cap > 1) {
+    if (!path[0])
+    {
+        if (cap > 1)
+        {
             out[0] = '/';
             out[1] = '\0';
         }
         return;
     }
-    if (path[0] == '/') {
+    if (path[0] == '/')
+    {
         int i = 0;
-        while (path[i] && i < cap - 1) {
+        while (path[i] && i < cap - 1)
+        {
             out[i] = path[i];
             i++;
         }
@@ -275,17 +305,20 @@ static void cmd_ls(const char* arg)
         normalize_path(pathbuf, sizeof(pathbuf), arg);
 
     int fd = open(pathbuf, 0);
-    if (fd < 0) {
+    if (fd < 0)
+    {
         write_str("ls: cannot open directory\r\n");
         return;
     }
     char buf[512];
-    for (;;) {
+    for (;;)
+    {
         int n = getdents(fd, buf, sizeof(buf));
         if (n <= 0)
             break;
         int off = 0;
-        while (off + (int)sizeof(struct dit_dirent) <= n) {
+        while (off + (int)sizeof(struct dit_dirent) <= n)
+        {
             const struct dit_dirent* de = (const struct dit_dirent*)(buf + off);
             write_str(de->d_name);
             write_str("\r\n");
@@ -297,7 +330,8 @@ static void cmd_ls(const char* arg)
 
 static void cmd_cat(const char* arg)
 {
-    if (!arg || !arg[0]) {
+    if (!arg || !arg[0])
+    {
         write_str("cat: missing operand\r\n");
         return;
     }
@@ -305,12 +339,14 @@ static void cmd_cat(const char* arg)
     normalize_path(pathbuf, sizeof(pathbuf), arg);
 
     int fd = open(pathbuf, 0);
-    if (fd < 0) {
+    if (fd < 0)
+    {
         write_str("cat: cannot open file\r\n");
         return;
     }
     char chunk[256];
-    for (;;) {
+    for (;;)
+    {
         int n = read(fd, chunk, sizeof(chunk));
         if (n <= 0)
             break;
@@ -338,36 +374,47 @@ void userland_shell_main(void)
     load_ditrc_defaults();
     readline_init();
 
-    for (;;) {
+    for (;;)
+    {
         render_prompt(prompt, MAX_PROMPT);
         if (readline(prompt, buf, sizeof(buf), s_commands) < 0)
             continue;
         trim_input_line(buf);
 
-        if (cmd_is(buf, "exit")) {
+        if (cmd_is(buf, "exit"))
+        {
             write_str("Bye.\r\n");
             poweroff_qemu();
-        } else if (cmd_is(buf, "ls")) {
+        }
+        else if (cmd_is(buf, "ls"))
+        {
             const char* rest = buf + 2;
             skip_ws(&rest);
             cmd_ls(rest);
-        } else if (cmd_is(buf, "cat")) {
+        }
+        else if (cmd_is(buf, "cat"))
+        {
             const char* rest = buf + 3;
             skip_ws(&rest);
             cmd_cat(rest);
-        } else if (starts_with(buf, "echo")) {
+        }
+        else if (starts_with(buf, "echo"))
+        {
             const char* msg = buf + 4;
             while (*msg == ' ' || *msg == '\t')
                 msg++;
             int len = str_len(msg);
-            if (len >= 2 && msg[0] == '"' && msg[len - 1] == '"') {
+            if (len >= 2 && msg[0] == '"' && msg[len - 1] == '"')
+            {
                 msg++;
                 len -= 2;
             }
             if (len > 0)
                 (void)write(1, msg, (unsigned)len);
             write_str("\r\n");
-        } else if (starts_with(buf, "export ")) {
+        }
+        else if (starts_with(buf, "export "))
+        {
             apply_export_line(buf);
         }
     }

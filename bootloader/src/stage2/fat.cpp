@@ -10,7 +10,8 @@ namespace boot
 {
 
 // Minimal BPB for FAT (first sector)
-struct FatBPB {
+struct FatBPB
+{
     u8 jmp[3];
     u8 oem[8];
     u16 bytes_per_sector;
@@ -27,7 +28,8 @@ struct FatBPB {
     u32 total_sectors_32;
 } __attribute__((packed));
 
-class FatReader : public FSReader {
+class FatReader : public FSReader
+{
 public:
     bool init(u8 drive) override
     {

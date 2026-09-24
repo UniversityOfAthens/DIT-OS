@@ -31,7 +31,8 @@ using mode_t = uint32_t;
 #define S_IWOTH 0000002
 #define S_IXOTH 0000001
 
-struct stat {
+struct stat
+{
     uint32_t st_dev;
     uint32_t st_ino;
     mode_t st_mode;

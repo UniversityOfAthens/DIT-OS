@@ -1,13 +1,9 @@
 // DIT-OS Kernel - Minimal spinlock mutex (not yet integrated)
 
-#include <stdint.h>
+#include "sched/mutex.hpp"
 
 namespace sched
 {
-
-struct Mutex {
-    volatile uint32_t locked;
-};
 
 static inline uint32_t xchg32(volatile uint32_t* addr, uint32_t newval)
 {
@@ -26,7 +22,8 @@ void mutex_init(Mutex* m)
 
 void mutex_lock(Mutex* m)
 {
-    while (xchg32(&m->locked, 1) != 0) {
+    while (xchg32(&m->locked, 1) != 0)
+    {
         asm volatile("pause");
     }
 }

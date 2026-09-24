@@ -9,7 +9,8 @@ namespace dev
 {
 
 /** Bus type for enumerating and attaching drivers to devices */
-struct Bus {
+struct Bus
+{
     const char* name;
     int (*enumerate)(Bus* bus);
     int (*attach)(Device* dev, Driver* drv);

@@ -6,11 +6,6 @@
 // Every pointer a syscall receives must go through these helpers instead of
 // being dereferenced directly. They reject NULL/low memory, ranges that wrap
 // around the address space, and anything outside the user window.
-//
-// Limitation (ISSUES.md C5/I3): userland still runs in ring 0 inside the
-// kernel image, so its buffers live in kernel memory and the window has to
-// include the kernel. Once user programs run in ring 3 with their own
-// address space, only USER_SPACE_START/END need to change.
 
 #include <stddef.h>
 #include <stdint.h>
@@ -18,10 +13,10 @@
 namespace mm
 {
 
-/** Below 1 MiB: IVT, BIOS data, bootloader, VGA memory; never user memory. */
-constexpr uintptr_t USER_SPACE_START = 0x00100000;
+/** User mappings begin above the kernel image and its bootstrap data. */
+constexpr uintptr_t USER_SPACE_START = 0x00400000;
 /** Conventional 3 GiB split; the upper 1 GiB is reserved for the kernel. */
-constexpr uintptr_t USER_SPACE_END = 0xC0000000;
+constexpr uintptr_t USER_SPACE_END = 0x01000000;
 
 /** True if [@addr, @addr + @size) lies entirely inside the user window.
  * A zero-length range is valid anywhere. */

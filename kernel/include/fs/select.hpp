@@ -10,21 +10,25 @@ namespace fs
 #define NFD 256
 #define FD_SETSIZE NFD
 
-typedef struct fd_set {
+typedef struct fd_set
+{
     uint8_t fds[NFD / 8];
 } fd_set;
 
 #define FD_ZERO(set)                                     \
-    do {                                                 \
+    do                                                   \
+    {                                                    \
         for (unsigned _i = 0; _i < sizeof(fd_set); _i++) \
             (set)->fds[_i] = 0;                          \
     } while (0)
 #define FD_SET(fd, set)                             \
-    do {                                            \
+    do                                              \
+    {                                               \
         (set)->fds[(fd) / 8] |= (1U << ((fd) % 8)); \
     } while (0)
 #define FD_CLR(fd, set)                              \
-    do {                                             \
+    do                                               \
+    {                                                \
         (set)->fds[(fd) / 8] &= ~(1U << ((fd) % 8)); \
     } while (0)
 #define FD_ISSET(fd, set) ((set)->fds[(fd) / 8] & (1U << ((fd) % 8)))

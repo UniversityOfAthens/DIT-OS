@@ -7,7 +7,8 @@ namespace dev
 {
 
 /** PS/2 set 1 scancodes (make codes; break = make | 0x80) */
-enum KeyScancode : uint8_t {
+enum KeyScancode : uint8_t
+{
     KEY_ESC = 0x01,
     KEY_1 = 0x02,
     KEY_2 = 0x03,

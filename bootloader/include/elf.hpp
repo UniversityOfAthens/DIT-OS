@@ -9,7 +9,8 @@ namespace boot
 // ELF32 types
 constexpr u32 ELF_MAGIC = 0x464C457F; // "\x7FELF"
 
-struct Elf32_Ehdr {
+struct Elf32_Ehdr
+{
     u8 e_ident[16];
     u16 e_type;
     u16 e_machine;
@@ -26,7 +27,8 @@ struct Elf32_Ehdr {
     u16 e_shstrndx;
 };
 
-struct Elf32_Phdr {
+struct Elf32_Phdr
+{
     u32 p_type;
     u32 p_offset;
     u32 p_vaddr;

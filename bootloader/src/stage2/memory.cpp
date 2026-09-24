@@ -20,7 +20,8 @@ int memory_map_e820(E820Entry* entries, int max_count)
 u64 memory_usable_total(const E820Entry* entries, int count)
 {
     u64 total = 0;
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < count; i++)
+    {
         if (entries[i].type == E820Type::Usable)
             total += entries[i].length;
     }

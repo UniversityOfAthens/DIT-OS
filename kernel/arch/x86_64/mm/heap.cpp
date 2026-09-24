@@ -24,7 +24,8 @@ constexpr size_t HEAP_ALIGN = 8;
 constexpr uint32_t BLOCK_MAGIC_FREE = 0xF4EEB10C;
 constexpr uint32_t BLOCK_MAGIC_USED = 0xA110CA7E;
 
-struct BlockHeader {
+struct BlockHeader
+{
     uint32_t size; /* whole block including this header */
     uint32_t magic; /* BLOCK_MAGIC_FREE or BLOCK_MAGIC_USED */
 };
@@ -54,7 +55,8 @@ static BlockHeader* next_block(BlockHeader* b)
 static void merge_following(BlockHeader* b)
 {
     BlockHeader* n = next_block(b);
-    while (n && n->magic == BLOCK_MAGIC_FREE) {
+    while (n && n->magic == BLOCK_MAGIC_FREE)
+    {
         b->size += n->size;
         n->magic = 0;
         n = next_block(b);
@@ -75,7 +77,8 @@ void* heap_alloc(size_t size)
     size_t need =
         sizeof(BlockHeader) + ((size + HEAP_ALIGN - 1) & ~(HEAP_ALIGN - 1));
 
-    for (BlockHeader* b = block_at(0); b; b = next_block(b)) {
+    for (BlockHeader* b = block_at(0); b; b = next_block(b))
+    {
         if (b->magic == BLOCK_MAGIC_USED)
             continue;
         if (b->magic != BLOCK_MAGIC_FREE)
@@ -85,7 +88,8 @@ void* heap_alloc(size_t size)
         if (b->size < need)
             continue;
 
-        if (b->size - need >= MIN_SPLIT) {
+        if (b->size - need >= MIN_SPLIT)
+        {
             BlockHeader* rest = reinterpret_cast<BlockHeader*>(
                 reinterpret_cast<uint8_t*>(b) + need);
             rest->size = b->size - static_cast<uint32_t>(need);

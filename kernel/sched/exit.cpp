@@ -29,7 +29,7 @@ void task_exit(int code)
     Task* next = schedule_next();
     if (!next)
         next = idle_task;
-    current_task = next;
+    task_activate(next);
     switch_to(prev, next);
 
     /* Should be unreachable; keep compiler happy. */

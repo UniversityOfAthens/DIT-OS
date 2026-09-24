@@ -11,17 +11,20 @@
 namespace ramfs
 {
 
-struct ramfs_entry {
+struct ramfs_entry
+{
     char name[256];
     fs::inode* ino;
     ramfs_entry* next;
 };
 
-struct ramfs_dir {
+struct ramfs_dir
+{
     ramfs_entry* entries;
 };
 
-struct ramfs_file {
+struct ramfs_file
+{
     char* data;
     uint32_t size;
     uint32_t cap;

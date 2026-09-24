@@ -8,7 +8,8 @@ namespace boot
 {
 
 // Generic file/dir entry (name + size + cluster/sector)
-struct DirEntry {
+struct DirEntry
+{
     char name[32];
     u32 size;
     u32 cluster_or_inode;
@@ -16,7 +17,8 @@ struct DirEntry {
 };
 
 // Abstract filesystem reader
-class FSReader {
+class FSReader
+{
 public:
     virtual ~FSReader() = default;
     virtual bool init(u8 drive) = 0;

@@ -83,7 +83,8 @@ MousePacket mouse_read()
     if (packet_idx == 0 && (b & 0x08) == 0)
         return p;
     packet_buf[packet_idx++] = b;
-    if (packet_idx >= 3) {
+    if (packet_idx >= 3)
+    {
         packet_idx = 0;
         p.buttons = packet_buf[0] & 0x07;
         p.dx = static_cast<int8_t>(packet_buf[1]);

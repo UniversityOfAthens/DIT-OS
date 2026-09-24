@@ -21,7 +21,8 @@ const char* cmdline_get()
 static bool match_option(const char* line, const char* opt, const char*& value)
 {
     value = nullptr;
-    while (*line) {
+    while (*line)
+    {
         while (*line == ' ')
             line++;
         if (!*line)
@@ -31,12 +32,15 @@ static bool match_option(const char* line, const char* opt, const char*& value)
             line++;
         const char* end = line;
         const char* p = opt;
-        while (start < end && *p && *start == *p) {
+        while (start < end && *p && *start == *p)
+        {
             start++;
             p++;
         }
-        if (start == end && !*p) {
-            if (*line == '=') {
+        if (start == end && !*p)
+        {
+            if (*line == '=')
+            {
                 line++;
                 value = line;
                 while (*line && *line != ' ')

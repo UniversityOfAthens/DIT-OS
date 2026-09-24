@@ -15,23 +15,11 @@ See `ISSUES.md` for full details. These are the blockers:
 - [x] **`disk.asm` retry count uses address as counter** — changed to `mov si, 3`
 - [x] **E820 uninitialized EBX** — added `xor ebx, ebx` before loop
 - [x] **`kernel_stack_top` treated as value, not address** — changed to array declaration
-- [x] **No `copy_from_user`/`copy_to_user`** — `mm::copy_from_user` / `copy_to_user` / `strncpy_from_user` in all pointer-taking syscalls; real isolation still needs ring 3 (ISSUES.md C5)
+- [x] **User/kernel isolation** — standalone ring-3 user task, dedicated page directory, supervisor-only kernel mappings, and checked user access
 - [x] **CMake uses host compiler** — CMake now wraps the Makefiles, which pick `i686-elf-*` when available
 - [x] **flake.nix has no cross-compiler** — `nix develop .#cross` adds it; default shell fixed (hardening off, no SSE)
 
 ---
-
-## HIGH-PRIORITY FIXES
-
-- [ ] **Update `.clang-format`** — change to Allman braces (`BreakBeforeBraces: Allman`), add `UseTab: Never`
-- [x] **Add `ENOSYS=38`** to `kernel/include/errno_defs.hpp` and replaced hardcoded `-38`
-- [x] **Remove legacy dead files**: removed `main.cpp`, `kernel.asm`, `serial.cpp`, `printk.cpp`
-- [x] **Fix conflicting `serial_init` declarations** — removed dead `kernel.h` and `arch/serial.h`
-- [ ] **Export `Mutex` struct** from `kernel/sched/mutex.cpp` to a header so it's usable
-- [ ] **Add `-ENOSYS` handler** for unimplemented syscalls in `syscall_table.cpp` instead of null pointers
-- [x] **Fix `scripts/create-disk.sh`** — stop hiding `dd` errors with `2>/dev/null`
-- [x] **Fix all shell scripts** — add `set -euo pipefail` and `IFS=$'\n\t'`
-- [ ] **Add `kernel/build/` to `.gitignore`**
 
 ---
 
@@ -249,7 +237,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/syscall/sys_getpid.cpp`
 - [x] `kernel/syscall/sys_getdents.cpp`
 - [x] `kernel/syscall/sys_fork.cpp` — STUB (returns -ENOSYS)
-- [ ] Implement: stat, fstat, execve, waitpid, mmap, munmap, brk, kill, ioctl
+- [ ] Implement: stat, fstat, execve, waitpid, mmap, munmap, brk, kill
 - [x] Add `copy_from_user` / `copy_to_user` to all syscall handlers
 
 ### Kernel include headers
@@ -293,8 +281,8 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [ ] Implement read/write wrappers
 
 ### Runtime
-- [x] `userland/crt0.asm` — No BSS clear, no stack setup (currently unused)
-- [ ] Fix crt0.asm to clear BSS, set up stack, call main(), then exit()
+- [x] `userland/crt0.asm` — clears BSS, receives argc/argv, calls `main`, then exits
+- [x] Standalone userland ELF build linked at `0x00400000`
 
 ### Binaries
 - [x] `userland/bin/init.c` — Init process
@@ -450,8 +438,8 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [ ] Quotas
 
 ### Phase 5: Userland Environment
-- [ ] User/kernel privilege separation (ring 3)
-- [ ] Separate page tables per process
+- [x] User/kernel privilege separation (ring 3)
+- [x] Separate page tables per process
 - [ ] Full POSIX libc (stdio, stdlib, string, unistd, signal, time, math, locale)
 - [ ] Dynamic linker (ld.so) for shared libraries
 - [ ] crt0 with BSS clear, argc/argv, proper exit

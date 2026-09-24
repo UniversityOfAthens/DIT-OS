@@ -34,7 +34,8 @@ void rtc_read(RtcTime* out)
 {
     if (!out)
         return;
-    while (rtc_read_reg(0x0A) & 0x80) {
+    while (rtc_read_reg(0x0A) & 0x80)
+    {
     }
     out->second = bcd_to_bin(rtc_read_reg(RTC_SEC));
     out->minute = bcd_to_bin(rtc_read_reg(RTC_MIN));

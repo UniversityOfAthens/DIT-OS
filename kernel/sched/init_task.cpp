@@ -1,15 +1,24 @@
-// DIT-OS Kernel - Init task entry (returns shell as first process)
-
 #include "sched/sched.hpp"
+#include "mm/vmm.hpp"
+#include <stddef.h>
+#include <stdint.h>
 
-extern "C" void userland_init_main();
+extern "C" const uint8_t user_image_start[];
+extern "C" const uint8_t user_image_end[];
 
 namespace sched
 {
 
-void (*get_init_entry())()
+bool init_user_image()
 {
-    return userland_init_main;
+    size_t image_size = static_cast<size_t>(user_image_end - user_image_start);
+    if (image_size == 0 || image_size > mm::USER_IMAGE_SIZE)
+        return false;
+
+    uint8_t* destination = reinterpret_cast<uint8_t*>(mm::USER_IMAGE_BASE);
+    for (size_t i = 0; i < image_size; i++)
+        destination[i] = user_image_start[i];
+    return true;
 }
 
-} // namespace sched
+}

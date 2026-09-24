@@ -23,7 +23,8 @@ extern SyscallResult sys_write_impl(const SyscallArgs* args)
         return -EFAULT;
 
     fs::file* vf = nullptr;
-    if (fd != 1 && fd != 2) {
+    if (fd != 1 && fd != 2)
+    {
         vf = fd_get(fd);
         if (!vf)
             return -EBADF;
@@ -32,13 +33,15 @@ extern SyscallResult sys_write_impl(const SyscallArgs* args)
     // Copy through a kernel buffer, one chunk at a time.
     char chunk[SYSCALL_BOUNCE_SIZE];
     uint32_t done = 0;
-    while (done < count) {
+    while (done < count)
+    {
         uint32_t n = count - done;
         if (n > sizeof(chunk))
             n = sizeof(chunk);
         if (mm::copy_from_user(chunk, buf + done, n) < 0)
             return done ? static_cast<SyscallResult>(done) : -EFAULT;
-        if (!vf) {
+        if (!vf)
+        {
             for (uint32_t i = 0; i < n; i++)
                 dev::serial_putchar(chunk[i]);
             done += n;

@@ -6,7 +6,8 @@
 namespace arch
 {
 
-struct CpuidResult {
+struct CpuidResult
+{
     uint32_t eax, ebx, ecx, edx;
 };
 

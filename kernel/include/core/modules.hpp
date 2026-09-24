@@ -6,7 +6,8 @@
 namespace core
 {
 
-struct Module {
+struct Module
+{
     const char* name;
     uint32_t start;
     uint32_t end;

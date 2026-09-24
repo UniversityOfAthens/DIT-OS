@@ -10,7 +10,8 @@ namespace fs
 struct inode;
 
 /** Superblock: per-mounted-filesystem metadata */
-struct superblock {
+struct superblock
+{
     uint32_t s_blocksize;
     uint64_t s_blocks;
     uint64_t s_free_blocks;

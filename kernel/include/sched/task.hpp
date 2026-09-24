@@ -7,11 +7,13 @@ namespace sched
 {
 
 /** Saved context for context switch (order must match context.asm) */
-struct Context {
+struct Context
+{
     uint32_t edi, esi, ebp, ebx, esp, eip;
 };
 
-enum class TaskState : uint8_t {
+enum class TaskState : uint8_t
+{
     Runnable,
     Running,
     Blocked,
@@ -22,13 +24,17 @@ enum class TaskState : uint8_t {
  * overwritten, which means the task overflowed its stack. */
 constexpr uint32_t STACK_CANARY = 0x57AC6CA7;
 
-struct Task {
+struct Task
+{
     Context ctx;
     TaskState state;
     Task* next; /* run queue link */
-    uint32_t stack_top; /* lowest address of the kernel stack */
+    uint32_t stack_top;
     uint32_t stack_sz;
-    uint32_t pid; /* process/thread id (monotonic for now) */
+    uint32_t pid;
+    uint32_t page_directory;
+    uint32_t user_stack_top;
+    bool user_mode;
 };
 
 } // namespace sched

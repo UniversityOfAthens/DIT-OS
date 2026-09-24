@@ -7,7 +7,8 @@ namespace gfx
 {
 
 /** Fixed-width bitmap font (e.g. 8x16) */
-struct Font {
+struct Font
+{
     const uint8_t* data; /* glyph bitmaps, row-major per glyph */
     uint8_t width; /* glyph width in pixels */
     uint8_t height; /* glyph height in pixels */

@@ -8,7 +8,8 @@ namespace sched
 {
 
 /** POSIX-style signal numbers (1-based; bit (sig-1) in sigset_t). */
-enum Signal : int {
+enum Signal : int
+{
     SIGHUP = 1,
     SIGINT = 2,
     SIGQUIT = 3,
@@ -46,7 +47,8 @@ enum Signal : int {
 /** Bitmask for signals 1..31 (bit i corresponds to signal i+1). */
 using sigset_t = uint32_t;
 
-struct SignalAction {
+struct SignalAction
+{
     void (*handler)(int);
     sigset_t mask;
     int flags;
@@ -84,7 +86,8 @@ inline bool sigismember(sigset_t s, int sig)
 }
 
 /** Default actions (for internal delivery policy). */
-enum class SignalDefault : uint8_t {
+enum class SignalDefault : uint8_t
+{
     Term,
     Ign,
     Core,

@@ -14,19 +14,24 @@ static int s_cursor_y = 0;
 void console_putchar(char c)
 {
     volatile u16* vga = (volatile u16*)VGA_TEXT_BASE;
-    if (c == '\n') {
+    if (c == '\n')
+    {
         s_cursor_x = 0;
         s_cursor_y++;
-    } else {
+    }
+    else
+    {
         u16 attr = (0x0F << 8) | (u8)c;
         vga[s_cursor_y * VGA_COLS + s_cursor_x] = attr;
         s_cursor_x++;
-        if (s_cursor_x >= VGA_COLS) {
+        if (s_cursor_x >= VGA_COLS)
+        {
             s_cursor_x = 0;
             s_cursor_y++;
         }
     }
-    if (s_cursor_y >= VGA_ROWS) {
+    if (s_cursor_y >= VGA_ROWS)
+    {
         s_cursor_y = VGA_ROWS - 1;
         for (int y = 0; y < VGA_ROWS - 1; y++)
             for (int x = 0; x < VGA_COLS; x++)

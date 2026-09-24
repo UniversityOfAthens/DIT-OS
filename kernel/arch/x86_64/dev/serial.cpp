@@ -47,7 +47,8 @@ static uint16_t base(int port)
 
 void serial_init()
 {
-    for (int p = 0; p < 2; p++) {
+    for (int p = 0; p < 2; p++)
+    {
         uint16_t b = base(p);
         arch::outb(b + UART_IER, 0);
         arch::outb(b + UART_LCR, LCR_DLAB);
@@ -68,10 +69,12 @@ void serial_enable_rx_irq(void (*handler)())
 void serial_irq()
 {
     bool got = false;
-    while (arch::inb(COM1 + UART_LSR) & LSR_DATA_READY) {
+    while (arch::inb(COM1 + UART_LSR) & LSR_DATA_READY)
+    {
         uint8_t byte = arch::inb(COM1 + UART_DATA);
         uint32_t head = s_rx_head;
-        if (head - s_rx_tail < RX_BUF_SIZE) { // drop input when full
+        if (head - s_rx_tail < RX_BUF_SIZE)
+        { // drop input when full
             s_rx_buf[head % RX_BUF_SIZE] = byte;
             s_rx_head = head + 1;
         }
@@ -94,14 +97,16 @@ int serial_rx_pop()
 void serial_putchar(int port, char c)
 {
     uint16_t b = base(port);
-    while (!(arch::inb(b + UART_LSR) & LSR_THR_EMPTY)) {
+    while (!(arch::inb(b + UART_LSR) & LSR_THR_EMPTY))
+    {
     }
     arch::outb(b + UART_DATA, (unsigned char)c);
 }
 
 void serial_puts(int port, const char* str)
 {
-    while (*str) {
+    while (*str)
+    {
         serial_putchar(port, *str);
         if (*str == '\n')
             serial_putchar(port, '\r');

@@ -31,7 +31,8 @@ void idt_load()
 
 void idt_init()
 {
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 256; i++)
+    {
         uint32_t offset = idt_stub_addrs[i];
         uint8_t* e = idt_entries + i * 8;
         e[0] = offset & 0xFF;
@@ -56,11 +57,13 @@ extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
 extern "C" void interrupt_dispatch(uint32_t vector, uint32_t error_code,
                                    uint32_t* regs)
 {
-    if (vector == SYSCALL_VECTOR) {
+    if (vector == SYSCALL_VECTOR)
+    {
         syscall_entry(regs);
         return;
     }
-    if (vector >= IRQ_BASE && vector < IRQ_BASE + IRQ_COUNT) {
+    if (vector >= IRQ_BASE && vector < IRQ_BASE + IRQ_COUNT)
+    {
         uint8_t irq = static_cast<uint8_t>(vector - IRQ_BASE);
         if (pic_is_spurious(irq))
             return;

@@ -11,7 +11,8 @@ struct inode;
 struct dentry;
 
 /** Open file: one per fd, links to dentry/inode and holds position */
-struct file {
+struct file
+{
     uint32_t f_flags;
     uint64_t f_pos;
     dentry* f_dentry;

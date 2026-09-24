@@ -8,7 +8,8 @@ namespace gfx
 {
 
 /** Kernel terminal: VGA output + optional scrollback buffer */
-struct Terminal {
+struct Terminal
+{
     TerminalBuffer* buffer; /* nullptr if no scrollback */
     uint8_t attr; /* current attribute (fg|bg<<4) */
 };

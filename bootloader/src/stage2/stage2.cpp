@@ -3,12 +3,13 @@
 // =============================================================================
 #include <stdint.h>
 // External assembly functions
-extern "C" {
-void enable_a20();
-void print_char(char c);
-void print_string(const char* s);
-char read_key();
-void disk_read();
+extern "C"
+{
+    void enable_a20();
+    void print_char(char c);
+    void print_string(const char* s);
+    char read_key();
+    void disk_read();
 }
 // Menu functions
 void show_menu();
@@ -26,7 +27,8 @@ int cursor_y = 0;
 
 void put_char(char c)
 {
-    if (c == '\n') {
+    if (c == '\n')
+    {
         cursor_x = 0;
         cursor_y++;
         return;
@@ -35,19 +37,22 @@ void put_char(char c)
     VIDEO_MEMORY[cursor_y * COLS + cursor_x] = (0x0F << 8) | c;
 
     cursor_x++;
-    if (cursor_x >= COLS) {
+    if (cursor_x >= COLS)
+    {
         cursor_x = 0;
         cursor_y++;
     }
 
-    if (cursor_y >= ROWS) {
+    if (cursor_y >= ROWS)
+    {
         cursor_y = 0;
     }
 }
 
 void write(const char* str)
 {
-    while (*str) {
+    while (*str)
+    {
         put_char(*str++);
     }
 }
@@ -60,7 +65,8 @@ void write_line(const char* str)
 
 void clear()
 {
-    for (int i = 0; i < COLS * ROWS; i++) {
+    for (int i = 0; i < COLS * ROWS; i++)
+    {
         VIDEO_MEMORY[i] = (0x0F << 8) | ' ';
     }
     cursor_x = 0;
@@ -80,14 +86,19 @@ void draw()
     vga::write("======================================\n");
     vga::write("\n");
 
-    for (int i = 0; i <= max_options; i++) {
-        if (i == selected) {
+    for (int i = 0; i <= max_options; i++)
+    {
+        if (i == selected)
+        {
             vga::write("    >");
-        } else {
+        }
+        else
+        {
             vga::write("     ");
         }
 
-        switch (i) {
+        switch (i)
+        {
         case 0:
             vga::write("Boot DIT-OS\n");
             break;
@@ -108,14 +119,20 @@ void handle_input()
 {
     char key = read_key();
 
-    if (key == 0x48) { // Up arrow
+    if (key == 0x48)
+    { // Up arrow
         if (selected > 0)
             selected--;
-    } else if (key == 0x50) { // Down arrow
+    }
+    else if (key == 0x50)
+    { // Down arrow
         if (selected < max_options)
             selected++;
-    } else if (key == 0x0D) { // Enter
-        switch (selected) {
+    }
+    else if (key == 0x0D)
+    { // Enter
+        switch (selected)
+        {
         case 0:
             boot_kernel();
             break;
@@ -155,7 +172,8 @@ void show_advanced_menu()
 
     char key = read_key();
 
-    if (key == '1') {
+    if (key == '1')
+    {
         vga::clear();
         vga::write_line("Memory Information");
         vga::write_line("TODO: Display memory map");
@@ -172,7 +190,8 @@ extern "C" void stage2_main()
 
     vga::clear();
 
-    while (true) {
+    while (true)
+    {
         vga::clear();
         menu::draw();
         menu::handle_input();

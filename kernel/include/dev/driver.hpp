@@ -12,12 +12,14 @@ namespace dev
 using driver_probe_t = int (*)(Device* dev);
 
 /** Driver operations (optional per-driver) */
-struct DriverOps {
+struct DriverOps
+{
     int (*init)(Device* dev);
     void (*remove)(Device* dev);
 };
 
-struct Driver {
+struct Driver
+{
     const char* name;
     driver_probe_t probe;
     DriverOps ops;

@@ -8,7 +8,8 @@ namespace dev
 {
 
 static constexpr uint16_t FDC_BASE = 0x3F0;
-enum {
+enum
+{
     SRA = 0,
     SRB = 1,
     DOR = 2,
@@ -18,11 +19,17 @@ enum {
     FIFO = 5,
     DIR = 7
 };
-enum { CMD_SPECIFY = 3, CMD_SEEK = 15, CMD_READ = 0xE6 };
+enum
+{
+    CMD_SPECIFY = 3,
+    CMD_SEEK = 15,
+    CMD_READ = 0xE6
+};
 
 static void wait_msr(uint8_t mask, uint8_t val)
 {
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1000; i++)
+    {
         if ((arch::inb(FDC_BASE + MSR) & mask) == val)
             return;
     }
@@ -59,7 +66,8 @@ int floppy_read_sector(uint8_t head, uint8_t track, uint8_t sector,
     arch::outb(FDC_BASE + FIFO, 0x1B);
     arch::outb(FDC_BASE + FIFO, 0xFF);
     wait_msr(0x80, 0x80);
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 256; i++)
+    {
         wait_msr(0x40, 0x40);
         uint16_t w = arch::inw(FDC_BASE + FIFO);
         buf_512[i * 2] = (uint8_t)(w & 0xFF);

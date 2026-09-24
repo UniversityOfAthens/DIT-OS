@@ -12,12 +12,16 @@ namespace sched
 // a wakeup IRQ cannot slip in between the check and the halt.
 static void idle_loop()
 {
-    for (;;) {
+    for (;;)
+    {
         __asm__ volatile("cli" : : : "memory");
-        if (has_other_runnable()) {
+        if (has_other_runnable())
+        {
             __asm__ volatile("sti" : : : "memory");
             schedule();
-        } else {
+        }
+        else
+        {
             __asm__ volatile("sti; hlt" : : : "memory");
         }
     }

@@ -23,7 +23,8 @@ extern SyscallResult sys_read_impl(const SyscallArgs* args)
         return -EFAULT;
 
     fs::file* vf = nullptr;
-    if (fd != 0) {
+    if (fd != 0)
+    {
         vf = fd_get(fd);
         if (!vf)
             return -EBADF;

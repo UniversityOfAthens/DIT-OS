@@ -7,7 +7,8 @@ namespace gfx
 {
 
 /** Linear framebuffer info (e.g. from Multiboot or VESA) */
-struct Framebuffer {
+struct Framebuffer
+{
     void* base; /* physical or virtual base address */
     uint32_t width;
     uint32_t height;

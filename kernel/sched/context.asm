@@ -46,3 +46,8 @@ switch_to:
     pop ebx
     popfd
     ret                 ; pops next's saved eip and jumps
+
+global user_entry_trap
+user_entry_trap:
+    mov esp, edi
+    iret

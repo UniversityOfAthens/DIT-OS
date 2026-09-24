@@ -12,7 +12,8 @@ constexpr uint16_t VGA_HEIGHT = 25;
 constexpr uintptr_t VGA_BUFFER_PHYS = 0xB8000;
 
 /** 16-color VGA palette (index 0-15) */
-enum VgaColor : uint8_t {
+enum VgaColor : uint8_t
+{
     VGA_BLACK = 0,
     VGA_BLUE,
     VGA_GREEN,

@@ -6,7 +6,8 @@
 namespace dev
 {
 
-struct MousePacket {
+struct MousePacket
+{
     int8_t dx, dy;
     uint8_t buttons;
     bool valid;

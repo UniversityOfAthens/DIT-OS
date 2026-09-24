@@ -1,11 +1,11 @@
-// DIT-OS Userland - init task entry (for now: directly start shell)
-
 #include "syscall.h"
 
 void userland_shell_main(void);
 
-void userland_init_main(void)
+int main(int argc, char** argv)
 {
+    (void)argc;
+    (void)argv;
     userland_shell_main();
-    exit(0);
+    return 0;
 }

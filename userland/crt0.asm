@@ -1,23 +1,28 @@
-; DIT-OS Userland - crt0 (minimal)
-;
-; Intended for standalone userland ELF executables in the future.
-; Not currently used by the kernel-run init task.
-
 BITS 32
 
 global _start
 
 extern main
 extern _exit
+extern __bss_start
+extern __bss_end
 
 _start:
-    ; Typical C ABI user stack layout:
-    ;   [esp]     argc
-    ;   [esp+4]   argv[0]
-    ;
-    ; Call main(argc, argv), then _exit(retval).
-    mov eax, [esp]        ; argc
-    lea ebx, [esp + 4]   ; argv
+    mov ax, 0x2b
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    mov edi, __bss_start
+    mov ecx, __bss_end
+    sub ecx, edi
+    xor eax, eax
+    cld
+    rep stosb
+
+    mov eax, [esp]
+    lea ebx, [esp + 4]
     push ebx
     push eax
     call main
@@ -25,8 +30,5 @@ _start:
 
     push eax
     call _exit
-
-    ; Should not return.
     hlt
     jmp $
-

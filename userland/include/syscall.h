@@ -1,7 +1,3 @@
-/* DIT-OS Userland - Syscall ABI (temporary)
- *
- * Kernel-exported C ABI wrappers (dit_sys_*) route to the syscall dispatcher.
- */
 #ifndef USERLAND_SYSCALL_H
 #define USERLAND_SYSCALL_H
 
@@ -14,85 +10,83 @@
 #define SYS_ioctl 15
 #define SYS_getdents 16
 
-/** Console TTY ioctls on fds 0-2 (must match kernel syscall/tty.hpp).
- * TTY_IOC_GETMODE returns the mode; TTY_IOC_SETMODE takes it as the value. */
 #define TTY_IOC_GETMODE 0x5401
 #define TTY_IOC_SETMODE 0x5402
-#define TTY_MODE_ECHO 0x1 /* echo input back */
-#define TTY_MODE_CANON 0x2 /* kernel line editing, read() returns lines */
+#define TTY_IOC_POWER_OFF 0x5403
+#define TTY_MODE_ECHO 0x1
+#define TTY_MODE_CANON 0x2
 
-/** Must match kernel fs::dirent layout (see kernel/include/fs/dirent.hpp). */
 #define DIT_DIRENT_SIZE 264
-struct dit_dirent {
+struct dit_dirent
+{
     unsigned int d_ino;
     unsigned char d_type;
     unsigned char d_pad[3];
     char d_name[256];
 };
-#define DIT_DT_DIR 4 /* d_type of a directory (kernel DT_DIR) */
+#define DIT_DT_DIR 4
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-int dit_sys_read(int fd, void* buf, unsigned count);
-int dit_sys_write(int fd, const void* buf, unsigned count);
-void dit_sys_exit(int code);
-int dit_sys_getpid(void);
-int dit_sys_open(const char* path, int flags);
-int dit_sys_close(int fd);
-int dit_sys_getdents(int fd, void* buf, unsigned count);
-int dit_sys_ioctl(int fd, unsigned long request, unsigned long arg);
-#ifdef __cplusplus
+static inline int dit_syscall(int number, unsigned int arg0, unsigned int arg1,
+                              unsigned int arg2, unsigned int arg3,
+                              unsigned int arg4)
+{
+    register unsigned int rax __asm__("eax") = (unsigned int)number;
+    register unsigned int rbx __asm__("ebx") = arg0;
+    register unsigned int rcx __asm__("ecx") = arg1;
+    register unsigned int rdx __asm__("edx") = arg2;
+    register unsigned int rsi __asm__("esi") = arg3;
+    register unsigned int rdi __asm__("rdi") = arg4;
+    __asm__ volatile("int $0x80"
+                     : "+a"(rax)
+                     : "b"(rbx), "c"(rcx), "d"(rdx), "S"(rsi), "D"(rdi)
+                     : "memory");
+    return (int)rax;
 }
-#endif
 
 static inline int read(int fd, void* buf, unsigned count)
 {
-    (void)SYS_read;
-    return dit_sys_read(fd, buf, count);
+    return dit_syscall(SYS_read, (unsigned int)fd, (unsigned int)buf, count, 0,
+                       0);
 }
+
 static inline int write(int fd, const void* buf, unsigned count)
 {
-    (void)SYS_write;
-    return dit_sys_write(fd, buf, count);
+    return dit_syscall(SYS_write, (unsigned int)fd, (unsigned int)buf, count, 0,
+                       0);
 }
+
 static inline void exit(int code)
 {
-    (void)SYS_exit;
-    dit_sys_exit(code);
+    (void)dit_syscall(SYS_exit, (unsigned int)code, 0, 0, 0, 0);
     __builtin_unreachable();
 }
 
 static inline int getpid(void)
 {
-    (void)SYS_getpid;
-    return dit_sys_getpid();
+    return dit_syscall(SYS_getpid, 0, 0, 0, 0, 0);
 }
 
 static inline int open(const char* path, int flags)
 {
-    (void)SYS_open;
-    return dit_sys_open(path, flags);
+    return dit_syscall(SYS_open, (unsigned int)path, (unsigned int)flags, 0, 0,
+                       0);
 }
 
 static inline int close(int fd)
 {
-    (void)SYS_close;
-    return dit_sys_close(fd);
+    return dit_syscall(SYS_close, (unsigned int)fd, 0, 0, 0, 0);
 }
 
 static inline int getdents(int fd, void* buf, unsigned count)
 {
-    (void)SYS_getdents;
-    return dit_sys_getdents(fd, buf, count);
+    return dit_syscall(SYS_getdents, (unsigned int)fd, (unsigned int)buf, count,
+                       0, 0);
 }
 
-/* Simplified from the variadic POSIX/Linux prototype: the argument is always
- * passed by value. */
 static inline int ioctl(int fd, unsigned long request, unsigned long arg)
 {
-    (void)SYS_ioctl;
-    return dit_sys_ioctl(fd, request, arg);
+    return dit_syscall(SYS_ioctl, (unsigned int)fd, (unsigned int)request,
+                       (unsigned int)arg, 0, 0);
 }
 
 #endif

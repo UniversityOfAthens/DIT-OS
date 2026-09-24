@@ -7,7 +7,8 @@ namespace gfx
 {
 
 /** Cursor position (text or pixel) */
-struct Cursor {
+struct Cursor
+{
     uint32_t x;
     uint32_t y;
 };

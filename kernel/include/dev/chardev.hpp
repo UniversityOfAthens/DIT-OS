@@ -7,7 +7,8 @@ namespace dev
 {
 
 /** Character device interface: byte stream, optional poll */
-struct CharDev {
+struct CharDev
+{
     /** Read up to size bytes into buf. Return bytes read, 0 on EOF, negative on
      * error. */
     int (*read)(CharDev* cdev, void* buf, uint32_t size);

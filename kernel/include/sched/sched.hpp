@@ -33,7 +33,8 @@ void schedule();
 bool has_other_runnable();
 
 /** Tasks blocked until an event (linked through Task::next while blocked). */
-struct WaitQueue {
+struct WaitQueue
+{
     Task* head;
 };
 
@@ -52,6 +53,10 @@ bool task_init(Task* t, void (*entry)(), uint32_t* stack, uint32_t stack_size,
 
 /** Create a new task with entry_point and stack; add to run queue */
 Task* task_create(void (*entry)(), uint32_t* stack, uint32_t stack_size);
+Task* task_create_user(uint32_t entry, uint32_t* kernel_stack,
+                       uint32_t kernel_stack_size, uint32_t* user_stack,
+                       uint32_t user_stack_size);
+bool init_user_image();
 
 /** Allocate a new pid for a task (used by task_create) */
 uint32_t pid_alloc();
@@ -61,6 +66,8 @@ uint32_t current_pid();
 
 /** Terminate the current task and schedule the next one */
 void task_exit(int code);
+
+void task_activate(Task* task);
 
 /** Idle task (runs when nothing else runnable) */
 extern Task* idle_task;
@@ -73,12 +80,6 @@ void sched_start(void (*init_entry)());
 
 /** Idle task setup (called from sched_init) */
 void idle_task_init(Task* idle, uint32_t* stack, uint32_t stack_size);
-
-/** Return init task entry point (shell) */
-void (*get_init_entry())();
-
-/** Return shell entry (used by get_init_entry) */
-void (*get_shell_entry())();
 
 } // namespace sched
 

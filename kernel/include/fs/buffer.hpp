@@ -7,7 +7,8 @@ namespace fs
 {
 
 /** Block buffer (buffer cache): one block of file system data in memory */
-struct buffer_head {
+struct buffer_head
+{
     uint8_t* b_data;
     uint64_t b_blocknr; /* block number on device */
     uint32_t b_size; /* block size */

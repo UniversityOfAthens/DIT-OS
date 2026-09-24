@@ -6,7 +6,8 @@
 namespace dev
 {
 
-struct RtcTime {
+struct RtcTime
+{
     uint8_t second, minute, hour;
     uint8_t day, month;
     uint16_t year;

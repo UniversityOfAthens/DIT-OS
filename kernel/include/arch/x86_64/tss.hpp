@@ -6,7 +6,8 @@
 namespace arch
 {
 
-struct Tss {
+struct Tss
+{
     uint32_t reserved0;
     uint32_t esp0;
     uint32_t ss0;

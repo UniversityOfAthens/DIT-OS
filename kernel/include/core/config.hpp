@@ -6,7 +6,8 @@
 namespace core
 {
 
-struct Config {
+struct Config
+{
     bool serial_enabled;
     bool vga_enabled;
     uint32_t serial_baud;

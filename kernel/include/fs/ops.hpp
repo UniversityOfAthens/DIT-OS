@@ -15,13 +15,15 @@ struct superblock;
 
 struct dirent;
 
-struct SuperblockOps {
+struct SuperblockOps
+{
     inode* (*alloc_inode)(superblock*);
     void (*destroy_inode)(inode*);
     int (*sync)(superblock*);
 };
 
-struct InodeOps {
+struct InodeOps
+{
     /** Lookup child by name inside @dir; on success sets target->d_inode. */
     int (*lookup)(inode* dir, dentry* target);
 
@@ -35,7 +37,8 @@ struct InodeOps {
     int (*unlink)(inode* dir, dentry* target);
 };
 
-struct FileOps {
+struct FileOps
+{
     /** Optional open hook. */
     int (*open)(inode* ino, file* f);
 

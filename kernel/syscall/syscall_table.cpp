@@ -9,7 +9,13 @@
 namespace syscall
 {
 
-static SyscallHandler s_table[SYS_MAX] = { nullptr };
+static SyscallResult sys_enosys_impl(const SyscallArgs* args)
+{
+    (void)args;
+    return -ENOSYS;
+}
+
+static SyscallHandler s_table[SYS_MAX] = { sys_enosys_impl };
 
 SyscallHandler syscall_get_handler(uint32_t num)
 {
@@ -22,7 +28,7 @@ void syscall_set_handler(uint32_t num, SyscallHandler handler)
 {
     if (num >= SYS_MAX)
         return;
-    s_table[num] = handler;
+    s_table[num] = handler ? handler : sys_enosys_impl;
 }
 
 SyscallResult syscall_dispatch(uint32_t num, const SyscallArgs* args)
