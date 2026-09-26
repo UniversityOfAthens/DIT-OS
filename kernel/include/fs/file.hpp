@@ -14,6 +14,7 @@ struct dentry;
 struct file
 {
     uint32_t f_flags;
+    uint32_t f_refcount; /* shared with a forked child's fd table */
     uint64_t f_pos;
     dentry* f_dentry;
     inode* f_inode;

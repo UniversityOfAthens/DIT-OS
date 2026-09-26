@@ -348,9 +348,12 @@ static uint32_t kstrlen(const char* s)
     return n;
 }
 
-static void seed_text_file(fs::inode* root, const char* name, const char* text)
+static void seed_file(fs::inode* root, const char* name, const uint8_t* data,
+                      uint32_t size)
 {
-    if (!root || !name || !text)
+    if (!root || !name || (!data && size))
+        return;
+    if (size > s_max_file_cap)
         return;
     fs::dentry t;
     for (uint32_t i = 0; i < sizeof(t); i++)
@@ -370,15 +373,21 @@ static void seed_text_file(fs::inode* root, const char* name, const char* text)
     ramfs_file* rf = (ramfs_file*)ino->i_private;
     if (!rf)
         return;
-    uint32_t len = kstrlen(text);
-    rf->data = (char*)mm::kmalloc(len ? len : 1);
-    if (!rf->data)
+    uint8_t* buffer = (uint8_t*)mm::kmalloc(size ? size : 1);
+    if (!buffer)
         return;
-    if (len)
-        kmemcpy(rf->data, text, len);
-    rf->size = len;
-    rf->cap = len;
-    ino->i_size = len;
+    if (size)
+        kmemcpy(buffer, data, size);
+    rf->data = (char*)buffer;
+    rf->size = size;
+    rf->cap = size;
+    ino->i_size = size;
+}
+
+static void seed_text_file(fs::inode* root, const char* name, const char* text)
+{
+    seed_file(root, name, reinterpret_cast<const uint8_t*>(text),
+              kstrlen(text));
 }
 
 static void seed_demo_files()
@@ -464,6 +473,14 @@ void init()
     fs::register_filesystem(&s_ramfs_type);
     fs::vfs_mount("ramfs", "/", "ramfs", nullptr);
     seed_demo_files();
+}
+
+void seed_file(const char* name, const void* data, uint32_t size)
+{
+    if (!s_root_inode || !name || !data)
+        return;
+    ::ramfs::seed_file(s_root_inode, name, static_cast<const uint8_t*>(data),
+                       size);
 }
 
 } // namespace ramfs

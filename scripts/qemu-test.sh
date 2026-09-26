@@ -101,8 +101,14 @@ main() {
     expect_after 0 "Boot DIT-OS"
     pass
 
+    STEP="userland self-test (brk, mmap, fork, execve, waitpid)"
+    # The init program exercises the process model before starting the shell,
+    # so it only runs after the boot menu is dismissed.
+    run_expect '\r' '^\[selftest\] ok$'
+    pass
+
     STEP="kernel reaches shell"
-    run_expect '\r' 'user@dit'
+    expect_after 0 'user@dit'
     pass
 
     STEP="echo"

@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 // Kernel version
-const char* kernel_version = "DIT-OS 0.1.0";
+const char* kernel_version = "DIT-OS 0.0.9-alpha";
 
 // Simple VGA text buffer
 volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;
@@ -114,6 +114,7 @@ void init();
 namespace ramfs
 {
 void init();
+void seed_file(const char* name, const void* data, uint32_t size);
 }
 #include "arch/x86_64/control.hpp"
 #include "arch/x86_64/idt.hpp"
@@ -131,6 +132,9 @@ void init();
 #include "sched/sched.hpp"
 
 extern "C" uint32_t kernel_stack_top[];
+/* Second user program, published into the root filesystem for execve(). */
+extern "C" const uint8_t exec_image_start[];
+extern "C" const uint8_t exec_image_end[];
 
 /* Print to both VGA and serial (so -display none -serial mon:stdio shows full
  * boot) */
@@ -214,6 +218,9 @@ extern "C" void kernel_main()
     sched::sched_init();
     dev::serial_puts("\r\n[main] before ramfs::init\r\n");
     ramfs::init();
+    /* Publish the second user program so execve() has something to load. */
+    ramfs::seed_file("greeter", exec_image_start,
+                     static_cast<uint32_t>(exec_image_end - exec_image_start));
     dev::serial_puts("\r\n[main] ramfs::init done\r\n");
     dev::serial_puts("\r\n[main] enabling interrupts\r\n");
     __asm__ volatile("sti");
@@ -283,8 +290,23 @@ extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
     {
         if ((regs[arch::FRAME_CS] & 3u) != 0)
         {
-            if (vector == arch::VECTOR_PAGE_FAULT)
-                core::printk("[user] page fault at 0x%x\n", arch::read_cr2());
+            /* A user page fault is usually demand paging or a copy-on-write
+             * break; both are resolved by filling in the page. */
+            sched::Task* task = sched::current_task;
+            if (vector == arch::VECTOR_PAGE_FAULT && task &&
+                task->page_directory &&
+                mm::vmm_handle_fault(task->page_directory, arch::read_cr2(),
+                                     error_code) == 0)
+                return;
+            core::printk("[user] %s at 0x%x (error 0x%x) eip 0x%x esp 0x%x "
+                         "eax 0x%x ebx 0x%x ecx 0x%x edx 0x%x esi 0x%x "
+                         "edi 0x%x pid %u\n",
+                         s_exception_names[vector], arch::read_cr2(),
+                         error_code, regs[arch::FRAME_EIP],
+                         regs[arch::FRAME_ESP], regs[arch::FRAME_EAX],
+                         regs[arch::FRAME_EBX], regs[arch::FRAME_ECX],
+                         regs[arch::FRAME_EDX], regs[arch::FRAME_ESI],
+                         regs[arch::FRAME_EDI], task ? task->pid : 0);
             sched::task_exit(-EFAULT);
         }
         // printk/panicf write to serial and VGA, so the report is visible

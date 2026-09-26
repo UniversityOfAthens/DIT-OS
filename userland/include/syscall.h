@@ -6,7 +6,13 @@
 #define SYS_open 2
 #define SYS_close 3
 #define SYS_exit 6
+#define SYS_fork 7
+#define SYS_execve 8
+#define SYS_waitpid 9
 #define SYS_getpid 10
+#define SYS_mmap 11
+#define SYS_munmap 12
+#define SYS_brk 13
 #define SYS_ioctl 15
 #define SYS_getdents 16
 
@@ -15,6 +21,15 @@
 #define TTY_IOC_POWER_OFF 0x5403
 #define TTY_MODE_ECHO 0x1
 #define TTY_MODE_CANON 0x2
+
+/* waitpid */
+#define WNOHANG 1
+
+/* mmap */
+#define PROT_READ 0x1
+#define PROT_WRITE 0x2
+#define MAP_PRIVATE 0x02
+#define MAP_ANONYMOUS 0x20
 
 #define DIT_DIRENT_SIZE 264
 struct dit_dirent
@@ -87,6 +102,45 @@ static inline int ioctl(int fd, unsigned long request, unsigned long arg)
 {
     return dit_syscall(SYS_ioctl, (unsigned int)fd, (unsigned int)request,
                        (unsigned int)arg, 0, 0);
+}
+
+static inline int fork(void)
+{
+    return dit_syscall(SYS_fork, 0, 0, 0, 0, 0);
+}
+
+static inline int waitpid(int pid, int* status, int options)
+{
+    return dit_syscall(SYS_waitpid, (unsigned int)pid, (unsigned int)status,
+                       (unsigned int)options, 0, 0);
+}
+
+/* Replaces the running program; only returns if it failed. */
+static inline int execve(const char* path, char* const argv[],
+                         char* const envp[])
+{
+    return dit_syscall(SYS_execve, (unsigned int)path, (unsigned int)argv,
+                       (unsigned int)envp, 0, 0);
+}
+
+/* Query the current break with addr 0, or set it. Returns the resulting
+ * break. */
+static inline void* brk(void* addr)
+{
+    return (void*)(unsigned int)dit_syscall(SYS_brk, (unsigned int)addr, 0, 0,
+                                            0, 0);
+}
+
+/* Anonymous private mapping; the kernel picks the address. */
+static inline void* mmap(unsigned length, int prot, int flags)
+{
+    return (void*)(unsigned int)dit_syscall(
+        SYS_mmap, 0, length, (unsigned int)prot, (unsigned int)flags, 0);
+}
+
+static inline int munmap(void* addr, unsigned length)
+{
+    return dit_syscall(SYS_munmap, (unsigned int)addr, length, 0, 0, 0);
 }
 
 #endif

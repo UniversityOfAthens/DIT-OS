@@ -28,13 +28,18 @@ struct Task
 {
     Context ctx;
     TaskState state;
-    Task* next; /* run queue link */
+    Task* next; /* run queue or wait queue link */
+    Task* all_next; /* every live task, for parent/child bookkeeping */
     uint32_t stack_top;
     uint32_t stack_sz;
     uint32_t pid;
     uint32_t page_directory;
     uint32_t user_stack_top;
     bool user_mode;
+    /* Process state: set when the task is reaped by its parent. */
+    uint32_t ppid;
+    int32_t exit_code;
+    int fd_table; /* index into the per-process fd table pool, -1 if none */
 };
 
 } // namespace sched

@@ -51,3 +51,20 @@ global user_entry_trap
 user_entry_trap:
     mov esp, edi
     iret
+
+; First instruction of a forked child. EDI is the iret frame to enter user mode
+; through and ESI points at the parent's user registers (edi, esi, ebp, esp,
+; ebx, edx, ecx), saved at the bottom of this task's kernel stack by
+; task_create_fork_child(). The child continues just after the fork() syscall,
+; so EAX is 0; every other register has to come back from the saved image.
+global fork_entry_trap
+fork_entry_trap:
+    xor eax, eax
+    mov esp, edi
+    mov ebx, [esi + 16]
+    mov edx, [esi + 20]
+    mov ebp, [esi + 8]
+    mov edi, [esi + 0]
+    mov ecx, [esi + 24]
+    mov esi, [esi + 4]
+    iret

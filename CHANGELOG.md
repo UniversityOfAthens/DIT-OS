@@ -7,8 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.9-alpha] - 2026-09-26
+
+Ring 3, demand paging and the POSIX process model: `fork`, `execve`, `waitpid`
+and a heap for user space.
+
 ### Added
 
+- User page faults are demand paged: touching a page the process owns (its
+  `brk` heap, its `mmap` region, its stack) allocates a zeroed frame, and
+  touching anything else still kills the process.
+- `fork()`: copy-on-write address space clone plus a `fork_entry_trap` that
+  restores the parent's user registers, so the child resumes just after the
+  syscall with 0 and its own copy of the pages it writes.
+- `execve()`: a static ELF32 loader (`syscall/sys_execve.cpp`) that reads the
+  program through the VFS into a fresh address space, builds argc/argv/envp on
+  a new user stack and continues in the new image instead of returning.
+- `waitpid()` with `WNOHANG`, plus zombie reaping: an exiting task is kept in
+  the task list until its parent collects it, and its stack, files and
+  address space are released at that point.
+- `brk()`, `mmap()` and `munmap()` for anonymous read/write private memory.
+- Per-process file descriptor tables; a child inherits its parent's open
+  files through reference counted `fs::file` objects, and a task releases its
+  files on exit.
+- `ramfs::seed_file()` publishes a file in the root filesystem; the boot code
+  uses it to seed `/greeter` (`userland/bin/greeter.c`) for the `execve()`
+  self-test.
+- A boot self-test in `userland/bin/init.c` exercises demand paging, `brk`,
+  `mmap`/`munmap`, `fork` (including that a child cannot change the parent's
+  memory), `execve` and `waitpid`, and prints `[selftest] ok`; the QEMU
+  integration test waits for that line.
 - Shell tab completion: the first word completes builtin commands, later
   words complete file paths (a `/` is added after directories); an ambiguous
   prefix is extended to the longest common prefix, then the candidates are
@@ -28,8 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `-EFAULT` for NULL, low memory, wraparound or out-of-window ranges, and
   `open` returns `-ENAMETOOLONG` for over-long paths. `read`/`write` copy
   through a kernel bounce buffer so drivers and filesystems only see kernel
-  memory. Userland still runs in ring 0, so the window includes the kernel
-  until ring 3 lands.
+  memory.
 - Console TTY modes: `ioctl(0, TTY_IOC_SETMODE, mode)` switches echo and
   canonical (line-edited) input on or off, so programs can read raw keys.
   `SYS_ioctl` is now implemented for fds 0-2.
@@ -40,6 +67,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The kernel version string is now `DIT-OS 0.0.9-alpha` (it still said
+  `0.1.0` during the previous alphas, so the banner did not match the tag).
+- `mm/vmm.cpp` was rewritten around a static pool of address spaces (one page
+  directory plus five page tables each) and a reference counted pool of
+  physical frames for user pages, 2 MiB below 4 MiB so the kernel can reach a
+  frame before any user mapping exists. The old `vmm_map`/`vmm_unmap`/
+  `vmm_virt_to_phys` kernel-space helpers and `vmm_map_user`/`vmm_unmap_user`
+  had no callers and are gone; `USER_SPACE_COUNT` is 8.
+- Tasks are created with a kernel stack from the heap and a demand paged user
+  stack in the user window, so `task_create_user()` no longer takes stacks
+  from the caller.
 - `build.yml` and `test.yml` are replaced by `ci.yml`. Their smoke tests
   could not fail: they looked for `OK` (already in the boot log) and
   `HELLO` (present in the echoed input).
@@ -65,6 +103,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The IDT frame indices for `EIP`, `CS` and `EFLAGS` were off, so a kernel
+  exception reported the segment registers and the vector instead of the
+  interrupted registers. The frame layout is now spelled out in
+  `arch/x86_64/idt.hpp` (`FRAME_STACK_ESP` is the user stack pointer, which is
+  pushed separately from the `pusha` slot).
+- The interrupted frame is now owned by the syscall layer
+  (`syscall::current_regs()`) instead of a global that any interrupt taken
+  during a syscall could displace.
 - The NASM lint check always passed (`grep "[BITS]"` matched any line with a
   B, I, T or S); it now checks for real `BITS` directives.
 - `printk("%d")` overflowed on `INT32_MIN`.

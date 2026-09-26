@@ -48,6 +48,7 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(SYSCALL_DIR)/sys_read.cpp $(SYSCALL_DIR)/sys_write.cpp $(SYSCALL_DIR)/sys_exit.cpp \
 	$(SYSCALL_DIR)/sys_open.cpp $(SYSCALL_DIR)/sys_close.cpp $(SYSCALL_DIR)/sys_getdents.cpp \
 	$(SYSCALL_DIR)/sys_getpid.cpp $(SYSCALL_DIR)/sys_fork.cpp \
+	$(SYSCALL_DIR)/sys_waitpid.cpp $(SYSCALL_DIR)/sys_execve.cpp $(SYSCALL_DIR)/sys_mem.cpp \
 	$(SYSCALL_DIR)/sys_ioctl.cpp $(SYSCALL_DIR)/tty.cpp \
 	$(SYSCALL_DIR)/syscall_wrappers.cpp \
 	$(FS_DIR)/vfs.cpp $(FS_DIR)/ramfs/ramfs.cpp $(FS_DIR)/ramfs/inode.cpp \
@@ -68,9 +69,11 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 ASM_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.asm,%.asm.o,$(ASM_SOURCES)))
 CPP_OBJECTS = $(addprefix $(OBJDIR)/,$(patsubst %.cpp,%.o,$(CPP_SOURCES)))
 USER_IMAGE = ../userland/build/init.bin
+EXEC_IMAGE = ../userland/build/greeter.elf
 USERLAND_SOURCES = \
 	../userland/crt0.asm \
 	../userland/bin/init.c \
+	../userland/bin/greeter.c \
 	../userland/shell/main.c \
 	../userland/shell/readline.c \
 	../userland/shell/readline.h \
@@ -104,17 +107,21 @@ C_FLAGS += -I../userland/include -I../userland/libc/include
 all: $(KERNEL_OUT)
 
 # Build kernel
-$(KERNEL_OUT): $(USER_IMAGE) $(ASM_OBJECTS) $(CPP_OBJECTS)
+$(KERNEL_OUT): $(USER_IMAGE) $(EXEC_IMAGE) $(ASM_OBJECTS) $(CPP_OBJECTS)
 	@mkdir -p $(BUILD_DIR)
 	@echo "Linking kernel..."
 	$(LD) -m elf_i386 -T $(BOOT_DIR)/linker.ld -z noexecstack -o $@ $(ASM_OBJECTS) $(CPP_OBJECTS)
 	@echo "Kernel built: $@"
 
+# The two images come out of one userland build. Chaining them keeps a parallel
+# kernel build from starting two userland builds over the same output files.
+$(EXEC_IMAGE): $(USER_IMAGE)
+
 $(USER_IMAGE): $(USERLAND_SOURCES) ../userland/Makefile ../userland/linker.ld
 	$(MAKE) -C ../userland
 
 # Assemble .asm files (obj dir avoids circular dependency)
-$(OBJDIR)/$(BOOT_DIR)/user_image.asm.o: $(USER_IMAGE)
+$(OBJDIR)/$(BOOT_DIR)/user_image.asm.o: $(USER_IMAGE) $(EXEC_IMAGE)
 
 $(OBJDIR)/%.asm.o: %.asm Makefile
 	@mkdir -p $(dir $@)

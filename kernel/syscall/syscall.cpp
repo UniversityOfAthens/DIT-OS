@@ -17,6 +17,11 @@ extern SyscallResult sys_write_impl(const SyscallArgs* args);
 extern SyscallResult sys_exit_impl(const SyscallArgs* args);
 extern SyscallResult sys_getpid_impl(const SyscallArgs* args);
 extern SyscallResult sys_fork_impl(const SyscallArgs* args);
+extern SyscallResult sys_waitpid_impl(const SyscallArgs* args);
+extern SyscallResult sys_execve_impl(const SyscallArgs* args);
+extern SyscallResult sys_brk_impl(const SyscallArgs* args);
+extern SyscallResult sys_mmap_impl(const SyscallArgs* args);
+extern SyscallResult sys_munmap_impl(const SyscallArgs* args);
 extern SyscallResult sys_open_impl(const SyscallArgs* args);
 extern SyscallResult sys_close_impl(const SyscallArgs* args);
 extern SyscallResult sys_getdents_impl(const SyscallArgs* args);
@@ -31,6 +36,11 @@ void init()
     syscall_set_handler(SYS_exit, sys_exit_impl);
     syscall_set_handler(SYS_getpid, sys_getpid_impl);
     syscall_set_handler(SYS_fork, sys_fork_impl);
+    syscall_set_handler(SYS_waitpid, sys_waitpid_impl);
+    syscall_set_handler(SYS_execve, sys_execve_impl);
+    syscall_set_handler(SYS_brk, sys_brk_impl);
+    syscall_set_handler(SYS_mmap, sys_mmap_impl);
+    syscall_set_handler(SYS_munmap, sys_munmap_impl);
     syscall_set_handler(SYS_open, sys_open_impl);
     syscall_set_handler(SYS_close, sys_close_impl);
     syscall_set_handler(SYS_getdents, sys_getdents_impl);
@@ -45,10 +55,18 @@ SyscallResult handle(uint32_t num, const SyscallArgs* args)
     return r;
 }
 
+static const uint32_t* s_syscall_regs;
+
+const uint32_t* current_regs()
+{
+    return s_syscall_regs;
+}
+
 /** Called from IDT when int 0x80; regs = pointer to saved pusha block (low to
  * high: EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX) */
 extern "C" void syscall_entry(uint32_t* regs)
 {
+    s_syscall_regs = regs;
     SyscallArgs args;
     args.args[0] = regs[4]; /* EBX */
     args.args[1] = regs[6]; /* ECX */
@@ -59,6 +77,7 @@ extern "C" void syscall_entry(uint32_t* regs)
     uint32_t num = regs[7]; /* EAX = syscall number */
     SyscallResult r = handle(num, &args);
     regs[7] = (uint32_t)r;
+    s_syscall_regs = nullptr;
 }
 
 } // namespace syscall

@@ -212,6 +212,7 @@ file* vfs_open(const char* path, int flags)
         ((uint8_t*)f)[i] = 0;
 
     f->f_pos = 0;
+    f->f_refcount = 1;
     f->f_dentry = d;
     f->f_inode = ino;
     f->f_ops = ino->i_file_ops;
@@ -228,6 +229,13 @@ void vfs_close(file* f)
 {
     if (!f)
         return;
+    /* A forked child holds its own reference to the same file, so the last
+     * one to close is the one that releases it. */
+    if (f->f_refcount > 1)
+    {
+        f->f_refcount--;
+        return;
+    }
     if (f->f_ops && f->f_ops->release)
         f->f_ops->release(f->f_inode, f);
     if (f->f_dentry)

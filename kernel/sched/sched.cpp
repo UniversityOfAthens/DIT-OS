@@ -9,6 +9,7 @@
 #include "mm/kmalloc.hpp"
 #include "mm/vmm.hpp"
 #include "dev/serial.hpp"
+#include "errno_defs.hpp"
 #include <stdint.h>
 
 namespace sched
@@ -18,13 +19,110 @@ Task* current_task = nullptr;
 Task* run_queue_head = nullptr;
 Task* idle_task = nullptr;
 
+/* Every task that has not been reaped, so a parent can find its children and
+ * wait for them. */
+static Task* s_all_tasks = nullptr;
+/* Parents blocked in wait_child(). */
+static WaitQueue s_child_wait;
+
+WaitQueue& child_wait_queue()
+{
+    return s_child_wait;
+}
+
 static Task s_idle;
 /* Idle also takes IRQs (serial, timer) on this stack. */
 static uint32_t s_idle_stack[1024];
-/* The init task runs the shell and the whole syscall/VFS path on this stack. */
-static uint32_t s_init_stack[4096];
-static uint32_t s_user_stack[mm::USER_STACK_SIZE / 4]
-    __attribute__((aligned(4096)));
+
+void task_register(Task* t)
+{
+    if (!t)
+        return;
+    t->all_next = s_all_tasks;
+    s_all_tasks = t;
+}
+
+static void task_unregister(Task* t)
+{
+    Task** link = &s_all_tasks;
+    while (*link)
+    {
+        if (*link == t)
+        {
+            *link = t->all_next;
+            t->all_next = nullptr;
+            return;
+        }
+        link = &(*link)->all_next;
+    }
+}
+
+/* The exited child of @parent matching @pid (-1 for any). */
+static Task* find_exited_child(Task* parent, int32_t pid)
+{
+    for (Task* t = s_all_tasks; t; t = t->all_next)
+    {
+        if (t->ppid != parent->pid || t->state != TaskState::Exited)
+            continue;
+        if (pid < 0 || static_cast<int32_t>(t->pid) == pid)
+            return t;
+    }
+    return nullptr;
+}
+
+static bool has_child(Task* parent, int32_t pid)
+{
+    for (Task* t = s_all_tasks; t; t = t->all_next)
+    {
+        if (t->ppid != parent->pid)
+            continue;
+        if (pid < 0 || static_cast<int32_t>(t->pid) == pid)
+            return true;
+    }
+    return false;
+}
+
+int wait_child(int32_t pid, int32_t* status, bool nohang)
+{
+    Task* parent = current_task;
+    if (!parent)
+        return -ECHILD;
+    if (pid == 0)
+        return -ECHILD;
+
+    for (;;)
+    {
+        /* Checking for an exit and going to sleep happen with IRQs off, so a
+         * child that exits in between still wakes us. */
+        uint32_t flags = arch::irq_save();
+        Task* child = find_exited_child(parent, pid);
+        if (child)
+        {
+            int32_t code = child->exit_code;
+            uint32_t child_pid = child->pid;
+            /* The child is unreachable: release its stack and bookkeeping. */
+            task_unregister(child);
+            mm::kfree(reinterpret_cast<void*>(child->stack_top));
+            mm::kfree(child);
+            arch::irq_restore(flags);
+            if (status)
+                *status = code;
+            return static_cast<int>(child_pid);
+        }
+        if (!has_child(parent, pid))
+        {
+            arch::irq_restore(flags);
+            return -ECHILD;
+        }
+        if (nohang)
+        {
+            arch::irq_restore(flags);
+            return 0;
+        }
+        sleep_on(&s_child_wait);
+        arch::irq_restore(flags);
+    }
+}
 
 void run_queue_add(Task* t)
 {
@@ -101,9 +199,7 @@ void sched_init()
         for (;;)
             asm volatile("hlt");
     }
-    Task* init_t = task_create_user(mm::USER_IMAGE_BASE, s_init_stack,
-                                    sizeof(s_init_stack), s_user_stack,
-                                    sizeof(s_user_stack));
+    Task* init_t = task_create_user(mm::USER_IMAGE_BASE);
     if (!init_t)
     {
         dev::serial_puts("\r\n[sched] init: task_create FAILED\r\n");

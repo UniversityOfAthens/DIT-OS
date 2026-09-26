@@ -149,10 +149,12 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/arch/x86_64/mm/dma.cpp` — Stub
 - [x] `kernel/arch/x86_64/mm/tlb.asm`
 - [x] `kernel/arch/x86_64/mm/mtrr.asm`
-- [ ] Implement proper VMM with page fault handling
-- [ ] Implement proper slab/buddy allocator
+- [x] Implement proper VMM with page fault handling (demand paging, copy-on-write, `mm/vmm.cpp`)
+- [ ] Implement proper slab/buddy allocator (kernel heap is first-fit; user frames are a refcounted pool)
+- [ ] Grow the user frame pool: it is 2 MiB below 4 MiB (`VMM_FRAME_START`..`VMM_FRAME_END`), so user
+      space is capped at 512 pages and `pmm.cpp` is still unused (it would hand out frame 0)
 - [x] Implement `copy_from_user` / `copy_to_user` with address-space checks (`kernel/arch/x86_64/mm/uaccess.cpp`)
-- [ ] Make `heap_free` actually free memory
+- [x] Make `heap_free` actually free memory (first-fit with split and coalesce, `mm/heap.cpp`)
 
 ### Architecture — Device Drivers
 - [x] `kernel/arch/x86_64/dev/serial.cpp` — COM1-4
@@ -216,9 +218,9 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/sched/exit.cpp`
 - [x] `kernel/sched/fork.cpp` — STUB (returns -ENOSYS)
 - [x] `kernel/sched/mutex.cpp` — Struct not exported, dead code
-- [ ] Implement fork() properly
-- [ ] Implement execve()
-- [ ] Implement waitpid()
+- [x] Implement fork() properly
+- [x] Implement execve() (static ELF32, `syscall/sys_execve.cpp`)
+- [x] Implement waitpid() (with `WNOHANG`)
 - [ ] Export Mutex struct to a header
 - [ ] Implement signal handling
 
@@ -237,7 +239,8 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/syscall/sys_getpid.cpp`
 - [x] `kernel/syscall/sys_getdents.cpp`
 - [x] `kernel/syscall/sys_fork.cpp` — STUB (returns -ENOSYS)
-- [ ] Implement: stat, fstat, execve, waitpid, mmap, munmap, brk, kill
+- [x] Implement: execve, waitpid, mmap, munmap, brk
+- [ ] Implement: stat, fstat, kill
 - [x] Add `copy_from_user` / `copy_to_user` to all syscall handlers
 
 ### Kernel include headers
@@ -279,6 +282,7 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [ ] Implement free()
 - [ ] Implement string ops (memcpy, memset, strlen, strcmp)
 - [ ] Implement read/write wrappers
+- [ ] Point userland `malloc()` at `brk()` instead of its static 64 KiB buffer
 
 ### Runtime
 - [x] `userland/crt0.asm` — clears BSS, receives argc/argv, calls `main`, then exits
@@ -393,13 +397,13 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [ ] Fix `.clang-format` and run as part of CI
 
 ### Phase 2: POSIX Core — Process model & syscalls
-- [ ] Implement fork() with proper address space cloning
-- [ ] Implement execve() with ELF loader for user binaries
-- [ ] Implement waitpid() for process lifecycle
-- [ ] Implement brk()/mmap()/munmap() for heap management
+- [x] Implement fork() with proper address space cloning (copy-on-write)
+- [x] Implement execve() with ELF loader for user binaries (static ELF32 only)
+- [x] Implement waitpid() for process lifecycle
+- [x] Implement brk()/mmap()/munmap() for heap management (anonymous memory only)
 - [ ] Implement stat()/fstat() for file metadata
 - [ ] Implement kill() and signal delivery
-- [ ] Implement ioctl() for device control
+- [x] Implement ioctl() for device control (fds 0-2: console modes and power off)
 - [ ] Implement pipe() and FIFO for inter-process communication
 - [ ] Full POSIX signal handling (sigaction, sigpending, sigsuspend)
 - [ ] POSIX timers (setitimer, nanosleep)
@@ -408,7 +412,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 ### Phase 3: Memory Management
 - [ ] Slab allocator for small kernel objects
 - [ ] Buddy allocator for physical page management
-- [ ] Demand paging with page fault handler
+- [x] Demand paging with page fault handler
 - [ ] Swap space and swap file support
 - [ ] Memory-mapped files (mmap of regular files)
 - [ ] mprotect() for per-page permissions
@@ -442,7 +446,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [x] Separate page tables per process
 - [ ] Full POSIX libc (stdio, stdlib, string, unistd, signal, time, math, locale)
 - [ ] Dynamic linker (ld.so) for shared libraries
-- [ ] crt0 with BSS clear, argc/argv, proper exit
+- [x] crt0 with BSS clear, argc/argv, proper exit
 - [ ] Init system (PID 1 that reaps orphans)
 - [ ] Service manager (launch daemons, dependencies, supervision)
 - [ ] Login manager (getty, login, session management)
