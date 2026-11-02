@@ -5,6 +5,8 @@
 #define SYS_write 1
 #define SYS_open 2
 #define SYS_close 3
+#define SYS_stat 4
+#define SYS_fstat 5
 #define SYS_exit 6
 #define SYS_fork 7
 #define SYS_execve 8
@@ -13,6 +15,7 @@
 #define SYS_mmap 11
 #define SYS_munmap 12
 #define SYS_brk 13
+#define SYS_kill 14
 #define SYS_ioctl 15
 #define SYS_getdents 16
 
@@ -24,6 +27,32 @@
 
 /* waitpid */
 #define WNOHANG 1
+
+/* waitpid status decoding (Linux-compatible layout; see
+ * kernel/include/sched/wait.hpp). */
+#define WIFEXITED(s) (((s) & 0x7f) == 0)
+#define WEXITSTATUS(s) (((s) >> 8) & 0xff)
+#define WIFSIGNALED(s) (((s) & 0x7f) != 0 && ((s) & 0x7f) != 0x7f)
+#define WTERMSIG(s) ((s) & 0x7f)
+
+/* Signals (same values as kernel/include/sched/signal.hpp). */
+#define SIGKILL 9
+#define SIGSEGV 11
+#define SIGTERM 15
+#define SIGCHLD 17
+#define SIGSTOP 19
+#define NSIG 32
+
+/* Errno values (same as kernel/include/errno_defs.hpp). Wrappers return the
+ * raw negative value, not -1 with errno set. */
+#define EPERM 1
+#define ENOENT 2
+#define ESRCH 3
+#define EBADF 9
+#define ECHILD 10
+#define EFAULT 14
+#define EINVAL 22
+#define ENOSYS 38
 
 /* mmap */
 #define PROT_READ 0x1
@@ -113,6 +142,11 @@ static inline int waitpid(int pid, int* status, int options)
 {
     return dit_syscall(SYS_waitpid, (unsigned int)pid, (unsigned int)status,
                        (unsigned int)options, 0, 0);
+}
+
+static inline int kill(int pid, int sig)
+{
+    return dit_syscall(SYS_kill, (unsigned int)pid, (unsigned int)sig, 0, 0, 0);
 }
 
 /* Replaces the running program; only returns if it failed. */

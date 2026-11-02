@@ -2,9 +2,12 @@
 #define KERNEL_SCHED_TASK_HPP
 
 #include <stdint.h>
+#include "sched/signal.hpp"
 
 namespace sched
 {
+
+struct WaitQueue;
 
 /** Saved context for context switch (order must match context.asm) */
 struct Context
@@ -40,6 +43,11 @@ struct Task
     uint32_t ppid;
     int32_t exit_code;
     int fd_table; /* index into the per-process fd table pool, -1 if none */
+    /** Signals whose default action is Term/Core, waiting to be delivered at
+     *  the next syscall exit or before the task blocks. */
+    sigset_t pending_signals;
+    /** Wait queue the task is blocked on, or nullptr while runnable. */
+    WaitQueue* wait_queue;
 };
 
 } // namespace sched

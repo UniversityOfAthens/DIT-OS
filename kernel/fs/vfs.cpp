@@ -333,15 +333,11 @@ int vfs_readdir(file* f, dirent* de)
     return f->f_ops->readdir(f, de);
 }
 
-int vfs_stat(const char* path, struct stat* st)
+void vfs_stat_inode(const inode* ino, struct stat* st)
 {
-    if (!path || !st)
-        return -EINVAL;
-    dentry* d = nullptr;
-    inode* ino = vfs_path_lookup(path, &d);
-    if (!ino || !d)
-        return -ENOENT;
-
+    // The result is copied to user space: zero it so no stale kernel data
+    // leaks through a field (or padding) that is not set below.
+    *st = {};
     st->st_ino = ino->i_ino;
     st->st_mode = ino->i_mode;
     st->st_nlink = ino->i_nlink;
@@ -355,7 +351,18 @@ int vfs_stat(const char* path, struct stat* st)
     st->st_dev = 0;
     st->st_rdev = 0;
     st->st_blksize = 0;
+}
 
+int vfs_stat(const char* path, struct stat* st)
+{
+    if (!path || !st)
+        return -EINVAL;
+    dentry* d = nullptr;
+    inode* ino = vfs_path_lookup(path, &d);
+    if (!ino || !d)
+        return -ENOENT;
+
+    vfs_stat_inode(ino, st);
     dentry_put(d);
     return 0;
 }

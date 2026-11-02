@@ -7,6 +7,7 @@
 #include "syscall/syscall_trace.hpp"
 #include "syscall/fd.hpp"
 #include "syscall/tty.hpp"
+#include "sched/signal.hpp"
 #include <stdint.h>
 
 namespace syscall
@@ -24,8 +25,11 @@ extern SyscallResult sys_mmap_impl(const SyscallArgs* args);
 extern SyscallResult sys_munmap_impl(const SyscallArgs* args);
 extern SyscallResult sys_open_impl(const SyscallArgs* args);
 extern SyscallResult sys_close_impl(const SyscallArgs* args);
+extern SyscallResult sys_stat_impl(const SyscallArgs* args);
+extern SyscallResult sys_fstat_impl(const SyscallArgs* args);
 extern SyscallResult sys_getdents_impl(const SyscallArgs* args);
 extern SyscallResult sys_ioctl_impl(const SyscallArgs* args);
+extern SyscallResult sys_kill_impl(const SyscallArgs* args);
 
 void init()
 {
@@ -36,6 +40,7 @@ void init()
     syscall_set_handler(SYS_exit, sys_exit_impl);
     syscall_set_handler(SYS_getpid, sys_getpid_impl);
     syscall_set_handler(SYS_fork, sys_fork_impl);
+    syscall_set_handler(SYS_kill, sys_kill_impl);
     syscall_set_handler(SYS_waitpid, sys_waitpid_impl);
     syscall_set_handler(SYS_execve, sys_execve_impl);
     syscall_set_handler(SYS_brk, sys_brk_impl);
@@ -43,6 +48,8 @@ void init()
     syscall_set_handler(SYS_munmap, sys_munmap_impl);
     syscall_set_handler(SYS_open, sys_open_impl);
     syscall_set_handler(SYS_close, sys_close_impl);
+    syscall_set_handler(SYS_stat, sys_stat_impl);
+    syscall_set_handler(SYS_fstat, sys_fstat_impl);
     syscall_set_handler(SYS_getdents, sys_getdents_impl);
     syscall_set_handler(SYS_ioctl, sys_ioctl_impl);
 }
@@ -78,6 +85,9 @@ extern "C" void syscall_entry(uint32_t* regs)
     SyscallResult r = handle(num, &args);
     regs[7] = (uint32_t)r;
     s_syscall_regs = nullptr;
+    /* Fatal signals are delivered on the way back to user mode; a task that
+     * killed itself does not get to run another instruction. */
+    sched::signal_check_current();
 }
 
 } // namespace syscall

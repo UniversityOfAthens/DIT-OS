@@ -32,6 +32,8 @@ int64_t vfs_lseek(file* f, int64_t offset, int whence);
 inode* vfs_path_lookup(const char* path, dentry** out_dentry);
 /** Stat by path */
 int vfs_stat(const char* path, struct stat* st);
+/** Fill @st from @ino (zeroes every field first); @ino and @st non-null */
+void vfs_stat_inode(const inode* ino, struct stat* st);
 
 /** Read one directory entry (directories only); see FileOps::readdir */
 int vfs_readdir(file* f, dirent* de);

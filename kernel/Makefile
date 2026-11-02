@@ -47,13 +47,16 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(SYSCALL_DIR)/fd.cpp \
 	$(SYSCALL_DIR)/sys_read.cpp $(SYSCALL_DIR)/sys_write.cpp $(SYSCALL_DIR)/sys_exit.cpp \
 	$(SYSCALL_DIR)/sys_open.cpp $(SYSCALL_DIR)/sys_close.cpp $(SYSCALL_DIR)/sys_getdents.cpp \
+	$(SYSCALL_DIR)/sys_stat.cpp \
 	$(SYSCALL_DIR)/sys_getpid.cpp $(SYSCALL_DIR)/sys_fork.cpp \
+	$(SYSCALL_DIR)/sys_kill.cpp \
 	$(SYSCALL_DIR)/sys_waitpid.cpp $(SYSCALL_DIR)/sys_execve.cpp $(SYSCALL_DIR)/sys_mem.cpp \
 	$(SYSCALL_DIR)/sys_ioctl.cpp $(SYSCALL_DIR)/tty.cpp \
 	$(SYSCALL_DIR)/syscall_wrappers.cpp \
 	$(FS_DIR)/vfs.cpp $(FS_DIR)/ramfs/ramfs.cpp $(FS_DIR)/ramfs/inode.cpp \
 	$(SCHED_DIR)/sched.cpp $(SCHED_DIR)/task.cpp $(SCHED_DIR)/idle.cpp $(SCHED_DIR)/init_task.cpp \
 	$(SCHED_DIR)/pid.cpp $(SCHED_DIR)/exit.cpp $(SCHED_DIR)/fork.cpp $(SCHED_DIR)/mutex.cpp \
+	$(SCHED_DIR)/signal.cpp \
 	$(CPU_DIR)/gdt.cpp $(CPU_DIR)/idt.cpp $(CPU_DIR)/tss.cpp $(CPU_DIR)/pic.cpp \
 	$(CPU_DIR)/msr.cpp $(CPU_DIR)/cpuid.cpp $(CPU_DIR)/control.cpp \
 	$(CPU_DIR)/apic.cpp $(CPU_DIR)/lapic.cpp $(CPU_DIR)/ioapic.cpp $(CPU_DIR)/smp.cpp \
@@ -80,6 +83,7 @@ USERLAND_SOURCES = \
 	../userland/include/syscall.h \
 	../userland/libc/include/stdio.h \
 	../userland/libc/include/stdlib.h \
+	../userland/libc/include/sys/stat.h \
 	../userland/libc/src/stdlib/malloc.c \
 	../userland/libc/src/stdlib/exit.c \
 	../userland/libc/src/stdio/printf.c

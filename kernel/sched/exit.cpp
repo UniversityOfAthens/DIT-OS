@@ -10,7 +10,7 @@
 namespace sched
 {
 
-void task_exit(int code)
+void task_exit(int status)
 {
     if (!current_task)
         for (;;)
@@ -20,7 +20,9 @@ void task_exit(int code)
     // context is never resumed to restore them.
     arch::irq_save();
     Task* prev = current_task;
-    prev->exit_code = code;
+    /* @status is already encoded for waitpid() (sched/wait.hpp). A task
+     * calling task_exit() is running, so it is not on a wait queue. */
+    prev->exit_code = status;
     prev->state = TaskState::Exited;
 
     /* Remove the exiting task from the run queue so it won't be scheduled

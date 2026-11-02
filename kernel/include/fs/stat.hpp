@@ -48,6 +48,11 @@ struct stat
     int64_t st_ctime;
 };
 
+/** Userland's struct stat (userland/libc/include/sys/stat.h) mirrors this
+ *  layout byte for byte. Both sides pin the size so ABI drift fails the
+ *  build instead of corrupting a user buffer at runtime. */
+static_assert(sizeof(stat) == 76, "struct stat is part of the syscall ABI");
+
 } // namespace fs
 
 #endif

@@ -40,11 +40,19 @@ struct WaitQueue
 
 /** Block the current task on @wq until wake_up_all(@wq). Must be called with
  * interrupts disabled (so the wakeup cannot be missed between checking the
- * condition and sleeping); returns with interrupts still disabled. */
+ * condition and sleeping); returns with interrupts still disabled. A pending
+ * fatal signal terminates the task instead of blocking. */
 void sleep_on(WaitQueue* wq);
 
 /** Make every task sleeping on @wq runnable. Safe to call from an IRQ. */
 void wake_up_all(WaitQueue* wq);
+
+/** Find a task by pid (zombies included), or nullptr. */
+Task* task_find(int32_t pid);
+
+/** Remove @t from its wait queue and make it runnable. Does nothing unless
+ *  @t is blocked. Must be called with interrupts disabled. */
+void task_wake(Task* t);
 
 /** The wait queue parents block on in wait_child(); woken when a child exits. */
 WaitQueue& child_wait_queue();
@@ -83,8 +91,9 @@ uint32_t pid_alloc();
 /** Current running task pid (0 if no current task) */
 uint32_t current_pid();
 
-/** Terminate the current task and schedule the next one */
-void task_exit(int code);
+/** Terminate the current task with the wait status @status built by
+ *  sched/wait.hpp's make_wait_status_*() helpers. Never returns. */
+void task_exit(int status);
 
 /** Wait for a child of the current task to exit and collect it.
  * @pid is a pid, or -1 for any child. @status receives the exit code.

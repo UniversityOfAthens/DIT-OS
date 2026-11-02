@@ -4,6 +4,28 @@
 
 #include <stdint.h>
 
+/* cppcheck's unix32 platform predefines some POSIX signal names as numbers,
+ * which would expand inside the enum below. The kernel is freestanding and
+ * has no system <signal.h>; these enum values are the canonical DIT-OS ABI. */
+#ifdef SIGINT
+#undef SIGINT
+#endif
+#ifdef SIGABRT
+#undef SIGABRT
+#endif
+#ifdef SIGFPE
+#undef SIGFPE
+#endif
+#ifdef SIGKILL
+#undef SIGKILL
+#endif
+#ifdef SIGSEGV
+#undef SIGSEGV
+#endif
+#ifdef SIGTERM
+#undef SIGTERM
+#endif
+
 namespace sched
 {
 
@@ -94,6 +116,19 @@ enum class SignalDefault : uint8_t
     Stop,
     Cont,
 };
+
+/** Default action for @sig (POSIX subset). @sig must be in 1..NSIG-1. */
+SignalDefault signal_default_action(int sig);
+
+/** Send @sig to the task @pid using its default action. Only the current task
+ *  and its direct children may be signalled. Returns 0, or -EINVAL (bad pid
+ *  or signal), -ESRCH (no such task), -EPERM (not self or a direct child),
+ *  -ENOSYS (stop signals: job control is not implemented). */
+int signal_send_pid(int32_t pid, int sig);
+
+/** Terminate the current task if a fatal signal is pending. Called at syscall
+ *  exit and before blocking; never returns when a signal is delivered. */
+void signal_check_current();
 
 } // namespace sched
 

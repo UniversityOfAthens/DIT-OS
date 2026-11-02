@@ -20,6 +20,7 @@ readonly DISK="${1:-$ROOT/bootloader/build/disk.img}"
 readonly TIMEOUT="${QEMU_TEST_TIMEOUT:-30}"
 readonly STRESS="${QEMU_TEST_STRESS:-100}"
 readonly HELLO_TEXT="Hello from DIT-OS ramfs."
+readonly HELLO_BYTES=$(( ${#HELLO_TEXT} + 1 ))
 readonly POLL_INTERVAL=0.05
 
 WORK_DIR="$(mktemp -d)"
@@ -101,10 +102,21 @@ main() {
     expect_after 0 "Boot DIT-OS"
     pass
 
-    STEP="userland self-test (brk, mmap, fork, execve, waitpid)"
+    STEP="userland self-test: stat/fstat"
     # The init program exercises the process model before starting the shell,
-    # so it only runs after the boot menu is dismissed.
-    run_expect '\r' '^\[selftest\] ok$'
+    # so it only runs after the boot menu is dismissed. The stat line reports
+    # the size of the seeded hello.txt, which stat() reads back from ramfs.
+    run_expect '\r' "^\\[selftest\\] stat: /hello\\.txt ${HELLO_BYTES} bytes\$"
+    pass
+
+    STEP="userland self-test: kill"
+    # A child kills itself with SIGKILL; waitpid() must decode the signal
+    # status (9) through the POSIX encoding.
+    expect_after 0 '^\[selftest\] kill: SIGKILL status 9$'
+    pass
+
+    STEP="userland self-test (brk, mmap, fork, execve, waitpid, stat, kill, security)"
+    expect_after 0 '^\[selftest\] ok$'
     pass
 
     STEP="kernel reaches shell"

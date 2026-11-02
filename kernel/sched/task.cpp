@@ -2,6 +2,7 @@
 
 #include "sched/sched.hpp"
 #include "sched/task.hpp"
+#include "sched/wait.hpp"
 #include "arch/x86_64/irqflags.hpp"
 #include "mm/kmalloc.hpp"
 #include "mm/vmm.hpp"
@@ -31,7 +32,7 @@ constexpr uint32_t KERNEL_STACK_BYTES = KERNEL_STACK_WORDS * sizeof(uint32_t);
 // A task's entry function returns here instead of into garbage.
 static void task_return_trap()
 {
-    task_exit(0);
+    task_exit(make_wait_status_exit(0));
 }
 
 bool task_init(Task* t, void (*entry)(), uint32_t* stack, uint32_t stack_size,
@@ -68,6 +69,8 @@ bool task_init(Task* t, void (*entry)(), uint32_t* stack, uint32_t stack_size,
     t->ppid = 0;
     t->exit_code = 0;
     t->fd_table = -1;
+    t->pending_signals = 0;
+    t->wait_queue = nullptr;
     return true;
 }
 

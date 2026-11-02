@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 // Kernel version
-const char* kernel_version = "DIT-OS 0.0.9-alpha";
+const char* kernel_version = "DIT-OS 0.1.0-alpha";
 
 // Simple VGA text buffer
 volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;
@@ -130,6 +130,8 @@ void seed_file(const char* name, const void* data, uint32_t size);
 #include "graphics/vga.hpp"
 #include "mm/vmm.hpp"
 #include "sched/sched.hpp"
+#include "sched/signal.hpp"
+#include "sched/wait.hpp"
 
 extern "C" uint32_t kernel_stack_top[];
 /* Second user program, published into the root filesystem for execve(). */
@@ -307,7 +309,7 @@ extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
                          regs[arch::FRAME_EBX], regs[arch::FRAME_ECX],
                          regs[arch::FRAME_EDX], regs[arch::FRAME_ESI],
                          regs[arch::FRAME_EDI], task ? task->pid : 0);
-            sched::task_exit(-EFAULT);
+            sched::task_exit(sched::make_wait_status_signal(sched::SIGSEGV));
         }
         // printk/panicf write to serial and VGA, so the report is visible
         // with -display none too.

@@ -2,6 +2,7 @@
 
 #include "sched/sched.hpp"
 #include "sched/task.hpp"
+#include "sched/signal.hpp"
 #include "arch/x86_64/irqflags.hpp"
 #include "arch/x86_64/paging.hpp"
 #include "arch/x86_64/tss.hpp"
@@ -55,6 +56,43 @@ static void task_unregister(Task* t)
         }
         link = &(*link)->all_next;
     }
+}
+
+Task* task_find(int32_t pid)
+{
+    if (pid <= 0)
+        return nullptr;
+    uint32_t wanted = static_cast<uint32_t>(pid);
+    for (Task* t = s_all_tasks; t; t = t->all_next)
+    {
+        if (t->pid == wanted)
+            return t;
+    }
+    return nullptr;
+}
+
+/* Unlink @t from the wait queue recorded on the task. */
+static void wait_queue_remove(Task* t)
+{
+    WaitQueue* wq = t->wait_queue;
+    if (!wq)
+        return;
+    Task** link = &wq->head;
+    while (*link && *link != t)
+        link = &(*link)->next;
+    if (*link == t)
+        *link = t->next;
+    t->wait_queue = nullptr;
+}
+
+void task_wake(Task* t)
+{
+    if (!t || t == idle_task || t->state != TaskState::Blocked)
+        return;
+    wait_queue_remove(t);
+    t->next = nullptr;
+    t->state = TaskState::Runnable;
+    run_queue_add(t);
 }
 
 /* The exited child of @parent matching @pid (-1 for any). */
@@ -266,8 +304,11 @@ void sleep_on(WaitQueue* wq)
     Task* t = current_task;
     if (!t || t == idle_task)
         core::panic("sleep_on: no task context to block");
+    /* A fatal signal must not be lost to an indefinite sleep. */
+    signal_check_current();
     t->state = TaskState::Blocked;
     run_queue_remove(t);
+    t->wait_queue = wq;
     t->next = wq->head;
     wq->head = t;
     switch_to_next();
@@ -281,6 +322,7 @@ void wake_up_all(WaitQueue* wq)
     while (t)
     {
         Task* next = t->next;
+        t->wait_queue = nullptr;
         t->state = TaskState::Runnable;
         run_queue_add(t);
         t = next;
