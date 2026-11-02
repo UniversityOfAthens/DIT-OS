@@ -66,8 +66,7 @@ Verify with `grep` before relying on any API; do not invent one.
   `stage1.asm`, `stage2.asm`, `common/constants.inc` and
   `bootloader/include/boot.hpp` in sync.
 - **Dead code**: `bootloader/src/uefi/` and the C++ files in
-  `bootloader/src/stage2/` are not built (`ISSUES.md` H18). `boot/grub/` is
-  only used by the ISO tooling.
+  `bootloader/src/stage2/` are not built (`ISSUES.md` H18).
 - **Branches**: `main` (stable) and `develop` (integration). Not `dev`.
 - **`tests/` is empty.** Integration testing is `scripts/qemu-test.sh` plus the
   userland self-test in `userland/bin/init.c`.

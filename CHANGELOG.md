@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `boot/grub/` (config, `grubenv` and the DIT PF2 theme): the custom
+  stage1 → stage2 → loader path is the only boot path. A visual boot menu
+  with theme support is planned on our own stack (see `TODO.md`).
+
 ## [0.0.10-alpha] - 2026-11-02
 
 **Version bump:** patch — two syscalls (`stat`/`fstat`, `kill`), POSIX

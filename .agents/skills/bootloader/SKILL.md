@@ -40,8 +40,8 @@ description: The DIT-OS custom boot chain (stage1 MBR, stage2 menu, loader, kern
 - **Not built (dead code):** the C++ files in `src/stage2/`, `src/uefi/`
   (`ISSUES.md` H18). Do not "fix" them as part of other work, and do not
   break `make -C bootloader all` by wiring them in half-way.
-- `boot/grub/` and `tools/build-iso/` are for the optional ISO path, not the
-  main boot.
+- `tools/build-iso/` is for the optional ISO path, not the main boot. There
+  is no GRUB: `stage1` → `stage2` → `loader` is the only boot path.
 - From `src/stage2/*.cpp`, includes are `#include "../../include/foo.hpp"`.
 
 ## Make targets

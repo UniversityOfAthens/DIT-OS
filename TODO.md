@@ -127,11 +127,22 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 ### UEFI bootloader
 - [x] `bootloader/src/uefi/uefi.asm` — STUB (section count mismatch, raw sizes = 0)
 
-### GRUB boot files (alternative path)
-- [x] `boot/grub/grub.cfg`
-- [x] `boot/grub/grubenv`
-- [x] `boot/grub/themes/dit/theme.txt`
-- [x] `boot/grub/themes/dit/fonts/` (PF2 font files)
+### Visual bootloader (custom, no GRUB)
+
+Plan: make our own graphical boot experience. The stage1 → stage2 → loader
+path stays the only boot path. **Bump**: minor (new user-visible feature);
+natural home is with or after the `0.1.0-alpha` usable milestone.
+
+- [ ] VBE mode picker with a fallback chain (native → 1024x768 → 640x480 → VGA text)
+- [ ] Theme file (extend `bootloader/config/boot.cfg`): background, colours,
+      logo, font, timeout, default entry
+- [ ] Per-entry icons, kernel path, cmdline and theme override
+- [ ] Countdown bar any key interrupts; arrows/Enter/Esc/number keys; serial
+      VT100 parity with the current text menu
+- [ ] Splash screen + boot progress, mouse pointer (stage2 has `mouse.asm`)
+- [ ] Recovery / safe-mode entry that passes a flag on the kernel cmdline
+- [ ] Strict theme parsing: reject a malformed config loudly instead of
+      half-drawing (config parsing is in the CVE catalog)
 
 ---
 
@@ -347,7 +358,6 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 ### Nix flake
 - [x] `flake.nix` + `flake.lock`
 - [x] Add `i686-elf-gcc` cross-compiler package (`devShells.cross`)
-- [ ] Add grub package (xorriso, mtools, clang-tools already added)
 - [ ] Add formatter and check outputs
 
 ### Scripts
@@ -616,7 +626,6 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [x] Integration tests (QEMU smoke tests) — `scripts/qemu-test.sh`
 - [ ] Coverage reporting (gcov)
 - [ ] Kconfig / menuconfig build configuration
-- [ ] ISOLINUX/GRUB/Limine boot support
 - [ ] Bootable ISO generation
 - [ ] initramfs / initrd support
 - [ ] Package manager for userland

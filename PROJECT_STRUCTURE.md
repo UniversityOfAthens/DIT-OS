@@ -40,14 +40,6 @@ DIT-OS/
 ├── flake.lock
 ├── flake.nix                # Nix dev shells: default (host GCC), .#cross (i686-elf)
 │
-├── boot/                    # GRUB boot files (alternative boot path)
-│   └── grub/
-│       ├── grub.cfg
-│       ├── grubenv
-│       └── themes/dit/
-│           ├── theme.txt
-│           └── fonts/       # Ubuntu font PF2 files
-│
 ├── bootloader/
 │   ├── Makefile             # Top-level: builds disk.img, runs QEMU
 │   ├── build/               # Build output (disk.img, stage*.bin, kernel.bin, kernel.img)
@@ -114,9 +106,6 @@ DIT-OS/
 │   │   │   └── Makefile
 │   │   └── uefi/
 │   │       └── uefi.asm     # UEFI PE bootloader (STUB, section count wrong)
-│   └── themes/dit/
-│       ├── theme.txt
-│       └── fonts/           # PF2 font files
 │
 ├── config/                  # No Kconfig system yet
 │   └── cppcheck-suppressions.txt  # cppcheck false positives + tracked baseline
