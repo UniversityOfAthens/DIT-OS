@@ -8,21 +8,22 @@
 
 Semantic Versioning, interpreted for the pre-1.0 alpha series:
 
-- **minor** — a new syscall or user-visible feature (`stat`/`fstat`, `kill`,
-  signals, `pipe`, timers).
-- **patch** — a bug fix or hardening of existing behaviour (M36, M39, M40,
-  M37, H9/H10).
+- **patch** — a bug fix, a hardening change, or a small increment on the
+  existing tier (`stat`/`fstat` + `kill`, M36, M39, M40, M37, H9/H10).
+- **minor** — a tier a user can actually feel: several syscalls *and* the
+  userland pieces that use them. `0.1.0` is the first usable release
+  (signal handlers, `pipe`, `dup2`, `errno.h`, job control), not merely the
+  next batch of syscalls.
 - **major** — the 1.0.0 milestone: stable ABI, or a breaking disk-format /
   syscall change. Before 1.0, breaking changes still use a minor bump.
 
 | Logical step | Bump | Target version | Status |
 |--------------|------|----------------|--------|
-| `stat`/`fstat`, `kill` + default signal delivery, cppcheck/agent tooling | minor | `0.1.0-alpha` | released 2026-11-02 |
-| M40 orphan reparenting + init reaper, M36 PID 1 exit panic | patch | `0.1.1-alpha` | next |
-| M39 COW-safe `copy_to_user`, M37 string bounds, H9/H10 boot constants | patch | `0.1.2-alpha` | planned |
-| Full POSIX signals (`sigaction`, masks, handlers, `SIGCHLD`, job control) | minor | `0.2.0-alpha` | planned |
-| `pipe()`/FIFO + userland `errno.h` | minor | `0.3.0-alpha` | planned |
-| POSIX timers + shared memory | minor | `0.4.0-alpha` | planned |
+| `stat`/`fstat`, `kill` + default signal delivery, cppcheck/agent tooling | patch | `0.0.10-alpha` | released 2026-11-02 |
+| M40 orphan reparenting + init reaper, M36 PID 1 exit panic | patch | `0.0.11-alpha` | implemented (unreleased) |
+| M39 COW-safe `copy_to_user`, M37 string bounds, M41 orphan reaping while blocked, H9/H10 boot constants | patch | `0.0.12-alpha` | planned |
+| Full POSIX signals (handlers, masks, `sigaction`, `SIGCHLD`, job control), `pipe()`/`dup2()` + userland `errno.h`, `chdir`/`getcwd` (**first usable release**) | minor | `0.1.0-alpha` | planned |
+| POSIX timers + shared memory | minor | `0.2.0-alpha` | planned |
 | Stable ABI / breaking disk-format or syscall changes | major | `1.0.0` | future |
 
 Each individual fix also carries its own `**Bump**` row in `ISSUES.md`.
@@ -248,6 +249,8 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] Implement waitpid() (with `WNOHANG`)
 - [ ] Export Mutex struct to a header
 - [x] Implement signal handling (default actions, cooperative delivery)
+- [x] Reparent children to PID 1 when a task exits (M40)
+- [x] Panic when PID 1 exits instead of idling forever (M36)
 
 ### Syscalls
 - [x] `kernel/syscall/syscall.cpp` — Dispatcher

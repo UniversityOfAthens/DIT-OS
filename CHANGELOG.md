@@ -7,10 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0-alpha] - 2026-11-02
+## [0.0.10-alpha] - 2026-11-02
 
-**Version bump:** minor — two new syscalls (`stat`/`fstat`, `kill`), POSIX
-default-action signal delivery, and the cppcheck/agent tooling.
+**Version bump:** patch — two syscalls (`stat`/`fstat`, `kill`), POSIX
+default-action signal delivery and the cppcheck/agent tooling on top of the
+0.0.9 process model. `0.1.0-alpha` is reserved for the first genuinely
+usable release (signal handlers, `pipe`, `dup2`, `errno.h`, job control).
 
 ### Added
 

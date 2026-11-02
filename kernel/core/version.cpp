@@ -5,7 +5,7 @@
 namespace core
 {
 
-static const char* const s_version = "DIT-OS 0.1.0-alpha";
+static const char* const s_version = "DIT-OS 0.0.10-alpha";
 
 const char* version_string()
 {
@@ -17,11 +17,11 @@ unsigned int version_major()
 }
 unsigned int version_minor()
 {
-    return 1;
+    return 0;
 }
 unsigned int version_patch()
 {
-    return 0;
+    return 10;
 }
 
 } // namespace core
