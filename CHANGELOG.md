@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha] - 2026-11-02
+
+**Version bump:** minor — two new syscalls (`stat`/`fstat`, `kill`), POSIX
+default-action signal delivery, and the cppcheck/agent tooling.
+
+### Added
+
+- `kill()` (`SYS_kill` 14) with POSIX default-action signal delivery: only
+  the caller and its direct children may be signalled; fatal signals
+  (`Term`/`Core`) set a pending bit and terminate the target at its next
+  syscall exit or before it blocks, ignored signals (`SIGCHLD`, `SIGURG`,
+  `SIGWINCH`) are no-ops, and stop signals return `-ENOSYS` until job
+  control exists. Covered by `test_kill`, `test_fault_signal`,
+  `test_sec_kill_invalid` and `test_sec_kill_parent`.
+- `stat()` and `fstat()` (`SYS_stat` 4, `SYS_fstat` 5):
+  `fs::vfs_stat_inode()` shares the field mapping, both handlers validate
+  user ranges with `mm::user_range_ok` and zero the result struct, and
+  `userland/libc/include/sys/stat.h` provides `struct stat` plus
+  `S_IF*`/`S_IS*`. Covered by the init self-test, including
+  `test_sec_stat_*` probes for NULL, kernel and wrapping pointers, invalid
+  descriptors, and uninitialised bytes in the returned struct.
+- `scripts/cppcheck.sh` static-analysis gate (kernel C++17, userland C11)
+  with `config/cppcheck-suppressions.txt`, run by `lint.yml`. Pre-existing
+  findings are baselined and tracked as `ISSUES.md` M37, L20 and L21.
+- Agent skills in `.agents/skills/` (also linked as `.claude/skills/`),
+  including a mandatory security audit with a known-CVE regression catalog
+  and a handoff-file protocol.
+
+### Changed
+
+- Exit statuses now use the POSIX wait encoding from `sched/wait.hpp`:
+  `exit()` stores `(code & 0xff) << 8`, signal deaths store the signal
+  number, and user faults report `SIGSEGV`, so `WIFEXITED`/`WEXITSTATUS` and
+  `WIFSIGNALED`/`WTERMSIG` work in userland.
+- `AGENTS.md` rewritten to match the code (namespaces, real kernel APIs,
+  freestanding userland, `develop` branch, current boot milestones) and to
+  define the definition of done: clean build, `qemu-test.sh`, cppcheck and
+  a written security audit.
+- `.cursor/rules/` reduced to thin glob-scoped pointers to the skills.
+- Pull request template asks for test output and the security-audit report.
+
+### Removed
+
+- `.ai/skills/`, replaced by `.agents/skills/`.
+
 ## [0.0.9-alpha] - 2026-09-26
 
 Ring 3, demand paging and the POSIX process model: `fork`, `execve`, `waitpid`

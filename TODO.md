@@ -4,6 +4,31 @@
 
 ---
 
+## VERSIONING PLAN
+
+Semantic Versioning, interpreted for the pre-1.0 alpha series:
+
+- **minor** — a new syscall or user-visible feature (`stat`/`fstat`, `kill`,
+  signals, `pipe`, timers).
+- **patch** — a bug fix or hardening of existing behaviour (M36, M39, M40,
+  M37, H9/H10).
+- **major** — the 1.0.0 milestone: stable ABI, or a breaking disk-format /
+  syscall change. Before 1.0, breaking changes still use a minor bump.
+
+| Logical step | Bump | Target version | Status |
+|--------------|------|----------------|--------|
+| `stat`/`fstat`, `kill` + default signal delivery, cppcheck/agent tooling | minor | `0.1.0-alpha` | released 2026-11-02 |
+| M40 orphan reparenting + init reaper, M36 PID 1 exit panic | patch | `0.1.1-alpha` | next |
+| M39 COW-safe `copy_to_user`, M37 string bounds, H9/H10 boot constants | patch | `0.1.2-alpha` | planned |
+| Full POSIX signals (`sigaction`, masks, handlers, `SIGCHLD`, job control) | minor | `0.2.0-alpha` | planned |
+| `pipe()`/FIFO + userland `errno.h` | minor | `0.3.0-alpha` | planned |
+| POSIX timers + shared memory | minor | `0.4.0-alpha` | planned |
+| Stable ABI / breaking disk-format or syscall changes | major | `1.0.0` | future |
+
+Each individual fix also carries its own `**Bump**` row in `ISSUES.md`.
+
+---
+
 ## CRITICAL BUGS (Fix these first)
 
 See `ISSUES.md` for full details. These are the blockers:
@@ -222,7 +247,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] Implement execve() (static ELF32, `syscall/sys_execve.cpp`)
 - [x] Implement waitpid() (with `WNOHANG`)
 - [ ] Export Mutex struct to a header
-- [ ] Implement signal handling
+- [x] Implement signal handling (default actions, cooperative delivery)
 
 ### Syscalls
 - [x] `kernel/syscall/syscall.cpp` — Dispatcher
@@ -240,7 +265,8 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `kernel/syscall/sys_getdents.cpp`
 - [x] `kernel/syscall/sys_fork.cpp` — STUB (returns -ENOSYS)
 - [x] Implement: execve, waitpid, mmap, munmap, brk
-- [ ] Implement: stat, fstat, kill
+- [x] Implement: stat, fstat
+- [x] Implement: kill
 - [x] Add `copy_from_user` / `copy_to_user` to all syscall handlers
 
 ### Kernel include headers
@@ -273,7 +299,8 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [x] `userland/libc/include/stdio.h`
 - [x] `userland/libc/include/stdlib.h`
 - [ ] Add `errno.h` with `errno` variable
-- [ ] Add `string.h`, `unistd.h`, `fcntl.h`, `sys/stat.h`, `sys/types.h`
+- [x] Add `sys/stat.h` (`struct stat`, `stat()`/`fstat()`)
+- [ ] Add `string.h`, `unistd.h`, `fcntl.h`, `sys/types.h`
 
 ### libc sources
 - [x] `userland/libc/src/stdio/printf.c`
@@ -351,7 +378,7 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [ ] `.vscode/launch.json`
 
 ### Config system
-- [ ] All files in `config/` — directory is empty, no Kconfig system exists
+- [ ] Kconfig system (`config/` currently holds only `cppcheck-suppressions.txt`)
 
 ### Tests
 - [ ] All files in `tests/` — directory is empty, no tests exist
@@ -379,7 +406,7 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 
 - **Bootloader**: Kernel truncation, FAT32 inverted branch, E820 uninitialized EBX, disk.asm retry counter, PNG zlib stub, UEFI PE header broken
 - **Kernel**: Task stack init order wrong, duplicate outb(), UB in interrupt dispatch, kernel_stack_top as value not address, heap_free no-op, Mutex not exported, conflicting serial_init declarations
-- **Syscall**: No user pointer validation, missing ENOSYS, hardcoded errno values, 10 syscalls unimplemented
+- **Syscall**: every syscall in `syscall_numbers.hpp` has a handler; signals are default-action only (handlers and job control are planned). User pointers are validated through `mm::copy_*_user` / `mm::user_range_ok`
 - **Build system**: CMake uses host compiler, flake.nix missing cross-compiler, .clang-format wrong brace style, shell scripts missing set -euo pipefail, missing scripts referenced in docs
 - **Userland**: No errno.h, error returns silently swallowed, _exit() calls inline exit(), crt0.asm no BSS clear
 
@@ -401,8 +428,8 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [x] Implement execve() with ELF loader for user binaries (static ELF32 only)
 - [x] Implement waitpid() for process lifecycle
 - [x] Implement brk()/mmap()/munmap() for heap management (anonymous memory only)
-- [ ] Implement stat()/fstat() for file metadata
-- [ ] Implement kill() and signal delivery
+- [x] Implement stat()/fstat() for file metadata
+- [x] Implement kill() and signal delivery (default actions, cooperative)
 - [x] Implement ioctl() for device control (fds 0-2: console modes and power off)
 - [ ] Implement pipe() and FIFO for inter-process communication
 - [ ] Full POSIX signal handling (sigaction, sigpending, sigsuspend)

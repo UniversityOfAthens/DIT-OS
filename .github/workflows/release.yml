@@ -68,6 +68,6 @@ jobs:
         with:
           name: DIT-OS ${{ github.ref_name }}
           body_path: release-notes.md
-          # 0.0.x-alpha style tags are pre-releases
+          # 0.x-alpha style tags are pre-releases
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: release/*

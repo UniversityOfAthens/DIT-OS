@@ -10,11 +10,13 @@ current boot path.
 
 ```
 DIT-OS/
-├── .ai/
-│   └── skills/            # AI agent skill definitions (build, coding, testing, etc.)
+├── .agents/
+│   └── skills/<name>/SKILL.md  # Agent skills (security-audit, testing, kernel-cpp, ...)
+├── .claude/
+│   └── skills -> ../.agents/skills  # Same skills for Claude Code
 ├── .clang-format           # Clang-format config (LLVM style — does NOT match C++ guidelines)
 ├── .cursor/
-│   └── rules/              # Cursor IDE rules for each subsystem
+│   └── rules/              # Thin glob-scoped pointers to .agents/skills
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug_report.md
@@ -116,7 +118,8 @@ DIT-OS/
 │       ├── theme.txt
 │       └── fonts/           # PF2 font files
 │
-├── config/                  # EMPTY — no Kconfig system yet
+├── config/                  # No Kconfig system yet
+│   └── cppcheck-suppressions.txt  # cppcheck false positives + tracked baseline
 │
 ├── docs/                    # EMPTY — no documentation yet
 │
@@ -238,15 +241,16 @@ DIT-OS/
 │   │       └── inode.cpp
 │   │
 │   ├── sched/                   # Scheduler
-│   │   ├── sched.cpp            #   Round-robin scheduler
-│   │   ├── task.cpp             #   Task creation (STACK INIT ORDER WRONG)
+│   │   ├── sched.cpp            #   Round-robin scheduler, wait queues
+│   │   ├── task.cpp             #   Task creation and kernel stacks
 │   │   ├── context.asm          #   Context switch
 │   │   ├── pid.cpp              #   PID allocation
 │   │   ├── idle.cpp             #   Idle task
 │   │   ├── init_task.cpp        #   Init task creator
 │   │   ├── shell.cpp            #   Kernel serial shell (bootstrap)
-│   │   ├── fork.cpp             #   FORK STUB (returns -ENOSYS)
+│   │   ├── fork.cpp             #   fork(): copy-on-write clone
 │   │   ├── exit.cpp             #   Task exit
+│   │   ├── signal.cpp           #   Signal defaults and delivery
 │   │   └── mutex.cpp            #   Mutex (struct not exported — dead code)
 │   │
 │   ├── syscall/                 # System calls
@@ -260,10 +264,12 @@ DIT-OS/
 │   │   ├── sys_write.cpp        #   write()
 │   │   ├── sys_open.cpp         #   open()
 │   │   ├── sys_close.cpp        #   close()
+│   │   ├── sys_stat.cpp         #   stat(), fstat()
 │   │   ├── sys_exit.cpp         #   exit()
 │   │   ├── sys_getpid.cpp       #   getpid()
 │   │   ├── sys_getdents.cpp     #   getdents()
-│   │   └── sys_fork.cpp         #   fork() stub returns -ENOSYS
+│   │   ├── sys_kill.cpp         #   kill()
+│   │   └── sys_fork.cpp         #   fork() (copy-on-write)
 │   │
 │   ├── mm/                      # EMPTY — MM is in arch/x86_64/mm/
 │   ├── lib/                     # EMPTY
@@ -272,6 +278,7 @@ DIT-OS/
 │
 ├── scripts/
 │   ├── build.sh                 # Build kernel + bootloader + disk image
+│   ├── cppcheck.sh              # Static-analysis gate (used by CI)
 │   ├── create-disk.sh           # Create floppy disk image (dd)
 │   ├── run-qemu.sh              # Run QEMU (serial stdio, 32MB)
 │   └── qemu-test.sh             # QEMU integration test (used by CI)

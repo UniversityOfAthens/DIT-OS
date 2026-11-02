@@ -37,27 +37,12 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ## HIGH — Will cause build failures, incorrect behavior, or significant confusion
 
-### H3. Missing referenced scripts
-
-| Field | Value |
-|-------|-------|
-| **Scripts** | `scripts/check-toolchain.sh`, `scripts/run-qemu-debug.sh`, `scripts/gdb.sh` |
-| **Issue** | AGENTS.md no longer references them, but `.cursor/rules/linker-and-build.mdc` and `.cursor/rules/testing.mdc` still do. The debug workflow exists as `make -C bootloader debug`. |
-| **Fix** | Create the scripts or update the Cursor rules to point at the Makefile targets. |
-
-### H4. `config/` directory completely empty
-
-| Field | Value |
-|-------|-------|
-| **Directory** | `config/` |
-| **Issue** | `PROJECT_STRUCTURE.md` defines 15+ expected files (Kconfig, kernel.config, Makefile.common, arch Kconfigs, etc.) but **none exist**. No configuration system exists — all kernel features are unconditionally compiled with hardcoded defaults. |
-| **Fix** | Implement the Kconfig-based configuration system or remove references from documentation. |
-
 ### H9. Stage2 wrong constants in `constants.inc`
 
 | Field | Value |
 |-------|-------|
 | **File** | `bootloader/src/common/constants.inc` |
+| **Bump** | patch |
 | **Line** | 6 |
 | **Issue** | `STAGE2_LOAD = 0x1000` (should be `0x7E00`). It contradicts `boot.hpp` and `stage1.asm`. (`STAGE2_SECTORS` is already fixed at 9.) |
 | **Fix** | Set `STAGE2_LOAD = 0x7E00`. |
@@ -67,6 +52,7 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | Field | Value |
 |-------|-------|
 | **File** | `bootloader/src/stage2/stage2.asm:166` |
+| **Bump** | patch |
 | **Issue** | Makefile declares `LOADER_SECTORS = 26`, but stage2 only loads 2 sectors (`mov word [dap_count], 2`). If loader.bin grows beyond 1 KB, it will be silently truncated. |
 | **Fix** | Update `dap_count` to match `LOADER_SECTORS` or use a named constant. |
 
@@ -102,15 +88,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Files** | `kernel/arch/x86_64/dev/ahci.cpp`, `nvme.cpp`, `floppy.cpp` |
 | **Issue** | These files return `-1` from their init functions immediately. No actual driver logic is implemented. |
 | **Fix** | Implement proper drivers or remove the stubs and add `-ENODEV` returns. |
-
-### H17. Userland compiled with `-ffreestanding` (contradicts guidelines)
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/Makefile` |
-| **Line** | 81 |
-| **Issue** | AGENTS.md says userland C should NOT be freestanding. But the kernel Makefile compiles userland sources (`init.c`, `shell/main.c`, libc files) with `-ffreestanding`. This prevents userland from using standard C library features properly. |
-| **Fix** | Remove `-ffreestanding` from userland compilation flags. |
 
 ### H18. Dead C++ stage2 build path not invoked by any Makefile
 
@@ -313,14 +290,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | The ELF build path reads the kernel from CHS sector 6, head 1 (≈ LBA 23), but the Makefile places the kernel at LBA 37. The ELF-linked build path would read the wrong data. |
 | **Fix** | Update CHS address or use LBA addressing consistent with the Makefile. |
 
-### M27. Per-syscall handler null entries in dispatch table
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/syscall/syscall_table.cpp` |
-| **Issue** | 10 syscalls (`stat`, `fstat`, `execve`, `waitpid`, `mmap`, `munmap`, `brk`, `kill`, `ioctl`) have no handler registered (returns `-ENOSYS`). `fork` returns `-ENOSYS` from a stub. The system cannot run multi-process userland. |
-| **Fix** | Implement the syscalls or document as planned-but-not-implemented. |
-
 ### M28. `cmd_cat()` uses small 256-byte read buffer
 
 | Field | Value |
@@ -351,8 +320,44 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | Field | Value |
 |-------|-------|
 | **Files** | `kernel/sched/exit.cpp`, `userland/bin/init.c` |
+| **Bump** | patch |
 | **Issue** | If the shell returns (instead of the `exit` builtin powering off QEMU), `init` exits, `task_exit()` removes it, and the idle task halts forever with no runnable task and no message. PID 1 exiting should be fatal and visible. |
 | **Fix** | Panic when PID 1 exits, or have init restart the shell. |
+
+### M37. String copy loops read the element before the bounds check
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/fs/ramfs/ramfs.cpp:362`, `userland/shell/readline.c:107`, `userland/shell/main.c:279` |
+| **Bump** | patch |
+| **Issue** | Loops of the form `while (src[i] && i < cap - 1)` read `src[i]` before checking `i`, so a source without a NUL inside the bound is read one byte past it. Reported by cppcheck (`arrayIndexThenCheck`); currently in the baseline of `config/cppcheck-suppressions.txt`. |
+| **Fix** | Check the bound first: `while (i < cap - 1 && src[i])`, then drop the suppressions. |
+
+### M38. `malloc()` size arithmetic can overflow
+
+| Field | Value |
+|-------|-------|
+| **File** | `userland/libc/src/stdlib/malloc.c` |
+| **Issue** | `align_up(size)` computes `(size + 7) & ~7` without checking for overflow, and `s_used + size` can wrap too. `malloc(0xFFFFFFFF)` therefore returns a pointer with no space behind it, and writing through it overruns `s_heap`. No current caller passes an attacker-controlled size. |
+| **Fix** | Reject sizes above `sizeof(s_heap) - s_used` before aligning, or check `size > SIZE_MAX - 7` first. |
+
+### M39. `copy_to_user()` rejects copy-on-write pages after `fork()`
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/arch/x86_64/mm/uaccess.cpp`, `kernel/arch/x86_64/mm/vmm.cpp` |
+| **Bump** | patch |
+| **Issue** | `vmm_clone_user_directory()` clears `PTE_RW` on every present user page in both processes. `copy_to_user()` validates with `write=true`, so a syscall writing into a page the process has not touched since `fork()` returns `-EFAULT` instead of letting the page fault duplicate it (for example a global `struct stat` filled by a child). Stack buffers usually work because the call frame faults the page in first. Pre-existing and not specific to `stat`. |
+| **Fix** | Validate with `write=false` and let the store fault into `break_cow()`, or call `page_for_write()` for each page before copying. |
+
+### M40. Killing a parent orphans its children
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/sched/exit.cpp`, `kernel/sched/sched.cpp` |
+| **Bump** | patch |
+| **Issue** | `task_exit()` does not reparent the exiting task's children. Their `ppid` keeps pointing at a pid that is later reaped, so when they exit their zombies stay in `s_all_tasks` forever and nobody can `waitpid()` for them. A fatal signal to a parent (now possible through `kill()`) makes this reachable. |
+| **Fix** | Reparent children to PID 1 (or the nearest living ancestor) in `task_exit()` and let init reap them. |
 
 ---
 
@@ -462,13 +467,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Files** | Userland `errno.h` (doesn't exist) |
 | **Issue** | Until userland has an errno.h, users cannot programmatically check syscall errors. |
 
-### L18. Kernel version string does not match releases
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/arch/x86_64/boot/main.cpp`, `kernel/core/version.cpp` |
-| **Issue** | The kernel prints `DIT-OS 0.1.0`, but releases are versioned `0.0.x-alpha` in `CHANGELOG.md`. |
-
 ### L19. Stage1 stores the boot drive before setting `DS`
 
 | Field | Value |
@@ -476,21 +474,46 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **File** | `bootloader/src/stage1/stage1.asm` |
 | **Issue** | `mov [boot_drive], dl` runs before `DS` is zeroed, so on a BIOS that enters with `DS != 0` the drive number is written to the wrong address and the stage2 read uses garbage. Stage1 also never normalises `CS` with a far jump. |
 
+### L20. `core::panic` / `core::panicf` are not declared noreturn
+
+| Field | Value |
+|-------|-------|
+| **File** | `kernel/include/core/panic.hpp` |
+| **Issue** | Both functions halt forever but lack `KERNEL_NORETURN`, so the compiler and cppcheck treat code after them as reachable (cppcheck `nullPointerRedundantCheck` in `kernel/sched/sched.cpp`, baselined in `config/cppcheck-suppressions.txt`). |
+| **Fix** | Include `core/compiler.hpp` and declare both `KERNEL_NORETURN`; drop the suppression. |
+
+### L21. `vfs_lseek` names locals `SEEK_SET`/`SEEK_CUR`/`SEEK_END`
+
+| Field | Value |
+|-------|-------|
+| **File** | `kernel/fs/vfs.cpp:264` |
+| **Issue** | These are libc macro names. Any header that defines them turns the declarations into `const int 0 = 0;`. cppcheck's std config does, so it reports `syntaxError` and **skips the whole file**; the suppression in `config/cppcheck-suppressions.txt` means `vfs.cpp` is currently not analysed. |
+| **Fix** | Rename the locals (e.g. `WHENCE_SET`), or move named constants to `fs/vfs.hpp` and use them in `sys_execve.cpp` too; drop the suppression. |
+
 ---
 
 ## INFO — Known design decisions, planned features, or documentation gaps
 
-### I2. 10 syscalls defined but unimplemented
+### I2. Signals are default-action only and delivered cooperatively
 
-`SYS_stat`, `SYS_fstat`, `SYS_execve`, `SYS_waitpid`, `SYS_mmap`, `SYS_munmap`, `SYS_brk`, and `SYS_kill` are defined in the enum but have no handler (return `-ENOSYS`). `SYS_ioctl` is implemented for TTY mode and QEMU poweroff. Fork is a stub. Listed in `TODO.md` as planned.
+`SYS_kill` is implemented, but only POSIX default actions: `Term`/`Core`
+signals terminate the target, `Ign`/`Cont` are no-ops, and `Stop` signals
+return `-ENOSYS` because there is no job control. Delivery is checked at
+syscall exit and before a task blocks, so a CPU-bound task that never makes a
+syscall does not notice a signal until it does. User handlers, `sigaction`,
+`sigprocmask`, `sigpending` and `sigsuspend` remain `TODO.md` work. Only self
+and direct children may be signalled; there are no UIDs yet.
 
 ### I3. Userland is a single standalone ring-3 image
 
-Userland is now built as a standalone ELF and entered at ring 3 through `int 0x80`. The first user task has a dedicated page directory with supervisor-only kernel mappings and user mappings for its image and stack. The process model is still intentionally limited to the init/shell task; `fork`, `execve`, and a general ELF process loader remain planned work.
+Userland is built as standalone ELF images and entered at ring 3 through `int 0x80`. The first user task has a dedicated page directory with supervisor-only kernel mappings and user mappings for its image and stack. `fork` (copy-on-write), `execve` (static ELF32) and `waitpid` are implemented; there is no dynamic linker, no shared libraries, and no init/service supervision yet.
 
-### I4. `config/` directory and its 15+ files are documented but unimplemented
+### I4. `config/` holds only the cppcheck suppressions
 
-`PROJECT_STRUCTURE.md` describes a full Kconfig-based configuration system that does not exist yet. Listed in `TODO.md`.
+`config/cppcheck-suppressions.txt` exists for `scripts/cppcheck.sh`. The
+Kconfig-based configuration system that `PROJECT_STRUCTURE.md` describes does
+not exist yet; all kernel features are unconditionally compiled with hardcoded
+defaults. Listed in `TODO.md`.
 
 ### I5. `tests/` directory is empty
 
@@ -520,17 +543,17 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 |------|----------|------|--------|----------|
 | **Bootloader (ASM)** | C9, C13 (unassembled) | H9, H10, H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
-| **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L18 |
-| **Kernel (Sched)** | — | — | M1, M36 | L13 |
-| **Kernel (FS)** | — | — | M4, M9, M31 | L12 |
-| **Kernel (MM)** | — | — | M10 | — |
+| **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
+| **Kernel (Sched)** | — | — | M1, M36, M40 | L13, I2 |
+| **Kernel (FS)** | — | — | M4, M9, M31, M37 | L12, L21 |
+| **Kernel (MM)** | — | — | M10, M39 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
-| **Kernel (Syscall)** | — | — | M1, M27 | — |
+| **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M17, M18, M19, M28, M35 | L1, L2, L3, L4, L7, L17 |
-| **Build System** | — | H3, H17 | M13, M15 | L10, L16 |
-| **Config/Tests/Tools** | — | H4 | — | I4, I5, I6, I7 |
-| **Docs/Conventions** | — | — | M16 | I2, I3, I9, I10 |
+| **Userland** | — | — | M17, M18, M19, M28, M35, M37, M38 | L1, L2, L3, L4, L7, L17 |
+| **Build System** | — | — | M13, M15 | L10, L16 |
+| **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
+| **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
 
 ---
 
