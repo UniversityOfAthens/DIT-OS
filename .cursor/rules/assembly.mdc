@@ -1,22 +1,18 @@
 ---
-description: NASM assembly and boot/kernel asm conventions
+description: DIT-OS NASM assembly
 globs: **/*.asm,**/*.inc
 alwaysApply: false
 ---
 
-# Assembly (NASM) Conventions
+# DIT-OS NASM assembly
 
-- **Syntax**: NASM (Intel-style). Use `section .text`, `section .data`, `section .bss`; `align` where the linker or ABI expects it.
-- **Exports**: Use `GLOBAL` / `global` for symbols called from C or from other modules. Match C naming: no leading underscore unless the C compiler emits one (e.g. ELF gcc does not).
-- **Bootloader**: Stage1 is `ORG 0x7C00`, 512 bytes, boot signature at 510-511. Stage2 is `ORG 0x7E00`, real mode; use `bits 16` and switch to `bits 32` only when entering protected mode.
-- **Kernel**: `bits 32` for entry/multiboot; linker places at 0x100000. Preserve multiboot magic/info in registers or memory before calling C.
-- **Comments**: Put a brief file header; comment non-obvious instructions (e.g. A20, paging setup).
+Before editing matching files, read `.agents/skills/nasm-assembly/SKILL.md` and follow
+it. Also apply `AGENTS.md` (definition of done, handoff, hard rules) and the
+mandatory `.agents/skills/security-audit/SKILL.md` for every code change.
+Content lives in the skill; this file only points to it.
 
-```asm
-; ✅ GOOD - entry.asm
-section .data
-global boot_magic
-global boot_info
-boot_magic: dd 0
-boot_info: dd 0
-```
+Never forget:
+- Every file declares bits 16 or bits 32; never elf64.
+- Save every register on interrupt entry; preserve EBX, ESI, EDI, EBP.
+- Keep context.asm frame layout in sync with fork/task creation.
+- Name constants; shared boot constants live in bootloader/src/common/constants.inc.

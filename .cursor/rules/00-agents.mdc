@@ -1,0 +1,17 @@
+---
+description: DIT-OS agent rules entry point
+alwaysApply: true
+---
+
+# DIT-OS agent rules
+
+`AGENTS.md` at the repository root is the source of truth; skills live in
+`.agents/skills/<name>/SKILL.md`. In particular:
+
+- Keep `handoff.md` current during multi-step work; read it first if it
+  exists (`.agents/skills/handoff/SKILL.md`).
+- Every change: clean build, `scripts/qemu-test.sh`, `scripts/cppcheck.sh`,
+  and a written security audit with the known-CVE pass
+  (`.agents/skills/security-audit/SKILL.md`).
+- Before discarding changes, check `git status` and limit the command to the
+  files you changed yourself.

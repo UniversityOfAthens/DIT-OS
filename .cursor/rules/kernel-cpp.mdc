@@ -1,20 +1,18 @@
 ---
-description: Kernel C++ and header conventions
+description: DIT-OS kernel C++
 globs: kernel/**/*.cpp,kernel/**/*.hpp,kernel/**/*.h
 alwaysApply: false
 ---
 
-# Kernel C++ Standards
+# DIT-OS kernel C++
 
-- **C++ version**: Use C++17. Flags: `-ffreestanding -fno-rtti -fno-exceptions -Wall -Wextra -m32` for kernel (32-bit) or appropriate arch.
-- **Includes**: Prefer `<stdint.h>`, `<stddef.h>`, `<stdbool.h>` for types. Use project headers from `kernel/include/` or `arch/.../`; avoid assuming a host libc.
-- **Linking with asm**: Export C entry points as `extern "C"`; use leading underscore in asm only when the toolchain expects it (ELF kernel uses no leading underscore for C symbols from asm).
-- **No exceptions/RTTI**: Do not use exceptions or dynamic_cast in kernel code.
-- **Naming**: snake_case for functions/variables; PascalCase or CamelCase for types if the rest of the file uses it. Match existing file style (e.g. kernel main uses snake_case).
+Before editing matching files, read `.agents/skills/kernel-cpp/SKILL.md` and follow
+it. Also apply `AGENTS.md` (definition of done, handoff, hard rules) and the
+mandatory `.agents/skills/security-audit/SKILL.md` for every code change.
+Content lives in the skill; this file only points to it.
 
-```cpp
-// ✅ GOOD - kernel main
-extern "C" void kernel_main() { ... }
-#include <stdint.h>
-volatile uint16_t *vga_buffer = (uint16_t *)0xB8000;
-```
+Never forget:
+- 32-bit only; namespaces are top level (core, mm, sched, fs, syscall, dev, arch).
+- Never dereference user pointers: use mm::copy_from_user / copy_to_user.
+- No exceptions, RTTI, new/delete, STL, floating point or SSE.
+- Run scripts/qemu-test.sh and scripts/cppcheck.sh before calling it done.

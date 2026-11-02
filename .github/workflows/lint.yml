@@ -36,6 +36,19 @@ jobs:
           pipx run "clang-format==${CLANG_FORMAT_VERSION}" \
             --dry-run -Werror "${sources[@]}"
 
+  cppcheck:
+    name: cppcheck
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+
+      - name: Static analysis gate
+        run: scripts/cppcheck.sh
+
   shellcheck:
     name: shellcheck
     runs-on: ubuntu-24.04

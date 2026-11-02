@@ -1,0 +1,25 @@
+# DIT-OS cppcheck suppressions, read by scripts/cppcheck.sh.
+# Format: <id>:<path>[:<line>], one per line. Prefer an inline
+# `// cppcheck-suppress <id> ; <reason>` on the exact line instead.
+# Every entry here needs a comment above it saying why it is suppressed.
+# Never add a bare <id> (that suppresses it everywhere).
+# Note: cppcheck 2.13 rejects a line that is only "#"; keep text after it.
+
+# --- False positives ---
+# end - start on linker-script symbols that bound one embedded image.
+comparePointers:kernel/sched/init_task.cpp
+comparePointers:kernel/arch/x86_64/boot/main.cpp
+
+# --- KNOWN BASELINE: real findings tracked in ISSUES.md ---
+# These hide real problems so the gate can catch NEW ones. Delete each entry
+# in the same change that fixes it. Never add to this section without an
+# ISSUES.md entry.
+# ISSUES.md L20: core::panic/panicf not declared noreturn.
+nullPointerRedundantCheck:kernel/sched/sched.cpp
+# ISSUES.md L21: locals named SEEK_* collide with libc macros. WARNING: while
+# this is suppressed cppcheck does not analyse vfs.cpp at all.
+syntaxError:kernel/fs/vfs.cpp
+# ISSUES.md M37: element read before the bounds check (1-byte over-read).
+arrayIndexThenCheck:kernel/fs/ramfs/ramfs.cpp
+arrayIndexThenCheck:userland/shell/readline.c
+arrayIndexThenCheck:userland/shell/main.c

@@ -1,99 +1,17 @@
 ---
-description: Userland code conventions — libc, shell, and user binaries
-globs: userland/**/*
+description: DIT-OS userland C
+globs: userland/**
 alwaysApply: false
 ---
 
-# Userland Conventions
+# DIT-OS userland C
 
-## Hard Boundary: Userland vs Kernel
-- Userland code **NEVER** includes kernel headers (`kernel/include/`, `kernel/core/`, `kernel/arch/`)
-- Userland code **NEVER** calls kernel functions directly (`kmalloc`, `printk`, `serial_puts`, etc.)
-- The only kernel interface is **syscalls** via `userland/include/syscall.h`
-- If you need something from the kernel in userland, it must go through a syscall wrapper in `userland/libc/`
+Before editing matching files, read `.agents/skills/c-userland/SKILL.md` and follow
+it. Also apply `AGENTS.md` (definition of done, handoff, hard rules) and the
+mandatory `.agents/skills/security-audit/SKILL.md` for every code change.
+Content lives in the skill; this file only points to it.
 
-## Directory Layout
-```
-userland/
-├── include/
-│   └── syscall.h       ← syscall numbers + raw asm wrappers (already exists — do not recreate)
-├── libc/
-│   ├── include/        ← public libc headers (stdio.h, stdlib.h, string.h, …)
-│   ├── src/            ← libc implementation (calls syscall.h wrappers)
-│   ├── crt/
-│   │   └── crt0.asm    ← C runtime start: calls main(), then exit()
-│   └── Makefile        ← produces userland/libc/libc.a
-├── shell/              ← userland shell (NOT the kernel/sched/shell.cpp stub)
-└── bin/                ← user binaries (init, ls, cat, echo, …)
-```
-
-## Language
-- Userland is **C** (not C++) unless there is a specific reason
-- Use `c11` standard: `-std=c11`
-- No `-ffreestanding`; userland links against libc and crt0
-
-## C Runtime (crt0)
-- `crt0.asm` is the real entry point for every userland binary (`_start`)
-- It must: set up the stack, call `main(argc, argv)`, then call `exit(return_value)`
-- Link order: `crt0.o` first, then objects, then `libc.a`
-
-```asm
-; ✅ GOOD - crt0.asm skeleton
-global _start
-extern main
-extern exit
-
-section .text
-_start:
-    xor  ebp, ebp
-    pop  esi          ; argc
-    mov  ecx, esp     ; argv
-    push ecx
-    push esi
-    call main
-    push eax
-    call exit
-    hlt               ; unreachable
-```
-
-## libc Implementation Rules
-- Each function in libc calls a syscall wrapper from `userland/include/syscall.h`
-- Do not reimplement syscall numbers — always `#include "../../include/syscall.h"`
-- `malloc`/`free` use `SYS_brk` to grow the heap; no `mmap` until that syscall exists
-- `printf` writes to fd `1` via `SYS_write`; no VGA or serial access
-
-```c
-// ✅ GOOD - libc write wrapping syscall
-#include "../../include/syscall.h"
-
-ssize_t write(int fd, const void *buf, size_t count) {
-    return syscall3(SYS_write, fd, (int)buf, (int)count);
-}
-
-// ❌ BAD - calling kernel internals from userland
-#include "kernel/dev/serial.hpp"
-dev::serial_puts("hello");   // NEVER
-```
-
-## Shell (userland/shell/)
-- The kernel-space `kernel/sched/shell.cpp` is a **bootstrap stub only** — it exists to prove the scheduler works
-- The real shell lives in `userland/shell/` and runs as a proper user process (fork + exec model)
-- The userland shell communicates via fd 0 (stdin) and fd 1 (stdout), not direct serial calls
-- Shell builtins: `cd`, `echo`, `exit`, `help` at minimum
-
-## User Binaries (userland/bin/)
-- `init.c` is PID 1: it mounts filesystems and `exec`s the shell
-- Every binary ends with `exit(0)` or `exit(status)` — never falls off the end of `main`
-- Binaries are ELF32 executables linked against `libc.a`
-
-## Makefile for Userland Binaries
-```makefile
-CC      := i686-elf-gcc
-CFLAGS  := -m32 -std=c11 -Wall -O2 -Iuserland/libc/include
-LDFLAGS := -m32 -nostdlib
-LIBS    := userland/libc/libc.a
-
-build/ls: userland/bin/ls.c
-	$(CC) $(CFLAGS) $(LDFLAGS) userland/libc/crt/crt0.o $< $(LIBS) -o $@
-```
-
+Never forget:
+- Userland is freestanding flat binaries embedded in the kernel; no libc.a.
+- Never include kernel headers; only syscalls via userland/include/syscall.h.
+- Check the index before reading the element; check every syscall return.

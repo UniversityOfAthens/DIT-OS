@@ -1,12 +1,17 @@
 ---
-description: Bootloader layout, headers, and scripts
+description: DIT-OS bootloader
 globs: bootloader/**/*
 alwaysApply: false
 ---
 
-# Bootloader Conventions
+# DIT-OS bootloader
 
-- **Layout**: Stage1 in `src/stage1/` (stage1.asm, boot.hpp, Makefile). Stage2 in `src/stage2/` (asm + C++). Shared headers in `include/` (boot.hpp, disk.hpp, fs.hpp, memory.hpp, video.hpp, elf.hpp, types.hpp). Scripts in `scripts/` (build.sh, sign.sh).
-- **Includes**: From `src/stage2/*.cpp` use `#include "../../include/foo.hpp"` (path relative to bootloader root).
-- **Build**: Primary build is NASM-only: `stage2.asm` → `stage2.bin`; stage1 + stage2 concatenated → bootloader.bin. C++ stage2 files exist for future linked build; do not break the current `make all` from `bootloader/Makefile`.
-- **Disk/kernel**: Kernel is loaded at 0x100000; stage2 reads from disk (CHS/LBA) per constants in `common/constants.inc` and `include/boot.hpp`. Keep sector counts and load addresses in sync with the Makefile that builds the disk image.
+Before editing matching files, read `.agents/skills/bootloader/SKILL.md` and follow
+it. Also apply `AGENTS.md` (definition of done, handoff, hard rules) and the
+mandatory `.agents/skills/security-audit/SKILL.md` for every code change.
+Content lives in the skill; this file only points to it.
+
+Never forget:
+- Disk layout numbers must change in every file listed in the skill.
+- C++ files in src/stage2/ and src/uefi/ are dead code (ISSUES.md H18).
+- Check the BIOS carry flag after every int 0x13; bound every ELF field.

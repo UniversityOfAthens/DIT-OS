@@ -9,3 +9,6 @@ bootloader/build/
 build/
 kernel/build/
 userland/build/
+
+# Agent handoff notes (AGENTS.md section 5); never committed
+handoff.md

@@ -1,0 +1,17 @@
+---
+description: DIT-OS build system, scripts and CI
+globs: **/Makefile,**/*.ld,**/*.mk,CMakeLists.txt,flake.nix,scripts/**,bootloader/scripts/**,tools/**,.github/workflows/**
+alwaysApply: false
+---
+
+# DIT-OS build system, scripts and CI
+
+Before editing matching files, read `.agents/skills/build-system/SKILL.md` and follow
+it. Also apply `AGENTS.md` (definition of done, handoff, hard rules) and the
+mandatory `.agents/skills/security-audit/SKILL.md` for every code change.
+Content lives in the skill; this file only points to it.
+
+Never forget:
+- Never remove -Werror, -mgeneral-regs-only or -march=i686.
+- List sources explicitly; never glob.
+- Shell scripts: set -euo pipefail, quoted expansions, shellcheck clean.

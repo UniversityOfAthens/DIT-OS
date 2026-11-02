@@ -1,94 +1,17 @@
 ---
-description: VFS layer design, interface contracts, and filesystem implementation patterns
-globs: kernel/fs/**/*,kernel/include/fs/**
+description: DIT-OS VFS and ramfs
+globs: kernel/fs/**,kernel/include/fs/**
 alwaysApply: false
 ---
 
-# Filesystem / VFS Conventions
+# DIT-OS VFS and ramfs
 
-## Layer Overview
-```
-syscall (sys_open, sys_read, …)
-        ↓
-    VFS core  (kernel/fs/vfs.cpp)
-        ↓
-  filesystem driver  (ramfs, ext2, fat32, …)
-        ↓
-   block layer / buffer cache
-```
+Before editing matching files, read `.agents/skills/filesystem-vfs/SKILL.md` and follow
+it. Also apply `AGENTS.md` (definition of done, handoff, hard rules) and the
+mandatory `.agents/skills/security-audit/SKILL.md` for every code change.
+Content lives in the skill; this file only points to it.
 
-- Every filesystem operation goes through VFS — **never** call a filesystem driver directly from a syscall handler
-- The VFS uses four core objects: `Superblock`, `Inode`, `Dentry`, `File`
-
-## Core VFS Structs (from `kernel/include/fs/`)
-All filesystem drivers must implement these operation tables:
-
-```cpp
-struct SuperblockOps {
-    Inode* (*alloc_inode)(Superblock*);
-    void   (*destroy_inode)(Inode*);
-    int    (*sync)(Superblock*);
-};
-
-struct InodeOps {
-    int    (*lookup)(Inode* dir, Dentry* target);
-    int    (*create)(Inode* dir, Dentry*, int mode);
-    int    (*mkdir)(Inode* dir, Dentry*, int mode);
-    int    (*unlink)(Inode* dir, Dentry*);
-};
-
-struct FileOps {
-    int    (*open)(Inode*, File*);
-    ssize_t (*read)(File*, void* buf, size_t, off_t*);
-    ssize_t (*write)(File*, const void* buf, size_t, off_t*);
-    int    (*readdir)(File*, void* dirent_buf, FillDirFn);
-    int    (*release)(Inode*, File*);
-};
-```
-
-- Every filesystem driver populates these structs as static const tables
-- Return `0` on success, `-errno` on failure (same as syscall convention)
-
-## Implementing a New Filesystem
-1. Create a directory `kernel/fs/<fsname>/`
-2. Implement `<fsname>.cpp` with `fs_register()` and `mount()` functions
-3. `mount()` allocates a `Superblock`, fills in `sb->ops`, reads the on-disk super, and returns the root `Inode`
-4. Implement `InodeOps` and `FileOps` for that filesystem
-5. Register with VFS at kernel init: `vfs_register_fs(&my_fs_type)`
-
-## ramfs — First Filesystem to Implement
-ramfs is the priority because it unblocks userland testing. It has no disk backend:
-- Inodes are allocated from `kmalloc`
-- File data stored in memory pages
-- No persistence across reboots — that's fine
-- Must support: `create`, `mkdir`, `unlink`, `read`, `write`, `readdir`
-
-## Path Resolution
-- Path resolution is done by VFS `namei.cpp`, not by individual filesystems
-- Filesystems only implement `lookup(dir_inode, name)` → `Inode*`
-- Never implement full path walking inside a filesystem driver
-
-## Buffer Cache
-- Block-based filesystems (ext2, fat32) must go through the buffer cache (`kernel/fs/buffer.cpp`)
-- Do not read directly from the block device in filesystem code
-- `buffer_read(dev, block_nr)` → returns a `Buffer*` with the data
-- Call `buffer_release(buf)` when done
-
-## Mount Points
-- Root filesystem mounted at `/` during kernel init (before any userland runs)
-- Mount table is global in `kernel/fs/mount.cpp`
-- `vfs_mount(fs_type, device, mountpoint)` is the only way to mount
-
-## Dentry Cache
-- Dcache avoids repeated disk lookups for the same path component
-- Filesystem `lookup` should check the dcache first via `dcache_lookup(parent, name)`
-- On miss: call filesystem `inode_ops->lookup`, then `dcache_insert` the result
-
-## Error Codes
-Use standard errno values from `kernel/include/errno.hpp`:
-- `-ENOENT` — file not found
-- `-EEXIST` — file already exists
-- `-EISDIR` / `-ENOTDIR` — wrong type
-- `-ENOSPC` — no space
-- `-EIO` — I/O error
-
+Never forget:
+- Syscalls go through fs::vfs_*, never a driver directly.
+- Only vfs.cpp and ramfs are implemented; many fs headers are declarations only.
+- Check offset + size for overflow; clamp .. at root; zero dirents.

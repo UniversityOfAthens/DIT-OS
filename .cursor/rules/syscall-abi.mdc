@@ -1,85 +1,17 @@
 ---
-description: Syscall ABI, numbers, and kernel/userland interface contract
-globs: kernel/syscall/**,userland/include/syscall.h,userland/libc/**,kernel/include/syscall/**
+description: DIT-OS syscall ABI
+globs: kernel/syscall/**,kernel/include/syscall/**,userland/include/syscall.h,userland/libc/**
 alwaysApply: false
 ---
 
-# Syscall ABI
+# DIT-OS syscall ABI
 
-## Calling Convention (int 0x80, 32-bit)
-| Register | Role              |
-|----------|-------------------|
-| EAX      | Syscall number (in); return value (out) |
-| EBX      | Argument 1        |
-| ECX      | Argument 2        |
-| EDX      | Argument 3        |
-| ESI      | Argument 4        |
-| EDI      | Argument 5        |
+Before editing matching files, read `.agents/skills/syscall-abi/SKILL.md` and follow
+it. Also apply `AGENTS.md` (definition of done, handoff, hard rules) and the
+mandatory `.agents/skills/security-audit/SKILL.md` for every code change.
+Content lives in the skill; this file only points to it.
 
-- **Return**: EAX ≥ 0 on success; EAX = `-errno` on error (negative)
-- Kernel saves/restores all registers except EAX
-- Syscall entry point is the IDT handler for vector `0x80`
-
-## Canonical Syscall Numbers
-These are the **only** definitions — defined in `userland/include/syscall.h` and mirrored in `kernel/include/syscall/syscall_numbers.hpp`. Do NOT redefine them anywhere else.
-
-```c
-#define SYS_read    0
-#define SYS_write   1
-#define SYS_open    2
-#define SYS_close   3
-#define SYS_stat    4
-#define SYS_fstat   5
-#define SYS_exit    6    /* ⚠ Use 6, not 13 — legacy value corrected */
-#define SYS_fork    7
-#define SYS_execve  8
-#define SYS_waitpid 9
-#define SYS_getpid  10
-#define SYS_mmap    11
-#define SYS_munmap  12
-#define SYS_brk     13
-#define SYS_kill    14
-#define SYS_ioctl   15
-```
-
-> **⚠ IMPORTANT**: The original `userland/include/syscall.h` had `SYS_exit = 13`. This was wrong and has been corrected to `6`. If you see `SYS_exit 13` anywhere, fix it.
-
-## Kernel Side — Dispatcher
-- The syscall handler in `kernel/syscall/syscall.cpp` is called from the IDT `int 0x80` stub
-- It reads EAX from the saved register frame, bounds-checks it against the table size, and calls `syscall_table[eax](frame)`
-- Each `sys_*.cpp` file implements one syscall and returns `int` (negative = error)
-
-```cpp
-// ✅ GOOD - syscall handler pattern
-extern "C" int syscall_dispatch(RegisterFrame* frame) {
-    uint32_t num = frame->eax;
-    if (num >= SYSCALL_COUNT) return -ENOSYS;
-    return syscall_table[num](frame);
-}
-```
-
-## Userland Side — Wrappers
-- Always use the wrappers in `userland/include/syscall.h`; never write raw `asm volatile("int $0x80")` in libc or app code
-- `syscall1`, `syscall2`, `syscall3` etc. are the raw wrappers — libc functions call those
-
-```c
-// ✅ GOOD - userland write wrapper
-static inline int write(int fd, const void* buf, unsigned count) {
-    return syscall3(SYS_write, fd, (int)buf, count);
-}
-
-// ❌ BAD - raw asm in application code
-asm volatile("int $0x80" : "=a"(r) : "a"(1), "b"(1), "c"(msg), "d"(len));
-```
-
-## File Descriptors
-- `0` = stdin, `1` = stdout, `2` = stderr (same as Unix)
-- Kernel shell uses fd 0/1 for serial until a real tty driver exists
-
-## Adding a New Syscall
-1. Add `#define SYS_foo N` to **both** `userland/include/syscall.h` and `kernel/include/syscall/syscall_numbers.hpp`
-2. Create `kernel/syscall/sys_foo.cpp` with the implementation
-3. Add the function pointer to the table in `kernel/syscall/syscall_table.cpp`
-4. Add a wrapper to `userland/libc/` if needed
-5. Update `SYSCALL_COUNT` if it is a compile-time constant
-
+Never forget:
+- Numbers live only in userland/include/syscall.h and kernel/include/syscall/syscall_numbers.hpp; SYS_exit is 6.
+- Validate every argument; single fetch of user data; zero structs before copy_to_user.
+- New syscall: add test_ and test_sec_ probes to userland/bin/init.c.
