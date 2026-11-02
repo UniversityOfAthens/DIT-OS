@@ -32,13 +32,20 @@ int copy_from_user(void* dst, uintptr_t src, size_t size)
 
 int copy_to_user(uintptr_t dst, const void* src, size_t size)
 {
+    /* Validate the range read-only: fork() clears PTE_RW on every present
+     * user page, so a page the process has not written since fork() is not
+     * writable yet (M39). Writability is restored page by page below by
+     * vmm_write_user()/page_for_write(); storing through the user VA would
+     * write-fault in kernel mode, and the fault handler only fixes up user
+     * faults. A short copy can only happen when a frame cannot be acquired
+     * mid-way; the caller then sees -EFAULT on a partially written buffer. */
     if (!mm::vmm_user_range_ok(arch::read_cr3(), static_cast<uint32_t>(dst),
-                               size, true))
+                               size, false))
         return -EFAULT;
-    volatile uint8_t* d = reinterpret_cast<volatile uint8_t*>(dst);
-    const uint8_t* s = static_cast<const uint8_t*>(src);
-    for (size_t i = 0; i < size; i++)
-        d[i] = s[i];
+    if (mm::vmm_write_user(arch::read_cr3(), static_cast<uint32_t>(dst), src,
+                           static_cast<uint32_t>(size)) !=
+        static_cast<uint32_t>(size))
+        return -EFAULT;
     return 0;
 }
 

@@ -11,9 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A parent that exits (including through a fatal signal) now reparents its
   children to PID 1, and the shell drains reparented zombies before each
-  prompt; PID 1 exiting now panics instead of leaving the system silent.
-  Patch bump for `0.0.11-alpha` (M36, M40). Known residual: orphans can
-  still pile up while init is blocked in `read()` (`ISSUES.md` M41).
+  prompt; PID 1 exiting now panics instead of leaving the system silent
+  (M36, M40). Known residual: orphans can still pile up while init is
+  blocked in `read()` (`ISSUES.md` M41).
+- `copy_to_user()` validates its range read-only and writes through
+  `vmm_write_user()`, so a syscall can write into a page the process has
+  not touched since `fork()` instead of returning `-EFAULT`; the parent's
+  copy stays untouched (M39). Patch bump for `0.0.11-alpha`.
+- `scripts/qemu-test.sh` now fails when the serial log contains any
+  `[selftest] FAIL` line: the self-test's own failure counter can be
+  corrupted by the COW bug tracked as `ISSUES.md` M42, which let a failing
+  self-test still print `ok` (found by the M39 regression test).
 
 ### Removed
 

@@ -249,6 +249,61 @@ static void test_fault_signal(void)
           "a user fault is reported as SIGSEGV");
 }
 
+/* copy_to_user() must break fork()'s COW instead of failing (M39): a global
+ * struct filled before fork() is present but read-only in the child, so a
+ * syscall writing it exercises the COW path. The parent's copy must stay
+ * untouched, proving the child got a private page. */
+static struct stat g_cow_stat;
+
+static void test_cow_copy_to_user(void)
+{
+    for (unsigned int i = 0; i < sizeof(g_cow_stat); i++)
+        ((unsigned char*)&g_cow_stat)[i] = 0xAA;
+
+    int pid = fork();
+    check_value(pid >= 0, pid, "fork for COW copy_to_user succeeds");
+    if (pid == 0)
+    {
+        int fd = open("/hello.txt", 0);
+        if (fd < 0)
+            exit(2);
+        /* Before the fix this returned -EFAULT: the COW page is not yet
+         * writable, so the write=true range check rejected it. */
+        int r = fstat(fd, &g_cow_stat);
+        if (r != 0)
+            exit(3);
+        struct stat by_fd = { 0 };
+        r = fstat(fd, &by_fd);
+        close(fd);
+        if (r != 0)
+            exit(4);
+        if (g_cow_stat.st_mode != by_fd.st_mode ||
+            g_cow_stat.st_size != by_fd.st_size ||
+            g_cow_stat.st_ino != by_fd.st_ino)
+            exit(5);
+        exit(0);
+    }
+    if (pid < 0)
+        return;
+
+    int status = -1;
+    int reaped = waitpid(pid, &status, 0);
+    check_value(reaped == pid, reaped, "waitpid after COW copy_to_user");
+    int code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+    check_value(code == 0, code, "fstat into a COW page succeeds (M39)");
+
+    int untouched = 1;
+    for (unsigned int i = 0; i < sizeof(g_cow_stat); i++)
+    {
+        if (((const unsigned char*)&g_cow_stat)[i] != 0xAA)
+        {
+            untouched = 0;
+            break;
+        }
+    }
+    check(untouched, "fork() isolates the child's COW copy");
+}
+
 /* A dead parent's children are reparented to PID 1 (init), so their zombies
  * stay reapable instead of leaking forever (M40). */
 static void test_orphan_reparent(void)
@@ -414,6 +469,7 @@ int main(int argc, char** argv)
     test_kill();
     test_fault_signal();
     test_orphan_reparent();
+    test_cow_copy_to_user();
     test_sec_stat_bad_pointers();
     test_sec_fstat_bad_fd();
     test_sec_stat_uninitialised();

@@ -332,15 +332,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | `align_up(size)` computes `(size + 7) & ~7` without checking for overflow, and `s_used + size` can wrap too. `malloc(0xFFFFFFFF)` therefore returns a pointer with no space behind it, and writing through it overruns `s_heap`. No current caller passes an attacker-controlled size. |
 | **Fix** | Reject sizes above `sizeof(s_heap) - s_used` before aligning, or check `size > SIZE_MAX - 7` first. |
 
-### M39. `copy_to_user()` rejects copy-on-write pages after `fork()`
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/arch/x86_64/mm/uaccess.cpp`, `kernel/arch/x86_64/mm/vmm.cpp` |
-| **Bump** | patch |
-| **Issue** | `vmm_clone_user_directory()` clears `PTE_RW` on every present user page in both processes. `copy_to_user()` validates with `write=true`, so a syscall writing into a page the process has not touched since `fork()` returns `-EFAULT` instead of letting the page fault duplicate it (for example a global `struct stat` filled by a child). Stack buffers usually work because the call frame faults the page in first. Pre-existing and not specific to `stat`. |
-| **Fix** | Validate with `write=false` and let the store fault into `break_cow()`, or call `page_for_write()` for each page before copying. |
-
 ### M41. Reparented orphans can accumulate while init is blocked
 
 | Field | Value |
@@ -349,6 +340,15 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Bump** | patch |
 | **Issue** | `task_exit()` reparents orphans to PID 1 and the shell drains them before each prompt, but while the shell is blocked in `read()` a process can keep forking and exiting orphans, accumulating zombies and kernel stacks until the next prompt. Normal use is bounded; a hostile workload is not. |
 | **Fix** | Deliver `SIGCHLD` and reap from a handler, or add a kernel reaper/cap for orphan zombies (with the signal work). |
+
+### M42. A self-test failure can be hidden: the failures counter reads back 0
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/arch/x86_64/mm/vmm.cpp` (`break_cow`, frame refcounts), `userland/bin/init.c` |
+| **Bump** | patch |
+| **Issue** | Reproduced with the M39 regression test on the pre-fix kernel: the parent printed two `[selftest] FAIL` lines and then still printed `[selftest] ok`, i.e. the `failures` counter (`0x40414c`) read back 0 after two increments, and the parent's `0xAA`-filled global read back dirty. Both live on the page fork() made copy-on-write; the parent broke COW (through a `printf` buffer write and the counter increments) only after `waitpid()` reaped the child that shared the frame. Disassembly confirms both increments and the final comparison are correct, so memory content changed underneath the parent: suspected `break_cow()` receiving a recycled frame whose copy did not take effect, or a refcount handing out a frame that is still mapped. Needs kernel-side instrumentation in `break_cow()`/`frame_acquire()` and a minimal reproducer. |
+| **Fix** | Audit `frame_acquire`/`frame_unref`/`break_cow` refcounts; make `break_cow()` never end up using a frame that is also on the free list, and keep the qemu-test FAIL-line scan that hides nothing. |
 
 ---
 
@@ -537,7 +537,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
 | **Kernel (Sched)** | — | — | M1, M41 | L13, I2 |
 | **Kernel (FS)** | — | — | M4, M9, M31, M37 | L12, L21 |
-| **Kernel (MM)** | — | — | M10, M39 | — |
+| **Kernel (MM)** | — | — | M10, M42 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
@@ -550,6 +550,6 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M39 — COW `copy_to_user()`**: a child writing into a page inherited from
-   `fork()` gets `-EFAULT` instead of a COW break.
+1. **M41 — orphan zombies while init blocks**: a hostile fork/exit loop
+   accumulates zombies until the next prompt (needs SIGCHLD).
 2. **H9 — `STAGE2_LOAD`**: wrong constant in `constants.inc`.
