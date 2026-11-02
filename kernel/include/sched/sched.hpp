@@ -50,6 +50,10 @@ void wake_up_all(WaitQueue* wq);
 /** Find a task by pid (zombies included), or nullptr. */
 Task* task_find(int32_t pid);
 
+/** Reassign every task whose ppid is @old_pid to @new_pid. Called with
+ *  interrupts disabled while @old_pid's task exits. */
+void task_reparent_children(uint32_t old_pid, uint32_t new_pid);
+
 /** Remove @t from its wait queue and make it runnable. Does nothing unless
  *  @t is blocked. Must be called with interrupts disabled. */
 void task_wake(Task* t);

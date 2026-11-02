@@ -29,6 +29,17 @@ static void poweroff_qemu(void)
         __asm__ volatile("hlt");
 }
 
+/* Children whose parent exited are reparented to PID 1 (this process), so
+ * drain them before each prompt (M40). */
+static void reap_children(void)
+{
+    int status;
+    while (waitpid(-1, &status, WNOHANG) > 0)
+    {
+        /* Status is intentionally discarded; the zombie is released. */
+    }
+}
+
 static int str_len(const char* s)
 {
     int n = 0;
@@ -376,6 +387,7 @@ void userland_shell_main(void)
 
     for (;;)
     {
+        reap_children();
         render_prompt(prompt, MAX_PROMPT);
         if (readline(prompt, buf, sizeof(buf), s_commands) < 0)
             continue;

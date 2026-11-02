@@ -71,6 +71,15 @@ Task* task_find(int32_t pid)
     return nullptr;
 }
 
+void task_reparent_children(uint32_t old_pid, uint32_t new_pid)
+{
+    for (Task* t = s_all_tasks; t; t = t->all_next)
+    {
+        if (t->ppid == old_pid)
+            t->ppid = new_pid;
+    }
+}
+
 /* Unlink @t from the wait queue recorded on the task. */
 static void wait_queue_remove(Task* t)
 {

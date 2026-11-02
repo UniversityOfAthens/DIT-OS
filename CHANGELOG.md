@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A parent that exits (including through a fatal signal) now reparents its
+  children to PID 1, and the shell drains reparented zombies before each
+  prompt; PID 1 exiting now panics instead of leaving the system silent.
+  Patch bump for `0.0.11-alpha` (M36, M40). Known residual: orphans can
+  still pile up while init is blocked in `read()` (`ISSUES.md` M41).
+
 ### Removed
 
 - `boot/grub/` (config, `grubenv` and the DIT PF2 theme): the custom

@@ -249,6 +249,41 @@ static void test_fault_signal(void)
           "a user fault is reported as SIGSEGV");
 }
 
+/* A dead parent's children are reparented to PID 1 (init), so their zombies
+ * stay reapable instead of leaking forever (M40). */
+static void test_orphan_reparent(void)
+{
+    int parent = fork();
+    check_value(parent >= 0, parent, "fork for orphan reparenting succeeds");
+    if (parent == 0)
+    {
+        int child = fork();
+        if (child == 0)
+            exit(5);
+        if (child < 0)
+            exit(2);
+        exit(0);
+    }
+    if (parent < 0)
+        return;
+
+    int status = -1;
+    int reaped = waitpid(parent, &status, 0);
+    check_value(reaped == parent, reaped,
+                "waitpid reaps the exiting middle parent");
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+    {
+        check(0, "the middle parent exits normally");
+        return;
+    }
+
+    /* The grandchild is now init's child and must be reapable. */
+    reaped = waitpid(-1, &status, 0);
+    check_value(reaped > 0, reaped, "init reaps a reparented orphan");
+    int code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+    check_value(code == 5, code, "the reparented orphan keeps its exit code");
+}
+
 /* Security probes: every pointer and descriptor below is untrusted, so the
  * kernel must return an error instead of dereferencing it. None of these is
  * expected to fault, so they run in init itself rather than a child. */
@@ -378,6 +413,7 @@ int main(int argc, char** argv)
     test_stat();
     test_kill();
     test_fault_signal();
+    test_orphan_reparent();
     test_sec_stat_bad_pointers();
     test_sec_fstat_bad_fd();
     test_sec_stat_uninitialised();

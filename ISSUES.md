@@ -315,15 +315,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | A 64 KB bump allocator whose `free()` is a no-op, the same bug the kernel heap had. Nothing calls it yet, but any userland program that allocates in a loop will run out. |
 | **Fix** | Reuse the kernel heap's free-list design, or implement `brk`/`mmap` and a real allocator. |
 
-### M36. Exiting the init task leaves the system with nothing to run
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/sched/exit.cpp`, `userland/bin/init.c` |
-| **Bump** | patch |
-| **Issue** | If the shell returns (instead of the `exit` builtin powering off QEMU), `init` exits, `task_exit()` removes it, and the idle task halts forever with no runnable task and no message. PID 1 exiting should be fatal and visible. |
-| **Fix** | Panic when PID 1 exits, or have init restart the shell. |
-
 ### M37. String copy loops read the element before the bounds check
 
 | Field | Value |
@@ -350,14 +341,14 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | `vmm_clone_user_directory()` clears `PTE_RW` on every present user page in both processes. `copy_to_user()` validates with `write=true`, so a syscall writing into a page the process has not touched since `fork()` returns `-EFAULT` instead of letting the page fault duplicate it (for example a global `struct stat` filled by a child). Stack buffers usually work because the call frame faults the page in first. Pre-existing and not specific to `stat`. |
 | **Fix** | Validate with `write=false` and let the store fault into `break_cow()`, or call `page_for_write()` for each page before copying. |
 
-### M40. Killing a parent orphans its children
+### M41. Reparented orphans can accumulate while init is blocked
 
 | Field | Value |
 |-------|-------|
-| **Files** | `kernel/sched/exit.cpp`, `kernel/sched/sched.cpp` |
+| **Files** | `userland/shell/main.c`, `kernel/sched/exit.cpp` |
 | **Bump** | patch |
-| **Issue** | `task_exit()` does not reparent the exiting task's children. Their `ppid` keeps pointing at a pid that is later reaped, so when they exit their zombies stay in `s_all_tasks` forever and nobody can `waitpid()` for them. A fatal signal to a parent (now possible through `kill()`) makes this reachable. |
-| **Fix** | Reparent children to PID 1 (or the nearest living ancestor) in `task_exit()` and let init reap them. |
+| **Issue** | `task_exit()` reparents orphans to PID 1 and the shell drains them before each prompt, but while the shell is blocked in `read()` a process can keep forking and exiting orphans, accumulating zombies and kernel stacks until the next prompt. Normal use is bounded; a hostile workload is not. |
+| **Fix** | Deliver `SIGCHLD` and reap from a handler, or add a kernel reaper/cap for orphan zombies (with the signal work). |
 
 ---
 
@@ -544,7 +535,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Bootloader (ASM)** | C9, C13 (unassembled) | H9, H10, H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
-| **Kernel (Sched)** | — | — | M1, M36, M40 | L13, I2 |
+| **Kernel (Sched)** | — | — | M1, M41 | L13, I2 |
 | **Kernel (FS)** | — | — | M4, M9, M31, M37 | L12, L21 |
 | **Kernel (MM)** | — | — | M10, M39 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
@@ -559,5 +550,6 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M36 — PID 1 exit**: the system silently idles if init exits.
+1. **M39 — COW `copy_to_user()`**: a child writing into a page inherited from
+   `fork()` gets `-EFAULT` instead of a COW break.
 2. **H9 — `STAGE2_LOAD`**: wrong constant in `constants.inc`.
