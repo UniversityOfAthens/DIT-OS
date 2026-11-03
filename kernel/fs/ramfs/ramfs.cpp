@@ -359,7 +359,9 @@ static void seed_file(fs::inode* root, const char* name, const uint8_t* data,
     for (uint32_t i = 0; i < sizeof(t); i++)
         ((uint8_t*)&t)[i] = 0;
     uint32_t j = 0;
-    while (name[j] && j < sizeof(t.d_name) - 1)
+    /* Bound first: a caller-supplied name may not be NUL-terminated within
+     * the dentry name length (M37). */
+    while (j < sizeof(t.d_name) - 1 && name[j])
     {
         t.d_name[j] = name[j];
         j++;

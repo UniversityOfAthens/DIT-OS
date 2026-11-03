@@ -104,7 +104,7 @@ static void match_add(struct match_set* m, const char* name, int is_dir)
     if (m->count == 0)
     {
         int i = 0;
-        while (name[i] && i < NAME_MAX_LEN - 1)
+        while (i < NAME_MAX_LEN - 1 && name[i])
         {
             m->lcp[i] = name[i];
             i++;

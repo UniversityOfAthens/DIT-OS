@@ -92,7 +92,7 @@ static int str_eq(const char* a, const char* b)
 static void copy_with_unescape(char* dst, int dst_cap, const char* src)
 {
     int di = 0;
-    for (int si = 0; src[si] && di < dst_cap - 1; si++)
+    for (int si = 0; di < dst_cap - 1 && src[si]; si++)
     {
         if (src[si] == '\\' && src[si + 1])
         {
@@ -143,7 +143,7 @@ static void set_var(const char* name, const char* value)
 static void render_prompt(char* out, int out_cap)
 {
     int oi = 0;
-    for (int i = 0; g_ps1[i] && oi < out_cap - 1; i++)
+    for (int i = 0; oi < out_cap - 1 && g_ps1[i]; i++)
     {
         if (g_ps1[i] == '\\' && g_ps1[i + 1])
         {
@@ -173,7 +173,7 @@ static void render_prompt(char* out, int out_cap)
                 one[1] = '\0';
                 repl = one;
             }
-            for (int k = 0; repl[k] && oi < out_cap - 1; k++)
+            for (int k = 0; oi < out_cap - 1 && repl[k]; k++)
                 out[oi++] = repl[k];
             continue;
         }
@@ -287,7 +287,7 @@ static void normalize_path(char* out, int cap, const char* path)
     if (path[0] == '/')
     {
         int i = 0;
-        while (path[i] && i < cap - 1)
+        while (i < cap - 1 && path[i])
         {
             out[i] = path[i];
             i++;
@@ -301,7 +301,7 @@ static void normalize_path(char* out, int cap, const char* path)
     out[0] = '/';
     int i = 1;
     int j = 0;
-    while (path[j] && i < cap - 1)
+    while (i < cap - 1 && path[j])
         out[i++] = path[j++];
     out[i] = '\0';
     trim_trailing_path(out);
