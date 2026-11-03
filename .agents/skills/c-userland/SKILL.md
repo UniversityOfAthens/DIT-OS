@@ -39,8 +39,12 @@ userland/
 
 - Never include kernel headers or call kernel functions. The only interface
   is syscalls through `userland/include/syscall.h` / `libc/include/sys/`.
-- Wrappers return the raw `-errno` (there is no `errno` variable yet).
-  Check every return value.
+- Wrappers return the raw `-errno` (there is no `errno` variable; the
+  constants are in `libc/include/errno.h`). Check every return value, and
+  retry a blocking call that returns `-EINTR` unless the handler used
+  `SA_RESTART`.
+- Signals: `libc/include/signal.h` (`sigaction` fills in the
+  `__dit_sig_restorer` trampoline from `crt0.asm`).
 - Inline assembly only inside the syscall wrappers.
 
 ## libc
@@ -57,8 +61,13 @@ userland/
 
 ## Shell
 
-- Runs in ring 3 inside `init.bin`, reading fd 0 and writing fd 1 through
-  the TTY ioctl modes (`TTY_IOC_*`).
+- Runs in ring 3 inside `init.bin` (PID 1), reading fd 0 and writing fd 1
+  through the TTY ioctl modes (`TTY_IOC_*`). It is a job-control shell:
+  programs run as process groups (`fork` + `setpgid` + `execve`, `/name`
+  for a bare name), `|` pipelines (up to 4 stages, 8 args each), `&`,
+  `jobs`/`fg`/`bg`, `cd`/`pwd`. Foreground jobs get the console in cooked
+  mode (`TTY_MODE_DEFAULT`, ISIG on) via `tcsetpgrp`; the prompt is raw.
+  A `SIGCHLD` handler (SA_RESTART) records job state and reaps orphans.
 - Line editing (`readline.c`) and argument splitting must stay within
   their fixed buffers; check the index **before** reading the element.
 - Builtins and commands are covered by `scripts/qemu-test.sh`; add a step

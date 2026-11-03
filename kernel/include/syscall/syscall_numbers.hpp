@@ -30,8 +30,20 @@ enum SyscallNumber : uint32_t
     SYS_ioctl = 15,
 
     SYS_getdents = 16,
+    SYS_sigaction = 17,
+    SYS_sigprocmask = 18,
+    SYS_sigpending = 19,
+    SYS_sigreturn = 20,
+    SYS_sigsuspend = 21,
+    SYS_setpgid = 22,
+    SYS_getpgid = 23,
+    SYS_pipe = 24,
+    SYS_dup = 25,
+    SYS_dup2 = 26,
+    SYS_chdir = 27,
+    SYS_getcwd = 28,
 
-    SYS_MAX = 17
+    SYS_MAX = 29
 };
 
 } // namespace syscall

@@ -61,8 +61,14 @@ Verify with `grep` before relying on any API; do not invent one.
   EAX (`>= 0` or `-errno`). Numbers live in exactly two places that CI keeps
   in sync: `userland/include/syscall.h` and
   `kernel/include/syscall/syscall_numbers.hpp`.
+- **fds 0–2 are ordinary open files** (a refcounted console `fs::file` from
+  `syscall::tty_open_console`), not special cases: any fd may be the
+  console, a VFS file or a pipe, and `dup2` can redirect them.
+- **Blocking**: `sched::sleep_on()` returns `bool`; false means a caught
+  signal is pending and the syscall must return `-EINTR`. There is no
+  preemption: signals act at syscall exit and at IRQ return to ring 3.
 - **Disk layout** (sectors): 0 stage1, 2–10 stage2, 11–36 loader, 37+ stripped
-  `kernel.img` (`KERNEL_SECTORS` = 200). Owned by `bootloader/Makefile`; keep
+  `kernel.img` (`KERNEL_SECTORS` = 240). Owned by `bootloader/Makefile`; keep
   `stage1.asm`, `stage2.asm`, `common/constants.inc` and
   `bootloader/include/boot.hpp` in sync.
 - **Dead code**: `bootloader/src/uefi/` and the C++ files in

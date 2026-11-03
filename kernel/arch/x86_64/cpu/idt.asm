@@ -47,6 +47,9 @@ isr_err 17
 %endrep
 
 isr_common:
+    ; The interrupted context may have DF set (user code can std, and
+    ; sigreturn restores it); compiled kernel code assumes DF = 0.
+    cld
     pusha
     push ds
     push es

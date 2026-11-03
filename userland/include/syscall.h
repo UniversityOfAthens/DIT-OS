@@ -1,6 +1,8 @@
 #ifndef USERLAND_SYSCALL_H
 #define USERLAND_SYSCALL_H
 
+#include "errno.h"
+
 #define SYS_read 0
 #define SYS_write 1
 #define SYS_open 2
@@ -18,15 +20,33 @@
 #define SYS_kill 14
 #define SYS_ioctl 15
 #define SYS_getdents 16
+#define SYS_sigaction 17
+#define SYS_sigprocmask 18
+#define SYS_sigpending 19
+#define SYS_sigreturn 20
+#define SYS_sigsuspend 21
+#define SYS_setpgid 22
+#define SYS_getpgid 23
+#define SYS_pipe 24
+#define SYS_dup 25
+#define SYS_dup2 26
+#define SYS_chdir 27
+#define SYS_getcwd 28
 
 #define TTY_IOC_GETMODE 0x5401
 #define TTY_IOC_SETMODE 0x5402
 #define TTY_IOC_POWER_OFF 0x5403
+#define TTY_IOC_GETPGRP 0x5404
+#define TTY_IOC_SETPGRP 0x5405
 #define TTY_MODE_ECHO 0x1
 #define TTY_MODE_CANON 0x2
+#define TTY_MODE_ISIG 0x4
+#define TTY_MODE_DEFAULT (TTY_MODE_ECHO | TTY_MODE_CANON | TTY_MODE_ISIG)
 
 /* waitpid */
 #define WNOHANG 1
+#define WUNTRACED 2
+#define WCONTINUED 4
 
 /* waitpid status decoding (Linux-compatible layout; see
  * kernel/include/sched/wait.hpp). */
@@ -34,25 +54,9 @@
 #define WEXITSTATUS(s) (((s) >> 8) & 0xff)
 #define WIFSIGNALED(s) (((s) & 0x7f) != 0 && ((s) & 0x7f) != 0x7f)
 #define WTERMSIG(s) ((s) & 0x7f)
-
-/* Signals (same values as kernel/include/sched/signal.hpp). */
-#define SIGKILL 9
-#define SIGSEGV 11
-#define SIGTERM 15
-#define SIGCHLD 17
-#define SIGSTOP 19
-#define NSIG 32
-
-/* Errno values (same as kernel/include/errno_defs.hpp). Wrappers return the
- * raw negative value, not -1 with errno set. */
-#define EPERM 1
-#define ENOENT 2
-#define ESRCH 3
-#define EBADF 9
-#define ECHILD 10
-#define EFAULT 14
-#define EINVAL 22
-#define ENOSYS 38
+#define WIFSTOPPED(s) (((s) & 0xff) == 0x7f)
+#define WSTOPSIG(s) (((s) >> 8) & 0xff)
+#define WIFCONTINUED(s) (((s) & 0xffff) == 0xffff)
 
 /* mmap */
 #define PROT_READ 0x1
@@ -175,6 +179,63 @@ static inline void* mmap(unsigned length, int prot, int flags)
 static inline int munmap(void* addr, unsigned length)
 {
     return dit_syscall(SYS_munmap, (unsigned int)addr, length, 0, 0, 0);
+}
+
+/* Process groups (job control). pid/pgid 0 mean "the caller". */
+static inline int setpgid(int pid, int pgid)
+{
+    return dit_syscall(SYS_setpgid, (unsigned int)pid, (unsigned int)pgid, 0, 0,
+                       0);
+}
+
+static inline int getpgid(int pid)
+{
+    return dit_syscall(SYS_getpgid, (unsigned int)pid, 0, 0, 0, 0);
+}
+
+static inline int getpgrp(void)
+{
+    return getpgid(0);
+}
+
+/* Anonymous pipe: fds[0] reads, fds[1] writes. */
+static inline int pipe(int fds[2])
+{
+    return dit_syscall(SYS_pipe, (unsigned int)fds, 0, 0, 0, 0);
+}
+
+static inline int dup(int fd)
+{
+    return dit_syscall(SYS_dup, (unsigned int)fd, 0, 0, 0, 0);
+}
+
+static inline int dup2(int oldfd, int newfd)
+{
+    return dit_syscall(SYS_dup2, (unsigned int)oldfd, (unsigned int)newfd, 0, 0,
+                       0);
+}
+
+static inline int chdir(const char* path)
+{
+    return dit_syscall(SYS_chdir, (unsigned int)path, 0, 0, 0, 0);
+}
+
+/* Copies the working directory into @buf; returns its length including the
+ * NUL, or -ERANGE when @size is too small. */
+static inline int getcwd(char* buf, unsigned size)
+{
+    return dit_syscall(SYS_getcwd, (unsigned int)buf, size, 0, 0, 0);
+}
+
+/* Foreground process group of the console on @fd. */
+static inline int tcgetpgrp(int fd)
+{
+    return ioctl(fd, TTY_IOC_GETPGRP, 0);
+}
+
+static inline int tcsetpgrp(int fd, int pgid)
+{
+    return ioctl(fd, TTY_IOC_SETPGRP, (unsigned long)pgid);
 }
 
 #endif

@@ -261,6 +261,10 @@ int64_t vfs_lseek(file* f, int64_t offset, int whence)
 {
     if (!f)
         return -EINVAL;
+    /* Pipes and the console have no inode and no position (POSIX ESPIPE);
+     * SEEK_END below would dereference the missing inode. */
+    if (!f->f_inode)
+        return -ESPIPE;
     const int SEEK_SET = 0;
     const int SEEK_CUR = 1;
     const int SEEK_END = 2;

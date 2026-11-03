@@ -392,13 +392,37 @@ static void seed_text_file(fs::inode* root, const char* name, const char* text)
               kstrlen(text));
 }
 
+/* Create directory @name in @parent; returns its inode or nullptr. */
+static fs::inode* seed_dir(fs::inode* parent, const char* name)
+{
+    if (!parent || !name)
+        return nullptr;
+    fs::dentry t;
+    for (uint32_t i = 0; i < sizeof(t); i++)
+        ((uint8_t*)&t)[i] = 0;
+    uint32_t j = 0;
+    while (j < sizeof(t.d_name) - 1 && name[j])
+    {
+        t.d_name[j] = name[j];
+        j++;
+    }
+    t.d_name[j] = '\0';
+    if (inode_mkdir(parent, &t, 0755) != 0)
+        return nullptr;
+    return t.d_inode;
+}
+
 static void seed_demo_files()
 {
     if (!s_root_inode)
         return;
     seed_text_file(s_root_inode, "hello.txt", "Hello from DIT-OS ramfs.\n");
     seed_text_file(s_root_inode, "README.txt",
-                   "Try: ls\n      cat hello.txt\n");
+                   "Try: ls\n      cat hello.txt\n      cd home\n");
+    /* A subdirectory, so cd/chdir and relative paths have somewhere to go. */
+    fs::inode* home = seed_dir(s_root_inode, "home");
+    if (home)
+        seed_text_file(home, "notes.txt", "Notes live in /home.\n");
 }
 
 static int ramfs_get_sb(fs::fs_type* type, const char* dev, void* data,

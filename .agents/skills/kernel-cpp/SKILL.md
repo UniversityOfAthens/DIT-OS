@@ -41,8 +41,11 @@ called from assembly are `extern "C"` with no leading underscore.
 | IRQ masking | `arch::irq_save()`, `arch::irq_restore(flags)` | `arch/x86_64/irqflags.hpp` |
 | Port I/O | helpers in `arch/x86_64/io.hpp` | |
 | Sleeping lock | `sched::Mutex` | `sched/mutex.hpp` |
-| Blocking | `sched::sleep_on(WaitQueue*)` and wake helpers | `sched/wait.hpp`, `sched/sched.hpp` |
-| Signals | `sched::signal_send_pid`, `sched::signal_check_current` | `sched/signal.hpp` |
+| Blocking | `bool sched::sleep_on(WaitQueue*)` (false = caught signal, return `-EINTR`), `wake_up_all`, `task_wake` | `sched/sched.hpp` |
+| Signals | `sched::signal_send` (kill), `signal_send_task`/`signal_send_group` (kernel-generated), `signal_force_current` (faults), `signal_interrupt_pending` | `sched/signal.hpp` |
+| Job control | `task_stop_current`, `task_continue`, `wait_child(pid, status, options)` | `sched/sched.hpp`, `sched/wait.hpp` |
+| Open files | `syscall::fd_get`/`fd_install`/`fd_close`/`fd_dup2`; console `syscall::tty_open_console`; `fs::pipe_create` | `syscall/fd.hpp`, `syscall/tty.hpp`, `fs/pipe.hpp` |
+| User paths | `syscall::path_from_user` (fetch once, resolve against the cwd) | `syscall/path.hpp` |
 | Errors | `EFAULT`, `EINVAL`, ... | `errno_defs.hpp` |
 
 Do not invent APIs. If one is missing, add it to the right header with a
@@ -83,9 +86,15 @@ the heap is up (use static storage).
 - Restore IRQ state on every return path.
 - Interrupt handlers: no allocation, no sleeping, no long loops.
 - Idle/wait loops use `hlt` (or `pause`), never a bare spin.
-- Signal delivery is cooperative: `sched::signal_check_current()` runs at
-  syscall exit and in `sleep_on()`. A task that never makes a syscall does not
-  see a pending signal, and there are no user handlers yet.
+- Signals act on the way back to ring 3: at syscall exit
+  (`syscall_entry`) and at IRQ/exception return (`interrupt_dispatch`), via
+  `signal_handle_pending()`. There is no preemption, so the IRQ path is how
+  ^C reaches a task spinning in user mode. Blocking calls go through
+  `sleep_on()`, which runs default actions (terminate, stop) itself and
+  returns false for a caught signal; the caller then returns `-EINTR`
+  (SA_RESTART is applied in `syscall_entry`).
+- PID 1 discards signals whose disposition is SIG_DFL (Linux semantics);
+  its own faults still reach it through `signal_force_current()`.
 
 ## Inline assembly
 

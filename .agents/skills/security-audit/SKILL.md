@@ -163,9 +163,8 @@ the existing `check(ok, what)` / `check_value(ok, value, what)` helpers: they
 count failures, and any failure makes `scripts/qemu-test.sh` fail.
 
 The wrappers in `userland/include/syscall.h` return the raw `-errno`.
-Userland has no errno constants yet; when a probe needs one, add it to
-`syscall.h` with the same value as `kernel/include/errno_defs.hpp`
-(e.g. `#define EFAULT 14`) rather than hard-coding the number.
+The errno constants live in `userland/libc/include/errno.h` (same values as
+`kernel/include/errno_defs.hpp`); use them rather than hard-coding numbers.
 
 Typical probe (adapt to the change):
 

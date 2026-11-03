@@ -85,12 +85,16 @@ void readline_init(void)
     s_raw = ioctl(0, TTY_IOC_SETMODE, 0) == 0;
 }
 
-/* Next input byte, or -1 on read error. */
+/* Next input byte, or -1 on read error. A signal handler (the shell's
+ * SIGCHLD reaper) interrupting the read is not an error: read again. */
 static int next_byte(void)
 {
     if (s_pending_pos == s_pending_len)
     {
-        int n = read(0, s_pending, sizeof(s_pending));
+        int n;
+        do
+            n = read(0, s_pending, sizeof(s_pending));
+        while (n == -EINTR);
         if (n <= 0)
             return -1;
         s_pending_len = n;
@@ -180,13 +184,14 @@ static int scan_dir(const char* dir, const char* base, int base_len,
     return rc;
 }
 
-/* Absolute directory path for the part of @word before its last '/'. The
- * shell has no working directory yet, so relative paths start at '/'. */
+/* Directory to scan for the part of @word before its last '/': the working
+ * directory (".") for a bare name, otherwise that prefix as typed, which the
+ * kernel resolves against the working directory when it is relative. */
 static void completion_dir(char* out, const char* word, int dir_len)
 {
     int o = 0;
-    if (dir_len == 0 || word[0] != '/')
-        out[o++] = '/';
+    if (dir_len == 0)
+        out[o++] = '.';
     for (int i = 0; i < dir_len && o < PATH_MAX_LEN - 1; i++)
         out[o++] = word[i];
     out[o] = '\0';
@@ -279,7 +284,10 @@ int readline(const char* prompt, char* buf, int cap,
     put_str(prompt);
     if (!s_raw)
     {
-        int n = read(0, buf, (unsigned)(cap - 1));
+        int n;
+        do
+            n = read(0, buf, (unsigned)(cap - 1));
+        while (n == -EINTR);
         if (n < 0)
             return -1;
         buf[n] = '\0';

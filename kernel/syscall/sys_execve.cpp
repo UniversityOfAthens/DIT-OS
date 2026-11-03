@@ -9,6 +9,7 @@
 #include "syscall/syscall.hpp"
 #include "syscall/syscall_defs.hpp"
 #include "syscall/syscall_numbers.hpp"
+#include "syscall/path.hpp"
 #include "sched/sched.hpp"
 #include "arch/x86_64/control.hpp"
 #include "arch/x86_64/gdt.hpp"
@@ -137,13 +138,11 @@ int place_strings(uint32_t directory, uintptr_t vector, int count,
 
 SyscallResult sys_execve_impl(const SyscallArgs* args)
 {
-    char path[128];
-    int length = mm::strncpy_from_user(
-        path, static_cast<uintptr_t>(args->args[0]), sizeof(path));
+    char path[PATH_MAX];
+    int length = path_from_user(path, sizeof(path),
+                                static_cast<uintptr_t>(args->args[0]));
     if (length < 0)
         return length;
-    if (length >= static_cast<int>(sizeof(path)) - 1)
-        return -ENAMETOOLONG;
 
     sched::Task* task = sched::current_task;
     if (!task || !task->page_directory)
@@ -354,6 +353,22 @@ SyscallResult sys_execve_impl(const SyscallArgs* args)
         arch::paging_load(directory);
         arch::tss_set_kernel_stack(task->stack_top + task->stack_sz);
         mm::vmm_destroy_user_directory(old_directory);
+
+        /* POSIX: caught signals revert to the default (their handlers are
+         * gone with the old image), ignored ones stay ignored, and the
+         * blocked mask and pending set are kept. */
+        uint32_t irq = arch::irq_save();
+        for (int sig = 0; sig < sched::NSIG; sig++)
+        {
+            sched::SignalAction& action = task->actions[sig];
+            if (action.handler == sched::SIG_IGN)
+                continue;
+            action.handler = sched::SIG_DFL;
+            action.mask = 0;
+            action.flags = 0;
+            action.restorer = 0;
+        }
+        arch::irq_restore(irq);
 
         regs[arch::FRAME_STACK_ESP] = esp;
         regs[arch::FRAME_EIP] = header->e_entry;

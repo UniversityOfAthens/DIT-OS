@@ -70,6 +70,14 @@ bool task_init(Task* t, void (*entry)(), uint32_t* stack, uint32_t stack_size,
     t->exit_code = 0;
     t->fd_table = -1;
     t->pending_signals = 0;
+    t->blocked_signals = 0;
+    for (int sig = 0; sig < NSIG; sig++)
+    {
+        t->actions[sig].handler = SIG_DFL;
+        t->actions[sig].mask = 0;
+        t->actions[sig].flags = 0;
+        t->actions[sig].restorer = 0;
+    }
     t->wait_queue = nullptr;
     return true;
 }
@@ -159,9 +167,11 @@ Task* task_create_user(uint32_t entry)
 
     for (size_t i = 0; i < sizeof(Task) / sizeof(uint32_t); i++)
         reinterpret_cast<uint32_t*>(t)[i] = 0;
+    /* A task without a table would fall back to the kernel's table 0, so
+     * no table (or no console for stdio) is a failure, not a default. */
     t->fd_table = syscall::fd_table_create();
-
-    if (!setup_user_context(t, stack, KERNEL_STACK_BYTES,
+    if (t->fd_table < 0 || !syscall::fd_table_install_stdio(t->fd_table) ||
+        !setup_user_context(t, stack, KERNEL_STACK_BYTES,
                             reinterpret_cast<uint32_t>(user_entry_trap), frame,
                             0))
     {
@@ -183,6 +193,10 @@ Task* task_create_user(uint32_t entry)
     t->user_mode = true;
     t->ppid = 0;
     t->exit_code = 0;
+    /* The first process leads process group 1 and starts at the root. */
+    t->pgid = t->pid;
+    t->cwd[0] = '/';
+    t->cwd[1] = '\0';
 
     task_register(t);
     run_queue_add(t);
@@ -224,6 +238,16 @@ Task* task_create_fork_child(Task* parent, const uint32_t* user_regs)
     for (size_t i = 0; i < sizeof(Task) / sizeof(uint32_t); i++)
         reinterpret_cast<uint32_t*>(t)[i] = 0;
 
+    /* Dispositions and the blocked mask are per-process state: fork copies
+     * them, while the pending set (and any job event) starts empty. */
+    t->blocked_signals = parent->blocked_signals;
+    for (int sig = 0; sig < NSIG; sig++)
+        t->actions[sig] = parent->actions[sig];
+    /* The child joins its parent's process group and directory. */
+    t->pgid = parent->pgid;
+    for (uint32_t i = 0; i < TASK_CWD_MAX; i++)
+        t->cwd[i] = parent->cwd[i];
+
     /* The child returns to user mode at the parent's interrupted EIP, on the
      * parent's stack, which the clone gave it its own copy of. Writing the
      * frame here is what makes that copy private. */
@@ -247,6 +271,16 @@ Task* task_create_fork_child(Task* parent, const uint32_t* user_regs)
         return nullptr;
     }
 
+    /* Sharing the kernel's table 0 is never acceptable: no table, no fork. */
+    t->fd_table = syscall::fd_table_dup(parent->fd_table);
+    if (t->fd_table < 0)
+    {
+        mm::kfree(t);
+        mm::kfree(stack);
+        mm::vmm_destroy_user_directory(directory);
+        return nullptr;
+    }
+
     t->state = TaskState::Runnable;
     t->next = nullptr;
     t->all_next = nullptr;
@@ -258,7 +292,6 @@ Task* task_create_fork_child(Task* parent, const uint32_t* user_regs)
     t->user_mode = true;
     t->ppid = parent->pid;
     t->exit_code = 0;
-    t->fd_table = syscall::fd_table_dup(parent->fd_table);
 
     task_register(t);
     run_queue_add(t);

@@ -4,6 +4,7 @@
 
 #include "arch/x86_64/idt.hpp"
 #include "arch/x86_64/pic.hpp"
+#include "sched/signal.hpp"
 #include <stdint.h>
 
 extern "C" void load_idt(void* descriptor);
@@ -70,6 +71,11 @@ extern "C" void interrupt_dispatch(uint32_t vector, uint32_t error_code,
         pic_eoi(irq);
     }
     interrupt_handler(vector, error_code, regs);
+    /* There is no preemption, so returning to ring 3 from an IRQ or fault is
+     * the only chance to act on a signal raised meanwhile (^C on a task
+     * spinning in user mode, or the fault's own signal). */
+    if ((regs[FRAME_CS] & 3u) != 0)
+        (void)sched::signal_handle_pending(regs);
 }
 
 } // namespace arch

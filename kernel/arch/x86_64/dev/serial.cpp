@@ -39,6 +39,7 @@ static volatile uint8_t s_rx_buf[RX_BUF_SIZE];
 static volatile uint32_t s_rx_head;
 static volatile uint32_t s_rx_tail;
 static void (*s_rx_handler)();
+static bool (*s_rx_filter)(uint8_t);
 
 static uint16_t base(int port)
 {
@@ -60,9 +61,10 @@ void serial_init()
     }
 }
 
-void serial_enable_rx_irq(void (*handler)())
+void serial_enable_rx_irq(void (*handler)(), bool (*filter)(uint8_t byte))
 {
     s_rx_handler = handler;
+    s_rx_filter = filter;
     arch::outb(COM1 + UART_IER, IER_RX_AVAILABLE);
 }
 
@@ -72,6 +74,8 @@ void serial_irq()
     while (arch::inb(COM1 + UART_LSR) & LSR_DATA_READY)
     {
         uint8_t byte = arch::inb(COM1 + UART_DATA);
+        if (s_rx_filter && s_rx_filter(byte))
+            continue;
         uint32_t head = s_rx_head;
         if (head - s_rx_tail < RX_BUF_SIZE)
         { // drop input when full

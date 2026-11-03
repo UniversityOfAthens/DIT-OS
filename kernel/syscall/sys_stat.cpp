@@ -5,6 +5,9 @@
 #include "mm/uaccess.hpp"
 #include "syscall/fd.hpp"
 #include "syscall/syscall_defs.hpp"
+#include "syscall/tty.hpp"
+#include "syscall/path.hpp"
+#include "fs/pipe.hpp"
 #include <stdint.h>
 
 namespace syscall
@@ -13,15 +16,19 @@ namespace syscall
 extern SyscallResult sys_stat_impl(const SyscallArgs* args);
 extern SyscallResult sys_fstat_impl(const SyscallArgs* args);
 
+/* Permission bits reported for inode-less files (crw--w---- / prw-------). */
+constexpr uint32_t CONSOLE_MODE = 0620;
+constexpr uint32_t PIPE_MODE = 0600;
+
 SyscallResult sys_stat_impl(const SyscallArgs* args)
 {
     uintptr_t user_stat = static_cast<uintptr_t>(args->args[1]);
     if (!mm::user_range_ok(user_stat, sizeof(fs::stat)))
         return -EFAULT;
 
-    char path[256];
-    int len = mm::strncpy_from_user(path, static_cast<uintptr_t>(args->args[0]),
-                                    sizeof(path));
+    char path[PATH_MAX];
+    int len = path_from_user(path, sizeof(path),
+                             static_cast<uintptr_t>(args->args[0]));
     if (len < 0)
         return len;
 
@@ -47,11 +54,26 @@ SyscallResult sys_fstat_impl(const SyscallArgs* args)
         return -EFAULT;
 
     fs::file* f = fd_get(fd);
-    if (!f || !f->f_inode)
+    if (!f)
         return -EBADF;
 
     fs::stat st;
-    fs::vfs_stat_inode(f->f_inode, &st);
+    if (f->f_inode)
+    {
+        fs::vfs_stat_inode(f->f_inode, &st);
+    }
+    else
+    {
+        /* The console and pipes have no inode: report only their type, and
+         * zero the rest so no stack bytes reach user space. */
+        uint8_t* raw = reinterpret_cast<uint8_t*>(&st);
+        for (uint32_t i = 0; i < sizeof(st); i++)
+            raw[i] = 0;
+        if (tty_is_console(f))
+            st.st_mode = S_IFCHR | CONSOLE_MODE;
+        else if (fs::pipe_is_pipe(f))
+            st.st_mode = S_IFIFO | PIPE_MODE;
+    }
 
     if (mm::copy_to_user(user_stat, &st, sizeof(st)) < 0)
         return -EFAULT;

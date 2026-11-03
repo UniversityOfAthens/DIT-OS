@@ -3,7 +3,8 @@
 #define USER_SHELL_READLINE_H
 
 /** Switch the console to raw mode so the editor sees every key. If that
- * fails, readline falls back to the kernel's line editing (no completion). */
+ * fails, readline falls back to the kernel's line editing (no completion).
+ * Call again after a foreground job used the console in cooked mode. */
 void readline_init(void);
 
 /** Print @prompt and read one line into @buf (NUL-terminated, no newline).

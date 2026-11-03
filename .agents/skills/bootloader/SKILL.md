@@ -23,7 +23,7 @@ description: The DIT-OS custom boot chain (stage1 MBR, stage2 menu, loader, kern
 | 0 | stage1.bin | 0x7C00 |
 | 2–10 | stage2.bin (9 sectors) | 0x7E00 |
 | 11–36 | loader.bin (26 reserved) | 0x10000 |
-| 37+ | kernel.img, `KERNEL_SECTORS` (200) | raw at 0x20000, segments to 0x100000 |
+| 37+ | kernel.img, `KERNEL_SECTORS` (240) | raw at 0x20000, segments to 0x100000 |
 
 - `kernel.img` is the stripped `kernel.bin`. The build fails if it exceeds
   `KERNEL_SECTORS * 512`.

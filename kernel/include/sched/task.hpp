@@ -20,8 +20,20 @@ enum class TaskState : uint8_t
     Runnable,
     Running,
     Blocked,
+    Stopped, /* job control: off the run queue until SIGCONT or SIGKILL */
     Exited,
 };
+
+/** Child state change not yet collected by waitpid(). */
+enum class JobEvent : uint8_t
+{
+    None,
+    Stopped, /* reported with WUNTRACED */
+    Continued, /* reported with WCONTINUED */
+};
+
+/** Longest working directory, including the NUL. */
+constexpr uint32_t TASK_CWD_MAX = 128;
 
 /** Written to the lowest word of every task stack; schedule() panics if it is
  * overwritten, which means the task overflowed its stack. */
@@ -43,9 +55,25 @@ struct Task
     uint32_t ppid;
     int32_t exit_code;
     int fd_table; /* index into the per-process fd table pool, -1 if none */
-    /** Signals whose default action is Term/Core, waiting to be delivered at
-     *  the next syscall exit or before the task blocks. */
+    /** Signals pending delivery (bit set) and the current blocked mask. */
     sigset_t pending_signals;
+    sigset_t blocked_signals;
+    /** Per-signal dispositions; index with the signal number. */
+    SignalAction actions[NSIG];
+    /** sigsuspend(): the mask to put back once a handler has been entered
+     *  (valid while restore_mask is set). */
+    sigset_t saved_mask;
+    bool restore_mask;
+    /** Process group (job control). Inherited across fork(). */
+    uint32_t pgid;
+    /** Unreported stop/continue for waitpid(), and the stopping signal. */
+    JobEvent job_event;
+    int stop_signal;
+    /** Times the task has stopped; lets a retry loop tell "stopped and
+     *  continued" from "the stop signal was discarded". */
+    uint32_t stop_count;
+    /** Absolute, normalised working directory (inherited across fork). */
+    char cwd[TASK_CWD_MAX];
     /** Wait queue the task is blocked on, or nullptr while runnable. */
     WaitQueue* wait_queue;
 };

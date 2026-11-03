@@ -3,6 +3,7 @@
 #include "sched/sched.hpp"
 #include "sched/task.hpp"
 #include "sched/signal.hpp"
+#include "sched/wait.hpp"
 #include "arch/x86_64/irqflags.hpp"
 #include "arch/x86_64/paging.hpp"
 #include "arch/x86_64/tss.hpp"
@@ -71,13 +72,49 @@ Task* task_find(int32_t pid)
     return nullptr;
 }
 
-void task_reparent_children(uint32_t old_pid, uint32_t new_pid)
+Task* task_list_head()
 {
+    return s_all_tasks;
+}
+
+/* Bound on the ppid walk: every step moves to a distinct live task, so the
+ * chain is never longer than the task list; this only guards corruption. */
+constexpr uint32_t MAX_ANCESTRY_DEPTH = 1024;
+
+bool task_is_descendant(const Task* t, const Task* ancestor)
+{
+    if (!t || !ancestor)
+        return false;
+    for (uint32_t depth = 0; t && depth < MAX_ANCESTRY_DEPTH; depth++)
+    {
+        if (t == ancestor)
+            return true;
+        if (t->ppid == 0)
+            return false;
+        t = task_find(static_cast<int32_t>(t->ppid));
+    }
+    return false;
+}
+
+bool task_reparent_children(uint32_t old_pid, uint32_t new_pid)
+{
+    bool zombie = false;
     for (Task* t = s_all_tasks; t; t = t->all_next)
     {
-        if (t->ppid == old_pid)
-            t->ppid = new_pid;
+        if (t->ppid != old_pid)
+            continue;
+        t->ppid = new_pid;
+        if (t->state == TaskState::Exited)
+            zombie = true;
+        /* Nobody will ever continue a stopped orphan: hang it up and wake
+         * it, like POSIX does for an orphaned stopped process group. */
+        if (t->state == TaskState::Stopped)
+        {
+            signal_send_task(t, SIGHUP);
+            signal_send_task(t, SIGCONT);
+        }
     }
+    return zombie;
 }
 
 /* Unlink @t from the wait queue recorded on the task. */
@@ -104,45 +141,69 @@ void task_wake(Task* t)
     run_queue_add(t);
 }
 
-/* The exited child of @parent matching @pid (-1 for any). */
-static Task* find_exited_child(Task* parent, int32_t pid)
+/* Does @t match waitpid()'s @pid selector for @parent? */
+static bool child_matches(const Task* t, const Task* parent, int32_t pid)
 {
+    if (t->ppid != parent->pid)
+        return false;
+    if (pid == -1)
+        return true;
+    if (pid > 0)
+        return static_cast<int32_t>(t->pid) == pid;
+    uint32_t pgid = pid == 0 ? parent->pgid : static_cast<uint32_t>(-pid);
+    return t->pgid == pgid;
+}
+
+/* A child of @parent with something to report under @options, or nullptr.
+ * Sets @any when at least one matching child exists. */
+static Task* find_reportable_child(Task* parent, int32_t pid, int options,
+                                   bool* any)
+{
+    *any = false;
     for (Task* t = s_all_tasks; t; t = t->all_next)
     {
-        if (t->ppid != parent->pid || t->state != TaskState::Exited)
+        if (!child_matches(t, parent, pid))
             continue;
-        if (pid < 0 || static_cast<int32_t>(t->pid) == pid)
+        *any = true;
+        if (t->state == TaskState::Exited)
+            return t;
+        if ((options & WUNTRACED) && t->job_event == JobEvent::Stopped)
+            return t;
+        if ((options & WCONTINUED) && t->job_event == JobEvent::Continued)
             return t;
     }
     return nullptr;
 }
 
-static bool has_child(Task* parent, int32_t pid)
-{
-    for (Task* t = s_all_tasks; t; t = t->all_next)
-    {
-        if (t->ppid != parent->pid)
-            continue;
-        if (pid < 0 || static_cast<int32_t>(t->pid) == pid)
-            return true;
-    }
-    return false;
-}
-
-int wait_child(int32_t pid, int32_t* status, bool nohang)
+int wait_child(int32_t pid, int32_t* status, int options)
 {
     Task* parent = current_task;
     if (!parent)
         return -ECHILD;
-    if (pid == 0)
-        return -ECHILD;
+    /* -pid must not overflow; INT32_MIN names no group. */
+    if (pid == INT32_MIN)
+        return -EINVAL;
 
     for (;;)
     {
-        /* Checking for an exit and going to sleep happen with IRQs off, so a
-         * child that exits in between still wakes us. */
+        /* Checking for an event and going to sleep happen with IRQs off, so
+         * a child that changes state in between still wakes us. */
         uint32_t flags = arch::irq_save();
-        Task* child = find_exited_child(parent, pid);
+        bool any = false;
+        Task* child = find_reportable_child(parent, pid, options, &any);
+        if (child && child->state != TaskState::Exited)
+        {
+            /* Stop/continue: report once, the child stays. */
+            int32_t code = child->job_event == JobEvent::Stopped ?
+                               make_wait_status_stop(child->stop_signal) :
+                               WAIT_STATUS_CONTINUED;
+            child->job_event = JobEvent::None;
+            uint32_t child_pid = child->pid;
+            arch::irq_restore(flags);
+            if (status)
+                *status = code;
+            return static_cast<int>(child_pid);
+        }
         if (child)
         {
             int32_t code = child->exit_code;
@@ -156,18 +217,20 @@ int wait_child(int32_t pid, int32_t* status, bool nohang)
                 *status = code;
             return static_cast<int>(child_pid);
         }
-        if (!has_child(parent, pid))
+        if (!any)
         {
             arch::irq_restore(flags);
             return -ECHILD;
         }
-        if (nohang)
+        if (options & WNOHANG)
         {
             arch::irq_restore(flags);
             return 0;
         }
-        sleep_on(&s_child_wait);
+        bool slept = sleep_on(&s_child_wait);
         arch::irq_restore(flags);
+        if (!slept)
+            return -EINTR;
     }
 }
 
@@ -308,19 +371,45 @@ void schedule()
     arch::irq_restore(flags);
 }
 
-void sleep_on(WaitQueue* wq)
+bool sleep_on(WaitQueue* wq)
 {
     Task* t = current_task;
     if (!t || t == idle_task)
+    {
         core::panic("sleep_on: no task context to block");
-    /* A fatal signal must not be lost to an indefinite sleep. */
-    signal_check_current();
+        for (;;)
+            asm volatile("hlt");
+    }
+    /* A signal must not be lost to an indefinite sleep: default actions run
+     * here, and a caught signal makes the syscall return -EINTR. */
+    if (signal_interrupt_pending())
+        return false;
     t->state = TaskState::Blocked;
     run_queue_remove(t);
     t->wait_queue = wq;
     t->next = wq->head;
     wq->head = t;
     switch_to_next();
+    return true;
+}
+
+void task_stop_current()
+{
+    Task* t = current_task;
+    if (!t || t == idle_task)
+        return;
+    t->state = TaskState::Stopped;
+    run_queue_remove(t);
+    switch_to_next();
+}
+
+void task_continue(Task* t)
+{
+    if (!t || t->state != TaskState::Stopped)
+        return;
+    t->next = nullptr;
+    t->state = TaskState::Runnable;
+    run_queue_add(t);
 }
 
 void wake_up_all(WaitQueue* wq)

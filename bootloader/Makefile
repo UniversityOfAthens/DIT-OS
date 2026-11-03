@@ -27,7 +27,7 @@ DISK_SECTOR_LOADER  = 11
 DISK_SECTOR_KERNEL  = 37
 LOADER_SECTORS      = 26
 # Sectors stage2 reads for the kernel; passed to stage2.asm and checked below
-KERNEL_SECTORS      = 200
+KERNEL_SECTORS      = 240
 SECTOR_SIZE         = 512
 
 STAGE1_SRC = $(STAGE1_DIR)/stage1.asm

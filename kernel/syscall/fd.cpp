@@ -1,6 +1,7 @@
 // DIT-OS Kernel - Per-process file descriptor tables
 
 #include "syscall/fd.hpp"
+#include "syscall/tty.hpp"
 #include "fs/file.hpp"
 #include "fs/vfs.hpp"
 #include "sched/sched.hpp"
@@ -19,6 +20,11 @@ static int current_table()
     if (sched::current_task && sched::current_task->fd_table >= 0)
         return sched::current_task->fd_table;
     return 0;
+}
+
+static bool fd_in_range(int fd)
+{
+    return fd >= 0 && fd < FD_TABLE_SIZE;
 }
 
 void fd_init()
@@ -45,17 +51,35 @@ int fd_table_create()
     return -1;
 }
 
+bool fd_table_install_stdio(int table)
+{
+    if (table < 0 || table >= FD_TABLE_COUNT || !s_table_used[table])
+        return false;
+    /* One open console shared by all three, like a login terminal. */
+    fs::file* console = tty_open_console();
+    if (!console)
+        return false;
+    for (int i = 0; i < STDIO_FD_COUNT; i++)
+    {
+        if (i > 0)
+            console->f_refcount++;
+        s_tables[table][i] = console;
+    }
+    return true;
+}
+
 void fd_table_release(int table)
 {
     if (table < 0 || table >= FD_TABLE_COUNT || !s_table_used[table])
         return;
-    for (int i = FIRST_FILE_FD; i < FD_TABLE_SIZE; i++)
+    for (int i = 0; i < FD_TABLE_SIZE; i++)
     {
-        if (!s_tables[table][i])
+        fs::file* f = s_tables[table][i];
+        if (!f)
             continue;
-        /* Drops one reference; the file goes away with the last holder. */
-        fs::vfs_close(s_tables[table][i]);
         s_tables[table][i] = nullptr;
+        /* Drops one reference; the file goes away with the last holder. */
+        fs::vfs_close(f);
     }
     s_table_used[table] = false;
 }
@@ -67,7 +91,7 @@ int fd_table_dup(int src)
     int dst = fd_table_create();
     if (dst < 0)
         return -1;
-    for (int i = FIRST_FILE_FD; i < FD_TABLE_SIZE; i++)
+    for (int i = 0; i < FD_TABLE_SIZE; i++)
     {
         if (!s_tables[src][i])
             continue;
@@ -79,7 +103,7 @@ int fd_table_dup(int src)
 
 fs::file* fd_get(int fd)
 {
-    if (fd < FIRST_FILE_FD || fd >= FD_TABLE_SIZE)
+    if (!fd_in_range(fd))
         return nullptr;
     return s_tables[current_table()][fd];
 }
@@ -89,7 +113,7 @@ int fd_install(fs::file* f)
     if (!f)
         return -EINVAL;
     fs::file** table = s_tables[current_table()];
-    for (int i = FIRST_FILE_FD; i < FD_TABLE_SIZE; i++)
+    for (int i = 0; i < FD_TABLE_SIZE; i++)
     {
         if (table[i] == nullptr)
         {
@@ -103,11 +127,42 @@ int fd_install(fs::file* f)
 int fd_close(int fd)
 {
     fs::file** table = s_tables[current_table()];
-    if (fd < FIRST_FILE_FD || fd >= FD_TABLE_SIZE || !table[fd])
+    if (!fd_in_range(fd) || !table[fd])
         return -EBADF;
+    /* Unlink first, then drop the reference of the file that was there. */
+    fs::file* f = table[fd];
     table[fd] = nullptr;
-    fs::vfs_close(table[fd]);
+    fs::vfs_close(f);
     return 0;
+}
+
+int fd_dup(int fd)
+{
+    fs::file* f = fd_get(fd);
+    if (!f)
+        return -EBADF;
+    int newfd = fd_install(f);
+    if (newfd >= 0)
+        f->f_refcount++;
+    return newfd;
+}
+
+int fd_dup2(int oldfd, int newfd)
+{
+    fs::file* f = fd_get(oldfd);
+    if (!f || !fd_in_range(newfd))
+        return -EBADF;
+    if (oldfd == newfd)
+        return newfd;
+    fs::file** table = s_tables[current_table()];
+    /* Take the new reference before dropping the old file, and install it
+     * before closing, so the slot is never observed empty or dangling. */
+    f->f_refcount++;
+    fs::file* previous = table[newfd];
+    table[newfd] = f;
+    if (previous)
+        fs::vfs_close(previous);
+    return newfd;
 }
 
 } // namespace syscall

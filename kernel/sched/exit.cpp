@@ -2,6 +2,7 @@
 
 #include "sched/sched.hpp"
 #include "sched/task.hpp"
+#include "sched/signal.hpp"
 #include "arch/x86_64/irqflags.hpp"
 #include "core/panic.hpp"
 #include "mm/vmm.hpp"
@@ -31,7 +32,8 @@ void task_exit(int status)
     }
     /* Children keep their parent's pid in ppid; adopt them before this pid
      * becomes a zombie that nobody will ever reap (M40). */
-    task_reparent_children(prev->pid, 1);
+    if (task_reparent_children(prev->pid, 1))
+        signal_send_task(task_find(1), SIGCHLD);
     /* @status is already encoded for waitpid() (sched/wait.hpp). A task
      * calling task_exit() is running, so it is not on a wait queue. */
     prev->exit_code = status;
@@ -55,7 +57,8 @@ void task_exit(int status)
     /* The kernel stack is freed by the parent in wait_child(): switch_to()
      * is still using it. */
 
-    wake_up_all(&child_wait_queue());
+    /* SIGCHLD for the parent, and wake anyone in waitpid(). */
+    signal_notify_parent(prev, true);
 
     /* Switch to the next runnable task. Never returns for the exiting task. */
     Task* next = schedule_next();

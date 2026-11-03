@@ -24,24 +24,33 @@ Defined in exactly two files, kept in sync by the `lint.yml` check:
 - `kernel/include/syscall/syscall_numbers.hpp` (`enum SyscallNumber`,
   ends with `SYS_MAX`)
 
-| # | Name | # | Name |
-|---|------|---|------|
-| 0 | read | 9 | waitpid |
-| 1 | write | 10 | getpid |
-| 2 | open | 11 | mmap |
-| 3 | close | 12 | munmap |
-| 4 | stat | 13 | brk |
-| 5 | fstat | 14 | kill |
-| 6 | exit | 15 | ioctl |
-| 7 | fork | 16 | getdents |
-| 8 | execve | | |
+| # | Name | # | Name | # | Name |
+|---|------|---|------|---|------|
+| 0 | read | 10 | getpid | 20 | sigreturn |
+| 1 | write | 11 | mmap | 21 | sigsuspend |
+| 2 | open | 12 | munmap | 22 | setpgid |
+| 3 | close | 13 | brk | 23 | getpgid |
+| 4 | stat | 14 | kill | 24 | pipe |
+| 5 | fstat | 15 | ioctl | 25 | dup |
+| 6 | exit | 16 | getdents | 26 | dup2 |
+| 7 | fork | 17 | sigaction | 27 | chdir |
+| 8 | execve | 18 | sigprocmask | 28 | getcwd |
+| 9 | waitpid | 19 | sigpending | | |
 
 `SYS_exit` is 6 (an old header had 13). Never define a number anywhere else.
 Check the headers for the current list before relying on this table.
 
-`kill` implements default actions only. Fatal signals are recorded as pending
-and delivered at the target's next syscall exit or before it blocks; there are
-no user handlers or job control yet (`sched/signal.hpp`).
+Signals (`sched/signal.hpp`, `userland/libc/include/signal.h`):
+`sigaction` installs handlers (`SA_RESTART`, `SA_NODEFER`, `SA_RESETHAND`,
+`SA_NOCLDSTOP`; anything else is `-EINVAL`). Delivery pushes a
+`SignalDelivery` block (restorer, signo, `SignalFrame`) below the user stack;
+the userland restorer drops signo and calls `SYS_sigreturn`, which takes the
+frame from the user ESP, restores it with sanitised EFLAGS (IF forced on,
+IOPL 0) and bypasses the result store (it restores EAX). `sigsuspend` takes
+the mask by value. `kill`/`waitpid` take signed 32-bit pids: 0 is the
+caller's group, `< -1` a group, `-1` (broadcast) is `-EINVAL`. The caller may
+signal itself and its descendants. Paths (`open`, `stat`, `execve`, `chdir`)
+are resolved against the task's working directory by `path_from_user`.
 
 ## Kernel side
 

@@ -38,11 +38,14 @@ struct WaitQueue
     Task* head;
 };
 
-/** Block the current task on @wq until wake_up_all(@wq). Must be called with
- * interrupts disabled (so the wakeup cannot be missed between checking the
- * condition and sleeping); returns with interrupts still disabled. A pending
- * fatal signal terminates the task instead of blocking. */
-void sleep_on(WaitQueue* wq);
+/** Block the current task on @wq until wake_up_all(@wq) or a signal. Must be
+ * called with interrupts disabled (so the wakeup cannot be missed between
+ * checking the condition and sleeping); returns with interrupts still
+ * disabled. Pending default actions run first (a fatal signal terminates
+ * the task, a stop signal stops it). Returns false without sleeping when a
+ * caught signal is pending: the caller must then return -EINTR. A true
+ * return may be spurious, so callers re-check their condition. */
+bool sleep_on(WaitQueue* wq);
 
 /** Make every task sleeping on @wq runnable. Safe to call from an IRQ. */
 void wake_up_all(WaitQueue* wq);
@@ -50,9 +53,25 @@ void wake_up_all(WaitQueue* wq);
 /** Find a task by pid (zombies included), or nullptr. */
 Task* task_find(int32_t pid);
 
+/** First task in the list of every live task (follow Task::all_next). Walk it
+ *  with interrupts disabled. */
+Task* task_list_head();
+
+/** True when @t is @ancestor or one of its descendants. */
+bool task_is_descendant(const Task* t, const Task* ancestor);
+
+/** Stop the current task (job control) and switch away; returns once it is
+ *  continued. IRQs must be disabled. */
+void task_stop_current();
+
+/** Make the stopped task @t runnable again. IRQs must be disabled. */
+void task_continue(Task* t);
+
 /** Reassign every task whose ppid is @old_pid to @new_pid. Called with
- *  interrupts disabled while @old_pid's task exits. */
-void task_reparent_children(uint32_t old_pid, uint32_t new_pid);
+ *  interrupts disabled while @old_pid's task exits. Stopped children get
+ *  SIGHUP and SIGCONT. Returns true when an already-exited child moved, so
+ *  the new parent must be told (SIGCHLD) to reap it. */
+bool task_reparent_children(uint32_t old_pid, uint32_t new_pid);
 
 /** Remove @t from its wait queue and make it runnable. Does nothing unless
  *  @t is blocked. Must be called with interrupts disabled. */
@@ -99,12 +118,13 @@ uint32_t current_pid();
  *  sched/wait.hpp's make_wait_status_*() helpers. Never returns. */
 void task_exit(int status);
 
-/** Wait for a child of the current task to exit and collect it.
- * @pid is a pid, or -1 for any child. @status receives the exit code.
- * With @nohang, returns 0 instead of blocking when no child has exited.
- * Returns the reaped pid, 0 for WNOHANG with nothing to reap, or a negative
- * errno (-ECHILD when the task has no matching child). */
-int wait_child(int32_t pid, int32_t* status, bool nohang);
+/** Wait for a state change of a child of the current task (waitpid(2)).
+ * @pid is a pid (> 0), any child (-1), the caller's group (0) or group -@pid.
+ * @options are WNOHANG, WUNTRACED and WCONTINUED (sched/wait.hpp). @status
+ * receives the wait status. Returns the child's pid (an exited child is
+ * reaped), 0 for WNOHANG with nothing to report, or a negative errno
+ * (-ECHILD with no matching child, -EINTR when a caught signal arrives). */
+int wait_child(int32_t pid, int32_t* status, int options);
 
 void task_activate(Task* task);
 

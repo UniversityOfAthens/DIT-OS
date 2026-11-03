@@ -51,6 +51,9 @@ inline bool wifcontinued(int status)
     return (status & 0xffff) == 0xffff;
 }
 
+/** Status reported for a continued child (WCONTINUED). */
+constexpr int WAIT_STATUS_CONTINUED = 0xffff;
+
 /** Build status word for a normal exit(code), code 0..255. */
 inline int make_wait_status_exit(int code8)
 {

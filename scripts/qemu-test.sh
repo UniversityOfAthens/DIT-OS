@@ -155,6 +155,69 @@ main() {
     send '\003'
     pass
 
+    STEP="cd and pwd (kernel working directory)"
+    run_expect 'cd home\r' 'user@dit'
+    run_expect 'pwd\r' '^/home$'
+    run_expect 'cat notes.txt\r' '^Notes live in /home\.$'
+    run_expect 'cd ..\r' 'user@dit'
+    run_expect 'pwd\r' '^/$'
+    run_expect 'cd nowhere\r' '^cd: nowhere: No such file or directory$'
+    pass
+
+    STEP="shell parser limits"
+    # Argument and pipeline counts are bounded (Baron Samedit class): an
+    # over-long command line is refused, never split past its buffers.
+    run_expect 'echo 1 2 3 4 5 6 7 8 9\r' '^sh: syntax error$'
+    run_expect 'echo a | echo b | echo c | echo d | echo e\r' '^sh: syntax error$'
+    run_expect 'echo "unterminated\r' '^sh: syntax error$'
+    run_expect 'echo one & echo two\r' '^sh: syntax error$'
+    pass
+
+    STEP="run a program"
+    run_expect 'greeter\r' '^\[selftest\] execve: greeter \(argc=1\)$'
+    run_expect 'nosuch\r' '^nosuch: command not found$'
+    pass
+
+    STEP="pipeline (pipe + dup2)"
+    run_expect 'cat hello.txt | greeter read\r' "^greeter got: $HELLO_TEXT\$"
+    pass
+
+    # "greeter read" prints its ready line just before it blocks in read(),
+    # so input sent after that line reaches the job, not the shell.
+    STEP="foreground job reads the console"
+    run_expect 'greeter read\r' '^greeter: reading$'
+    run_expect 'typed-line\r' '^greeter got: typed-line$'
+    pass
+
+    STEP="Ctrl+C ends the foreground job"
+    run_expect 'greeter read\r' '^greeter: reading$'
+    run_expect '\003' '^\^C$'
+    # If the job survived, it would read this line instead of the shell.
+    run_expect 'echo after-intr\r' '^after-intr$'
+    pass
+
+    STEP="Ctrl+Z stops, jobs lists, fg resumes"
+    run_expect 'greeter read\r' '^greeter: reading$'
+    run_expect '\032' '^\[1\]\+ +Stopped +greeter read$'
+    run_expect 'jobs\r' '^\[1\]\+ +Stopped +greeter read$'
+    run_expect 'fg\r' '^greeter read$'
+    run_expect 'resumed\r' '^greeter got: resumed$'
+    pass
+
+    STEP="background job reports its exit"
+    run_expect 'greeter &\r' '^\[1\] [0-9]+$'
+    run_expect '\r' '^\[1\]\+ +Exit 3 +greeter$'
+    pass
+
+    STEP="background read stops with SIGTTIN, fg brings it back"
+    # A background job's output can land after the shell's prompt on the same
+    # line, so this one match is not anchored at the start.
+    run_expect 'greeter read &\r' 'greeter: reading$'
+    run_expect '\r' '^\[1\]\+ +Stopped +greeter read$'
+    run_expect 'fg %1\r' '^greeter read$'
+    run_expect 'from-bg\r' '^greeter got: from-bg$'
+    pass
+
     STEP="stress ($STRESS commands)"
     local offset count
     offset="$(log_size)"

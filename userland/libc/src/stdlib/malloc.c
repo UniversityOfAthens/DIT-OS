@@ -13,8 +13,13 @@ static inline size_t align_up(size_t n)
 
 void* malloc(size_t size)
 {
+    /* Bound before aligning: align_up() wraps for sizes near SIZE_MAX and
+     * would turn a huge request into a tiny one (M38). After this check
+     * size <= sizeof(s_heap), so aligning cannot overflow. */
+    if (size > sizeof(s_heap) - s_used)
+        return NULL;
     size = align_up(size);
-    if (s_used + size > sizeof(s_heap))
+    if (size > sizeof(s_heap) - s_used)
         return NULL;
     void* p = &s_heap[s_used];
     s_used += size;

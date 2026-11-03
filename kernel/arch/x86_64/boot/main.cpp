@@ -268,6 +268,30 @@ static const char* const s_exception_names[arch::EXCEPTION_COUNT] = {
     "reserved",
 };
 
+/* The signal a user-mode exception raises (Linux mapping). */
+static int exception_signal(uint32_t vector)
+{
+    switch (vector)
+    {
+    case arch::VECTOR_DIVIDE_ERROR:
+    case arch::VECTOR_X87_ERROR:
+    case arch::VECTOR_SIMD_ERROR:
+        return sched::SIGFPE;
+    case arch::VECTOR_DEBUG:
+    case arch::VECTOR_BREAKPOINT:
+        return sched::SIGTRAP;
+    case arch::VECTOR_INVALID_OPCODE:
+    case arch::VECTOR_DEVICE_NOT_AVAILABLE:
+        return sched::SIGILL;
+    case arch::VECTOR_SEGMENT_NOT_PRESENT:
+    case arch::VECTOR_STACK_FAULT:
+    case arch::VECTOR_ALIGNMENT_CHECK:
+        return sched::SIGBUS;
+    default:
+        return sched::SIGSEGV;
+    }
+}
+
 // Everything except syscalls lands here; PIC EOI is already sent by
 // interrupt_dispatch.
 extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
@@ -300,16 +324,23 @@ extern "C" void interrupt_handler(uint32_t vector, uint32_t error_code,
                 mm::vmm_handle_fault(task->page_directory, arch::read_cr2(),
                                      error_code) == 0)
                 return;
-            core::printk("[user] %s at 0x%x (error 0x%x) eip 0x%x esp 0x%x "
-                         "eax 0x%x ebx 0x%x ecx 0x%x edx 0x%x esi 0x%x "
-                         "edi 0x%x pid %u\n",
-                         s_exception_names[vector], arch::read_cr2(),
-                         error_code, regs[arch::FRAME_EIP],
-                         regs[arch::FRAME_ESP], regs[arch::FRAME_EAX],
-                         regs[arch::FRAME_EBX], regs[arch::FRAME_ECX],
-                         regs[arch::FRAME_EDX], regs[arch::FRAME_ESI],
-                         regs[arch::FRAME_EDI], task ? task->pid : 0);
-            sched::task_exit(sched::make_wait_status_signal(sched::SIGSEGV));
+            /* The signal is delivered (or kills) on the way back to user
+             * mode, in interrupt_dispatch(). */
+            int sig = exception_signal(vector);
+            sched::signal_force_current(sig);
+            /* Report faults that will kill; a handler that keeps returning
+             * to the faulting instruction must not flood the console. */
+            if (task && task->actions[sig].handler == sched::SIG_DFL)
+                core::printk("[user] %s at 0x%x (error 0x%x) eip 0x%x esp 0x%x "
+                             "eax 0x%x ebx 0x%x ecx 0x%x edx 0x%x esi 0x%x "
+                             "edi 0x%x pid %u\n",
+                             s_exception_names[vector], arch::read_cr2(),
+                             error_code, regs[arch::FRAME_EIP],
+                             regs[arch::FRAME_ESP], regs[arch::FRAME_EAX],
+                             regs[arch::FRAME_EBX], regs[arch::FRAME_ECX],
+                             regs[arch::FRAME_EDX], regs[arch::FRAME_ESI],
+                             regs[arch::FRAME_EDI], task->pid);
+            return;
         }
         // printk/panicf write to serial and VGA, so the report is visible
         // with -display none too.
