@@ -122,7 +122,9 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [x] `bootloader/Makefile`
 - [x] `bootloader/src/common/constants.inc`
 - [x] `bootloader/src/common/macros.inc`
-- [ ] Fix `constants.inc` — `STAGE2_LOAD` should be `0x7E00` not `0x1000`; `STAGE2_SECTORS` should be `9` not `16`
+- [x] Fix `constants.inc` — `STAGE2_LOAD` is now `0x7E00` and stage1 uses
+      it; `STAGE2_SECTORS` is `9` and stage2 loads the full
+      `LOADER_SECTORS` region with a Makefile size check (H9, H10)
 
 ### UEFI bootloader
 - [x] `bootloader/src/uefi/uefi.asm` — STUB (section count mismatch, raw sizes = 0)

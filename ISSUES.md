@@ -37,25 +37,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ## HIGH — Will cause build failures, incorrect behavior, or significant confusion
 
-### H9. Stage2 wrong constants in `constants.inc`
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/common/constants.inc` |
-| **Bump** | patch |
-| **Line** | 6 |
-| **Issue** | `STAGE2_LOAD = 0x1000` (should be `0x7E00`). It contradicts `boot.hpp` and `stage1.asm`. (`STAGE2_SECTORS` is already fixed at 9.) |
-| **Fix** | Set `STAGE2_LOAD = 0x7E00`. |
-
-### H10. Loader sector count mismatch (stage2 loads only 2 sectors)
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/stage2.asm:166` |
-| **Bump** | patch |
-| **Issue** | Makefile declares `LOADER_SECTORS = 26`, but stage2 only loads 2 sectors (`mov word [dap_count], 2`). If loader.bin grows beyond 1 KB, it will be silently truncated. |
-| **Fix** | Update `dap_count` to match `LOADER_SECTORS` or use a named constant. |
-
 ### H11. 20+ duplicate global symbols in bootloader ELF build path
 
 | Field | Value |
@@ -315,15 +296,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | A 64 KB bump allocator whose `free()` is a no-op, the same bug the kernel heap had. Nothing calls it yet, but any userland program that allocates in a loop will run out. |
 | **Fix** | Reuse the kernel heap's free-list design, or implement `brk`/`mmap` and a real allocator. |
 
-### M37. String copy loops read the element before the bounds check
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/fs/ramfs/ramfs.cpp:362`, `userland/shell/readline.c:107`, `userland/shell/main.c:279` |
-| **Bump** | patch |
-| **Issue** | Loops of the form `while (src[i] && i < cap - 1)` read `src[i]` before checking `i`, so a source without a NUL inside the bound is read one byte past it. Reported by cppcheck (`arrayIndexThenCheck`); currently in the baseline of `config/cppcheck-suppressions.txt`. |
-| **Fix** | Check the bound first: `while (i < cap - 1 && src[i])`, then drop the suppressions. |
-
 ### M38. `malloc()` size arithmetic can overflow
 
 | Field | Value |
@@ -532,16 +504,16 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 | Area | Critical | High | Medium | Low/Info |
 |------|----------|------|--------|----------|
-| **Bootloader (ASM)** | C9, C13 (unassembled) | H9, H10, H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
+| **Bootloader (ASM)** | C9, C13 (unassembled) | H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
 | **Kernel (Sched)** | — | — | M1, M41 | L13, I2 |
-| **Kernel (FS)** | — | — | M4, M9, M31, M37 | L12, L21 |
+| **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
 | **Kernel (MM)** | — | — | M10, M42 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M17, M18, M19, M28, M35, M37, M38 | L1, L2, L3, L4, L7, L17 |
+| **Userland** | — | — | M17, M18, M19, M28, M35, M38 | L1, L2, L3, L4, L7, L17 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
@@ -550,6 +522,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M41 — orphan zombies while init blocks**: a hostile fork/exit loop
+1. **M42 — COW counter corruption**: a self-test failure can be masked
+   because the `failures` counter reads back 0 after a COW break.
+2. **M41 — orphan zombies while init blocks**: a hostile fork/exit loop
    accumulates zombies until the next prompt (needs SIGCHLD).
-2. **H9 — `STAGE2_LOAD`**: wrong constant in `constants.inc`.

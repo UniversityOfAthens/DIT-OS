@@ -65,7 +65,6 @@ The file has two sections:
 |----|-------|-------|---------|
 | `nullPointerRedundantCheck` | `kernel/sched/sched.cpp` | `core::panic` lacks `KERNEL_NORETURN` | L20 |
 | `syntaxError` | `kernel/fs/vfs.cpp` | locals named `SEEK_*` (libc macros); **the file is not analysed while suppressed** | L21 |
-| `arrayIndexThenCheck` | `ramfs.cpp`, `readline.c`, `shell/main.c` | element read before bounds check | M37 |
 
 Lessons for new code: declare never-returning functions `KERNEL_NORETURN`;
 never name identifiers after libc macros; check the index before reading

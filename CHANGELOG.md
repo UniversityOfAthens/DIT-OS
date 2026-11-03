@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- String copy loops in ramfs seeding and the shell (prompt rendering,
+  completion, path normalisation) check their destination bound before
+  reading the source byte, so an unterminated source can no longer be read
+  one byte past its buffer (M37). The matching cppcheck suppressions are
+  gone. Patch bump for `0.0.12-alpha`.
+- Bootloader constants now match the code: `STAGE2_LOAD` is `0x7E00`,
+  stage1 includes `constants.inc` and reads `STAGE2_LOAD`/`STAGE2_SECTORS`
+  instead of hardcoded literals (H9), and stage2 loads the full reserved
+  loader region (`LOADER_SECTORS`, 26 sectors) with a build-time size
+  check instead of silently loading 2 sectors (H10). Patch bump for
+  `0.0.12-alpha`.
+
 ## [0.0.11-alpha] - 2026-11-02
 
 ### Fixed
@@ -56,7 +70,8 @@ usable release (signal handlers, `pipe`, `dup2`, `errno.h`, job control).
   descriptors, and uninitialised bytes in the returned struct.
 - `scripts/cppcheck.sh` static-analysis gate (kernel C++17, userland C11)
   with `config/cppcheck-suppressions.txt`, run by `lint.yml`. Pre-existing
-  findings are baselined and tracked as `ISSUES.md` M37, L20 and L21.
+  findings were baselined and tracked as `ISSUES.md` M37 (fixed in
+  0.0.12), L20 and L21.
 - Agent skills in `.agents/skills/` (also linked as `.claude/skills/`),
   including a mandatory security audit with a known-CVE regression catalog
   and a handoff-file protocol.
