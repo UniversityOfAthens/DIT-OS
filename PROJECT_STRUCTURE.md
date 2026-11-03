@@ -79,7 +79,7 @@ DIT-OS/
 │   │   │   ├── multiboot.asm#   Multiboot info (unused)
 │   │   │   ├── pf2.asm      #   PF2 font loader
 │   │   │   ├── pmode.asm    #   Protected mode switch
-│   │   │   ├── png.asm      #   PNG decoder — STUB (zlib does nothing)
+│   │   │   ├── png.asm      #   PNG decoder — no inflate yet (M43)
 │   │   │   ├── bmp.asm      #   BMP loader
 │   │   │   ├── theme.asm    #   Theme loader
 │   │   │   ├── video.asm    #   VGA/VESA helpers
@@ -225,6 +225,7 @@ DIT-OS/
 │   │
 │   ├── fs/                      # Filesystem
 │   │   ├── vfs.cpp              #   VFS: path resolution, open/read/write/readdir
+│   │   ├── pipe.cpp             #   Anonymous pipes (pipe(2))
 │   │   └── ramfs/               #   RAM filesystem (in-memory)
 │   │       ├── ramfs.cpp/hpp
 │   │       └── inode.cpp
@@ -239,7 +240,7 @@ DIT-OS/
 │   │   ├── shell.cpp            #   Kernel serial shell (bootstrap)
 │   │   ├── fork.cpp             #   fork(): copy-on-write clone
 │   │   ├── exit.cpp             #   Task exit
-│   │   ├── signal.cpp           #   Signal defaults and delivery
+│   │   ├── signal.cpp           #   Signals: dispositions, masks, delivery, job control
 │   │   └── mutex.cpp            #   Mutex (struct not exported — dead code)
 │   │
 │   ├── syscall/                 # System calls
@@ -248,7 +249,9 @@ DIT-OS/
 │   │   ├── syscall_trace.cpp    #   Trace stubs
 │   │   ├── syscall_wrappers.cpp #   Kernel-internal wrappers
 │   │   ├── userland_syscall_cwrap.cpp  # User-to-syscall glue (NO pointer validation)
-│   │   ├── fd.cpp               #   File descriptor table
+│   │   ├── fd.cpp               #   File descriptor tables (dup/dup2, stdio console)
+│   │   ├── tty.cpp              #   Console TTY: modes, ISIG, foreground group
+│   │   ├── path.cpp             #   Path resolution against the working directory
 │   │   ├── sys_read.cpp         #   read()
 │   │   ├── sys_write.cpp        #   write()
 │   │   ├── sys_open.cpp         #   open()
@@ -257,7 +260,11 @@ DIT-OS/
 │   │   ├── sys_exit.cpp         #   exit()
 │   │   ├── sys_getpid.cpp       #   getpid()
 │   │   ├── sys_getdents.cpp     #   getdents()
-│   │   ├── sys_kill.cpp         #   kill()
+│   │   ├── sys_kill.cpp         #   kill() (process or group)
+│   │   ├── sys_signal.cpp       #   sigaction, sigprocmask, sigpending, sigsuspend
+│   │   ├── sys_proc.cpp         #   setpgid, getpgid
+│   │   ├── sys_pipe.cpp         #   pipe, dup, dup2
+│   │   ├── sys_cwd.cpp          #   chdir, getcwd
 │   │   └── sys_fork.cpp         #   fork() (copy-on-write)
 │   │
 │   ├── mm/                      # EMPTY — MM is in arch/x86_64/mm/
@@ -284,15 +291,19 @@ DIT-OS/
     ├── README.md
     ├── include/
     │   └── syscall.h            # Syscall numbers + inline wrappers
-    ├── crt0.asm                 # C runtime (no BSS clear — unused)
+    ├── crt0.asm                 # C runtime + signal restorer trampoline
     ├── bin/
-    │   ├── init.c               # Init process (mounts ramfs, starts shell)
+    │   ├── init.c               # Init process: kernel self-test, then the shell
+    │   ├── greeter.c            # Second program (/greeter): execve + "read" mode
     │   └── build/               # Stale .o artifacts (cat, ls)
     ├── shell/
-    │   └── main.c               # Shell: builtins (cd, echo, exit, help, ls, cat)
+    │   ├── main.c               # Job-control shell: programs, pipelines, &, jobs/fg/bg
+    │   └── readline.c           # Line editor with tab completion
     └── libc/
         ├── include/
         │   ├── stdio.h          # printf declaration
+        │   ├── signal.h         # POSIX signals: sigaction, masks, raise, pause
+        │   ├── errno.h          # Error numbers (same as the kernel)
         │   └── stdlib.h         # exit, malloc declarations
         ├── src/
         │   ├── stdio/printf.c   # printf + utoa
@@ -331,14 +342,14 @@ stage1.asm (512B MBR, loaded by BIOS at 0x7C00)
 | **Bootloader (flat binary path)** | Working — stage1→stage2→loader→kernel chain complete. Kernel truncated (only 110/162 sectors loaded). |
 | **Bootloader (ELF C++ path)** | NOT WORKING — 20+ duplicate symbols, broken include paths, never compiled. |
 | **Kernel core** | Working — panic, printk, assertions, GDT/IDT/PIC/serial/console init. |
-| **Scheduler** | Minimal — round-robin with linked-list run queue. Fork is stub. |
-| **Syscalls** | 8 implemented (read, write, open, close, exit, getpid, getdents). 10 defined but unimplemented. No `copy_from_user`/`copy_to_user`. |
-| **VFS** | Basic path resolution, open/read/write/readdir for ramfs. |
+| **Scheduler** | Cooperative round-robin (no preemption). COW `fork`, `execve`, `waitpid` (groups, WUNTRACED/WCONTINUED), POSIX signals with handlers, process groups and job control (stop/continue). |
+| **Syscalls** | 29 (`syscall_numbers.hpp`), all implemented; user memory through `copy_*_user`. |
+| **VFS** | Path resolution (relative to the per-process cwd), open/read/write/readdir for ramfs, anonymous pipes. fds 0–2 are refcounted console files. |
 | **ramfs** | Working — in-memory root filesystem with create/mkdir/unlink/read/write. |
 | **Memory management** | Simple bitmap PMM, bump heap allocator (kfree is no-op). Paging set up but VMM is stub. |
 | **Devices** | Serial, PS/2 keyboard, PIT timer, CMOS RTC, PCI enumeration, ATA PIO. AHCI/NVMe/floppy are stubs. |
 | **Graphics** | VGA text mode + basic framebuffer pixel ops. |
-| **Userland** | Compiles into kernel. Init starts shell with cd/echo/exit/help/ls/cat builtins. |
+| **Userland** | Embedded in the kernel. Init runs the self-test, then a job-control shell (programs, pipelines, `&`, `jobs`/`fg`/`bg`, `cd`/`pwd`, `cat`/`echo`/`ls`/`export`). |
 | **Tests** | Nothing yet. |
 | **Config system** | Nothing yet. |
 | **ISO/initrd/UEFI** | Nothing yet. |

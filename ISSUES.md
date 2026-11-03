@@ -13,25 +13,7 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 
 ## CRITICAL — Will cause boot failure, crashes, or compile errors
 
-### C9. PNG decoder header chunk lookup always fails
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/png.asm` |
-| **Lines** | 38 (never-initialized `png_target_chunk`) |
-| **Issue** | `png_target_chunk` is never initialized (remains 0), so `png_find_chunk` can never find any chunk. Additionally, `zlib_decompress` at line 191 is a stub that does nothing. PNG images are never decoded. |
-| **Fix** | Implement proper chunk-type matching and a working zlib decompressor, or remove the dead code. |
-| **Note** | `png.asm` is not assembled into the current build, so this cannot break boot today. |
-
-### C13. Disk LBA segment hardcoded to 0
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/disk.asm` |
-| **Line** | 47 |
-| **Issue** | `mov word [si+6], 0` always sets the buffer segment to 0 for LBA reads, ignoring any caller-specified segment. Data may be written to the wrong memory location if the caller expects a different segment. |
-| **Fix** | Use the segment value passed by the caller, or document that the segment is always 0. |
-| **Note** | `disk.asm` is not assembled into the current build; `stage2.asm` has its own `read_lba`. |
+None open.
 
 ---
 
@@ -184,20 +166,20 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | The entire kernel compiles with `-m32`, uses 32-bit paging, 32-bit GDT/IDT entries, and links as `elf32-i386`. The directory is named `x86_64` which is misleading. AGENTS.md acknowledges this as a known misnomer. |
 | **Fix** | Rename `arch/x86_64/` to `arch/i386/` or `arch/x86/` throughout the project. |
 
-### M17. No userland `errno.h` or `errno` variable
+### M17. No userland `errno` variable
 
 | Field | Value |
 |-------|-------|
 | **Directory** | `userland/` |
-| **Issue** | POSIX requires `<errno.h>` with an `errno` variable (or thread-local) for inspecting syscall error codes. Neither exists in userland. Syscall errors are invisible to user programs. |
-| **Fix** | Add `userland/libc/include/errno.h` with extern `int errno` declaration and the errno constant definitions. |
+| **Issue** | `userland/libc/include/errno.h` now provides the constants, but there is no `errno` variable: wrappers return the raw `-errno`. Code ported from POSIX that tests `errno` after a `-1` return will not work. |
+| **Fix** | Add a libc layer (`int errno`, wrappers returning `-1`) when a real libc is introduced; keep the raw wrappers for in-tree code. |
 
 ### M18. Userland error returns silently swallowed in shell
 
 | Field | Value |
 |-------|-------|
 | **File** | `userland/shell/main.c` |
-| **Lines** | 228-229, 256-257, 284-286 |
+| **Lines** | `cmd_ls()`, `copy_fd()` |
 | **Issue** | `getdents()` and `read()` error returns (negative values) are treated identically to "end of data" (0). Errors are silently swallowed — the user has no way to know a read failed. |
 | **Fix** | Check for negative return values and report errors to stderr. |
 
@@ -276,7 +258,7 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | Field | Value |
 |-------|-------|
 | **File** | `userland/shell/main.c` |
-| **Line** | 254 |
+| **Line** | `copy_fd()` |
 | **Issue** | `char chunk[256]` — adequate for ramfs but would cause many read syscalls for larger files. |
 | **Fix** | Increase buffer size or make it a configurable constant. |
 
@@ -296,23 +278,39 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | A 64 KB bump allocator whose `free()` is a no-op, the same bug the kernel heap had. Nothing calls it yet, but any userland program that allocates in a loop will run out. |
 | **Fix** | Reuse the kernel heap's free-list design, or implement `brk`/`mmap` and a real allocator. |
 
-### M38. `malloc()` size arithmetic can overflow
+### M43. PNG inflate is not implemented
 
 | Field | Value |
 |-------|-------|
-| **File** | `userland/libc/src/stdlib/malloc.c` |
-| **Issue** | `align_up(size)` computes `(size + 7) & ~7` without checking for overflow, and `s_used + size` can wrap too. `malloc(0xFFFFFFFF)` therefore returns a pointer with no space behind it, and writing through it overruns `s_heap`. No current caller passes an attacker-controlled size. |
-| **Fix** | Reject sizes above `sizeof(s_heap) - s_used` before aligning, or check `size > SIZE_MAX - 7` first. |
+| **File** | `bootloader/src/stage2/png.asm` (not assembled) |
+| **Issue** | `zlib_decompress` has no inflate; it now returns CF=1, so `png_load_image` fails cleanly instead of copying an undecoded buffer. PNG images still cannot be shown. |
+| **Fix** | Implement inflate (stored/fixed/dynamic blocks) and filter reconstruction, or remove `png.asm`. |
 
-### M41. Reparented orphans can accumulate while init is blocked
+### M44. `png_find_chunk` is not bounded by the input size
 
 | Field | Value |
 |-------|-------|
-| **Files** | `userland/shell/main.c`, `kernel/sched/exit.cpp` |
+| **File** | `bootloader/src/stage2/png.asm` (not assembled) |
+| **Issue** | The chunk walk ignores the caller's ECX size, so a file without the wanted chunk (or a crafted chunk length) walks past the buffer. Untrusted disk data. |
+| **Fix** | Keep an end pointer; reject a chunk whose header or `length + CRC` does not fit before reading or skipping it (together with M20). |
+
+### M45. `read_lba` passes the LBA in EDX, overwriting the drive in DL
+
+| Field | Value |
+|-------|-------|
+| **File** | `bootloader/src/stage2/disk.asm` (not assembled) |
+| **Issue** | INT 13h AH=42h takes the drive in DL, but `read_lba` takes the LBA in EDX, so the low LBA byte is used as the drive number. |
+| **Fix** | Take the LBA in another register (or memory) and load DL from the boot drive. |
+
+
+### M46. Pipes and open files draw on a small, unaccounted kernel heap
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/fs/pipe.cpp`, `kernel/arch/x86_64/mm/heap.cpp` |
 | **Bump** | patch |
-| **Issue** | `task_exit()` reparents orphans to PID 1 and the shell drains them before each prompt, but while the shell is blocked in `read()` a process can keep forking and exiting orphans, accumulating zombies and kernel stacks until the next prompt. Normal use is bounded; a hostile workload is not. |
-| **Fix** | Deliver `SIGCHLD` and reap from a handler, or add a kernel reaper/cap for orphan zombies (with the signal work). |
-
+| **Issue** | Each pipe takes ~4 KiB from the 256 KiB kernel heap, which also holds kernel stacks and every open file, and nothing limits it per process. A process filling its 32 fds with pipes (and forking to use more tables) can exhaust the heap, after which `fork`, `open` and `pipe` fail with `-ENOMEM` for everyone. It cannot crash the kernel. |
+| **Fix** | Back pipe buffers with page frames, and add a global or per-process pipe/file limit. |
 ---
 
 ## LOW — Cleanup, style, and minor issues
@@ -444,19 +442,50 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | These are libc macro names. Any header that defines them turns the declarations into `const int 0 = 0;`. cppcheck's std config does, so it reports `syntaxError` and **skips the whole file**; the suppression in `config/cppcheck-suppressions.txt` means `vfs.cpp` is currently not analysed. |
 | **Fix** | Rename the locals (e.g. `WHENCE_SET`), or move named constants to `fs/vfs.hpp` and use them in `sys_execve.cpp` too; drop the suppression. |
 
+
+### L22. No sessions: job control trusts every process in the system
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/syscall/sys_proc.cpp`, `kernel/syscall/tty.cpp` |
+| **Issue** | There is no `setsid`/session, so the system behaves like one Linux session: any process may `setpgid` into any existing group (including init's) and a background process that ignores `SIGTTOU` may `tcsetpgrp` the console. Orphaned process groups are approximated per process (a stopped orphan gets `SIGHUP` + `SIGCONT` when reparented). |
+| **Fix** | Add sessions (`setsid`, `getsid`, controlling terminal) and restrict `setpgid`/`tcsetpgrp` to the caller's session. |
+
+### L23. Ignoring `SIGCHLD` does not auto-reap children
+
+| Field | Value |
+|-------|-------|
+| **File** | `kernel/sched/exit.cpp` |
+| **Issue** | POSIX (XSI) says children of a parent with `SIGCHLD` set to `SIG_IGN` (or `SA_NOCLDWAIT`) are reaped automatically. DIT-OS still leaves zombies until `waitpid`; `SA_NOCLDWAIT` is rejected with `-EINVAL`. |
+| **Fix** | Free such zombies in `task_exit()` once the kernel stack is no longer in use (e.g. a deferred reaper). |
+
+### L24. Stage2 reads the kernel in one 240-sector EDD request
+
+| Field | Value |
+|-------|-------|
+| **File** | `bootloader/src/stage2/stage2.asm` (`read_lba` with `KERNEL_SECTORS`) |
+| **Issue** | The Enhanced Disk Drive spec allows at most 127 sectors per `int 13h AH=42h` request on some BIOSes. QEMU accepts 240, real firmware may not. |
+| **Fix** | Read the kernel in chunks of at most 127 sectors, advancing the buffer segment. |
+
+### L25. A signal during a canonical-mode read drops the typed line
+
+| Field | Value |
+|-------|-------|
+| **File** | `kernel/syscall/tty.cpp` (`tty_read_line`) |
+| **Issue** | The line being edited lives in the reader's kernel buffer, so a caught signal (or SA_RESTART restart) loses what was typed so far. Linux keeps it in the TTY line buffer. |
+| **Fix** | Keep the canonical line buffer in the TTY, not on the reader's stack. |
 ---
 
 ## INFO — Known design decisions, planned features, or documentation gaps
 
-### I2. Signals are default-action only and delivered cooperatively
+### I2. Scheduling is cooperative; signals act on the way back to user mode
 
-`SYS_kill` is implemented, but only POSIX default actions: `Term`/`Core`
-signals terminate the target, `Ign`/`Cont` are no-ops, and `Stop` signals
-return `-ENOSYS` because there is no job control. Delivery is checked at
-syscall exit and before a task blocks, so a CPU-bound task that never makes a
-syscall does not notice a signal until it does. User handlers, `sigaction`,
-`sigprocmask`, `sigpending` and `sigsuspend` remain `TODO.md` work. Only self
-and direct children may be signalled; there are no UIDs yet.
+There is no preemption: the timer only counts ticks, so a task runs until it
+blocks or exits. Signals are delivered at syscall exit and at IRQ/exception
+return to ring 3, which is what lets `^C`, `^Z` or `kill` stop a task that
+spins in user mode, but other tasks still do not run while it spins. The
+permission model has no UIDs: a process may signal itself and its
+descendants. init (PID 1) discards signals it has no handler for.
 
 ### I3. Userland is a single standalone ring-3 image
 
@@ -495,16 +524,16 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 | Area | Critical | High | Medium | Low/Info |
 |------|----------|------|--------|----------|
-| **Bootloader (ASM)** | C9, C13 (unassembled) | H11, H20 | M20, M21, M22, M23, M24, M25, M26 | L14, L19 |
+| **Bootloader (ASM)** | — | H11, H20 | M20, M21, M22, M23, M24, M25, M26, M43, M44, M45 | L14, L19, L24 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
-| **Kernel (Sched)** | — | — | M1, M41 | L13, I2 |
-| **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
+| **Kernel (Sched)** | — | — | M1 | L13, L22, L23, I2 |
+| **Kernel (FS)** | — | — | M4, M9, M31, M46 | L12, L21, L25 |
 | **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M17, M18, M19, M28, M35, M38 | L1, L2, L3, L4, L7, L17 |
+| **Userland** | — | — | M17, M18, M19, M28, M35 | L1, L2, L3, L4, L7, L17 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
@@ -513,7 +542,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M41 — orphan zombies while init blocks**: a hostile fork/exit loop
-   accumulates zombies until the next prompt (needs SIGCHLD).
-2. **M38 — `malloc()` size overflow**: an unchecked size can return a
-   pointer with no space behind it and overrun the userland heap.
+1. **M46 — unaccounted kernel heap**: pipes and open files from one process
+   can starve every other process of kernel memory (`-ENOMEM`).
+2. **L24 / H20 — boot on real hardware**: the 240-sector EDD read and the
+   hardcoded CHS geometry only work because QEMU is lenient.

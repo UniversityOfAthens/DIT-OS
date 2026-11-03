@@ -57,7 +57,7 @@ Build outputs in `bootloader/build/`:
 
 Disk layout: stage1 at sector 0, stage2 at sectors 2–10, loader at 11–36,
 kernel from sector 37. Stage2 reads a fixed number of kernel sectors
-(`KERNEL_SECTORS` in `bootloader/Makefile`, currently 200 = 100 KB); the build
+(`KERNEL_SECTORS` in `bootloader/Makefile`, currently 240 = 120 KB); the build
 fails if `kernel.img` is bigger.
 
 ### 2. Run in QEMU

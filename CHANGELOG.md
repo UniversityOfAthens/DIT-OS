@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha] - 2026-11-03
+
+**Version bump:** minor — the first usable release: POSIX signals with
+handlers, job control, pipes, `dup2`, a working directory and a shell that
+runs programs.
+
+### Added
+
+- Signal handlers: `sigaction` (`SA_RESTART`, `SA_NODEFER`,
+  `SA_RESETHAND`, `SA_NOCLDSTOP`), `sigprocmask`, `sigpending`,
+  `sigsuspend` and `sigreturn` (syscalls 17–21). Handlers run on a frame
+  the kernel pushes below the user stack and return through a userland
+  trampoline; interrupted blocking calls return `-EINTR` or restart.
+  Signals now act at IRQ/exception return to ring 3 as well as at syscall
+  exit, so `^C` or `kill` reaches a task spinning in user mode.
+- CPU faults raise real signals (`SIGSEGV`, `SIGILL`, `SIGFPE`, `SIGBUS`,
+  `SIGTRAP`) that a handler can catch; a blocked or ignored fault signal
+  reverts to its default instead of looping.
+- Job control: process groups (`setpgid`, `getpgid`), `kill(0)` and
+  `kill(-pgid)`, stop/continue (`SIGSTOP`, `SIGTSTP`, `SIGTTIN`, `SIGTTOU`,
+  `SIGCONT`), `waitpid` with process-group selectors, `WUNTRACED` and
+  `WCONTINUED`, and `SIGCHLD` to the parent on exit, stop and continue.
+- Console job control: a foreground process group (`TTY_IOC_GETPGRP` /
+  `TTY_IOC_SETPGRP`, `tcgetpgrp`/`tcsetpgrp`), `TTY_MODE_ISIG` (`^C`,
+  `^Z`, `^\` raise `SIGINT`, `SIGTSTP`, `SIGQUIT`), and `SIGTTIN`/`SIGTTOU`
+  for background readers and `tcsetpgrp` callers.
+- `pipe` (anonymous, 4 KiB, atomic writes up to 512 bytes, EOF and
+  `SIGPIPE`/`-EPIPE`), `dup` and `dup2` (syscalls 24–26). fds 0–2 are now
+  ordinary refcounted console files, so they can be closed and redirected.
+- A per-process working directory: `chdir`, `getcwd` (syscalls 27–28);
+  `open`, `stat`, `execve` and `chdir` resolve relative paths, `.` and
+  `..` (never above `/`). ramfs seeds a `/home` directory.
+- Userland `errno.h` (all kernel error numbers) and `signal.h`.
+- The shell runs programs (`/name` for a bare name) as jobs: `|`
+  pipelines, `&`, `jobs`, `fg`, `bg`, `cd`, `pwd`; foreground jobs get the
+  console in cooked mode with `^C`/`^Z`. A `SIGCHLD` handler records job
+  state and reaps orphans. `/greeter read` reads one line (for tests).
+- Self-tests for all of the above, `test_sec_*` probes (forged `sigreturn`
+  frames, kernel pointers to every new syscall, fd/pgid/signal ranges,
+  path escape and length, inode-less `fstat` leaks), and new
+  `qemu-test.sh` steps for cd/pwd, programs, pipelines, `^C`, `^Z`/`fg`,
+  background jobs, `SIGTTIN` and the shell parser limits.
+
+### Changed
+
+- `kill` may signal the caller's descendants (was: direct children only)
+  and process groups; `kill(-1)` is still `-EINVAL`. `SIGSTOP` is no longer
+  `-ENOSYS`.
+- init (PID 1) discards signals with a default disposition, like Linux.
+- `execve` keeps ignored dispositions, the blocked mask and pending
+  signals; only caught handlers revert to the default (POSIX).
+- `KERNEL_SECTORS` is 240 (was 200): the kernel image is now ~212 sectors.
+
+### Fixed
+
+- `close()` released the now-empty slot instead of the file, so every
+  closed file (and, with pipes, every pipe end) leaked and pipes never saw
+  EOF.
+- `fork()` and the first process no longer fall back to the kernel's fd
+  table 0 when no table is free; they fail instead.
+- The interrupt entry clears the direction flag: user code (or a restored
+  signal frame) could enter the kernel with `DF = 1`.
+- `vfs_lseek` returns `-ESPIPE` for inode-less files instead of
+  dereferencing a null inode.
+- M41: orphans reparented to init are reaped while the shell waits at its
+  prompt: init gets `SIGCHLD` for a reparented zombie and the shell's
+  handler reaps it.
+- M38: `malloc()` rejects sizes that would wrap its size arithmetic.
+- `png.asm` (not assembled) now sets the wanted chunk type before each
+  lookup, compares the signature against the PNG constant instead of
+  itself and skips the IHDR CRC, so IHDR/IDAT can be found; the
+  unimplemented inflate returns an error instead of faking success (C9,
+  rest tracked as M43).
+- `disk.asm` `read_lba` (not assembled) uses the caller's ES as the DAP
+  buffer segment instead of hardcoding 0 (C13).
+
+### Security
+
+- `sigreturn` never restores CS/SS, forces `IF` on and keeps `IOPL`, `TF`,
+  `NT`, `RF`, `VM`, `AC` and `ID` clear, and rejects frames with a bad
+  magic or an EIP/ESP outside the user window (probe:
+  `test_sec_sigreturn_forged`).
+- Handlers and restorers must be user addresses; every new syscall bounds
+  its 64-bit arguments before narrowing and fetches user data once.
+
 ## [0.0.12-alpha] - 2026-11-03
 
 **Version bump:** patch — string bounds, bootloader constants and a

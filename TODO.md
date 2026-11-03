@@ -23,7 +23,7 @@ Semantic Versioning, interpreted for the pre-1.0 alpha series:
 | `stat`/`fstat`, `kill` + default signal delivery, cppcheck/agent tooling | patch | `0.0.10-alpha` | released 2026-11-02 |
 | M40 orphan reparenting + init reaper, M36 PID 1 exit panic, M39 COW-safe `copy_to_user` | patch | `0.0.11-alpha` | released 2026-11-02 |
 | M37 string bounds, H9/H10 boot constants, M42 COW failure-counter corruption | patch | `0.0.12-alpha` | released 2026-11-03 |
-| Full POSIX signals (handlers, masks, `sigaction`, `SIGCHLD`, job control) incl. M41 orphan reaping, `pipe()`/`dup2()` + userland `errno.h`, `chdir`/`getcwd` (**first usable release**) | minor | `0.1.0-alpha` | planned |
+| Full POSIX signals (handlers, masks, `sigaction`, `SIGCHLD`, job control) incl. M41 orphan reaping, `pipe()`/`dup2()` + userland `errno.h`, `chdir`/`getcwd`, M38 (**first usable release**) | minor | `0.1.0-alpha` | released 2026-11-03 |
 | POSIX timers + shared memory | minor | `0.2.0-alpha` | planned |
 | Stable ABI / breaking disk-format or syscall changes | major | `1.0.0` | future |
 
@@ -35,7 +35,7 @@ Each individual fix also carries its own `**Bump**` row in `ISSUES.md`.
 
 See `ISSUES.md` for full details. These are the blockers:
 
-- [x] **Kernel truncated on boot** — stage2 now loads 200 sectors (kernel needs 167, gives headroom)
+- [x] **Kernel truncated on boot** — stage2 now loads 240 sectors (`KERNEL_SECTORS`; the 0.1.0 kernel needs ~212)
 - [x] **Task stack init order wrong** — reordered pushes to match context.asm pop order
 - [x] **Duplicate `outb()`** — removed duplicate definition in `arch/io.h`
 - [x] **UB in interrupt dispatch** — asm now passes regs pointer explicitly to C
@@ -101,7 +101,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
 - [ ] Fix broken include paths in `gdt.cpp`, `paging.cpp`
 - [ ] Fix 20+ duplicate global symbols between `stage2_core.asm` and module files (for ELF build)
 - [ ] Add keyboard controller + BIOS fallback to A20 enable
-- [ ] Implement proper PNG zlib decompression
+- [ ] Implement proper PNG zlib decompression (ISSUES.md M43)
 - [ ] Add LBA fallback (detect geometry dynamically instead of hardcoded 18/2)
 
 ### Loader
@@ -263,6 +263,12 @@ natural home is with or after the `0.1.0-alpha` usable milestone.
 - [x] Implement waitpid() (with `WNOHANG`)
 - [ ] Export Mutex struct to a header
 - [x] Implement signal handling (default actions, cooperative delivery)
+- [x] Signal handlers: `sigaction`, `sigprocmask`, `sigpending`, `sigsuspend`, `sigreturn`, SA_RESTART
+- [x] Faults raise real signals (SIGSEGV/SIGILL/SIGFPE/SIGBUS/SIGTRAP)
+- [x] Job control: process groups, stop/continue, `waitpid` WUNTRACED/WCONTINUED, console foreground group, ^C/^Z/^\
+- [x] `SIGCHLD` to the parent, and to init for reparented zombies (M41)
+- [ ] Preemptive scheduling (timer-driven; see `ISSUES.md` I2)
+- [ ] Sessions (`setsid`) and orphaned process groups (`ISSUES.md` L22)
 - [x] Reparent children to PID 1 when a task exits (M40)
 - [x] Panic when PID 1 exits instead of idling forever (M36)
 
@@ -283,7 +289,8 @@ natural home is with or after the `0.1.0-alpha` usable milestone.
 - [x] `kernel/syscall/sys_fork.cpp` — STUB (returns -ENOSYS)
 - [x] Implement: execve, waitpid, mmap, munmap, brk
 - [x] Implement: stat, fstat
-- [x] Implement: kill
+- [x] Implement: kill (process or group)
+- [x] Implement: pipe, dup, dup2, chdir, getcwd, setpgid, getpgid
 - [x] Add `copy_from_user` / `copy_to_user` to all syscall handlers
 
 ### Kernel include headers
@@ -315,7 +322,9 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [x] `userland/include/syscall.h` — Syscall numbers + inline wrappers
 - [x] `userland/libc/include/stdio.h`
 - [x] `userland/libc/include/stdlib.h`
-- [ ] Add `errno.h` with `errno` variable
+- [x] Add `errno.h` (constants; wrappers return `-errno`)
+- [x] Add `signal.h` (`sigaction`, masks, `raise`, `pause`)
+- [ ] Add an `errno` variable (`ISSUES.md` M17)
 - [x] Add `sys/stat.h` (`struct stat`, `stat()`/`fstat()`)
 - [ ] Add `string.h`, `unistd.h`, `fcntl.h`, `sys/types.h`
 
@@ -339,7 +348,8 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 - [ ] Add echo, mkdir, cp, mv, rm, pwd, etc.
 
 ### Shell
-- [x] `userland/shell/main.c` — Shell with builtins: cd, echo, exit, help, ls, cat
+- [x] `userland/shell/main.c` — Job-control shell: programs, `|` pipelines, `&`, `jobs`/`fg`/`bg`, builtins `cat`, `cd`, `echo`, `exit`, `export`, `ls`, `pwd`
+- [ ] Shell: redirections (`<`, `>`), `$?`, a `PATH` search
 - [ ] Fix silent error swallowing (getdents/read errors treated as EOF)
 - [ ] Add proper command parser
 - [ ] Add I/O redirection support
@@ -366,7 +376,7 @@ All kernel include headers exist (~80 files). See `PROJECT_STRUCTURE.md` for the
 ### Scripts
 - [x] `scripts/build.sh`
 - [x] `scripts/create-disk.sh`
-- [x] `scripts/qemu-test.sh` — QEMU integration test (boot, shell commands, tab completion, stress, poweroff)
+- [x] `scripts/qemu-test.sh` — QEMU integration test (boot, self-test, shell commands, tab completion, cd/pwd, programs, pipelines, ^C/^Z job control, stress, poweroff)
 - [x] `scripts/run-qemu.sh`
 - [ ] `scripts/check-toolchain.sh` — Referenced in docs but doesn't exist
 - [ ] `scripts/run-qemu-debug.sh`
@@ -422,9 +432,9 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 
 - **Bootloader**: Kernel truncation, FAT32 inverted branch, E820 uninitialized EBX, disk.asm retry counter, PNG zlib stub, UEFI PE header broken
 - **Kernel**: Task stack init order wrong, duplicate outb(), UB in interrupt dispatch, kernel_stack_top as value not address, heap_free no-op, Mutex not exported, conflicting serial_init declarations
-- **Syscall**: every syscall in `syscall_numbers.hpp` has a handler; signals are default-action only (handlers and job control are planned). User pointers are validated through `mm::copy_*_user` / `mm::user_range_ok`
+- **Syscall**: every syscall in `syscall_numbers.hpp` has a handler, including signal handlers, job control, pipes and the working directory. User pointers are validated through `mm::copy_*_user` / `mm::user_range_ok`
 - **Build system**: CMake uses host compiler, flake.nix missing cross-compiler, .clang-format wrong brace style, shell scripts missing set -euo pipefail, missing scripts referenced in docs
-- **Userland**: No errno.h, error returns silently swallowed, _exit() calls inline exit(), crt0.asm no BSS clear
+- **Userland**: no `errno` variable, error returns silently swallowed, _exit() calls inline exit()
 
 ---
 
@@ -447,8 +457,11 @@ The file `ISSUES.md` contains a comprehensive audit with 13 critical, ~25 high, 
 - [x] Implement stat()/fstat() for file metadata
 - [x] Implement kill() and signal delivery (default actions, cooperative)
 - [x] Implement ioctl() for device control (fds 0-2: console modes and power off)
-- [ ] Implement pipe() and FIFO for inter-process communication
-- [ ] Full POSIX signal handling (sigaction, sigpending, sigsuspend)
+- [x] Implement pipe() for inter-process communication (anonymous pipes)
+- [ ] Named FIFOs (`mkfifo`)
+- [x] Full POSIX signal handling (sigaction, sigpending, sigsuspend)
+- [x] dup()/dup2() and fd 0-2 as ordinary files
+- [x] chdir()/getcwd() with per-process working directory
 - [ ] POSIX timers (setitimer, nanosleep)
 - [ ] Shared memory (shmget, shmat, shmdt)
 
