@@ -304,6 +304,41 @@ static void test_cow_copy_to_user(void)
     check(untouched, "fork() isolates the child's COW copy");
 }
 
+/* fork() must take a reference for every page it shares, including a code
+ * image page this process already made private: vmm_clone_user_directory()
+ * pre-maps the image in the new space and skipped frame_ref() whenever the
+ * destination PTE was present. The child then owned the only reference, so
+ * its exit freed a frame the parent still mapped (M42). A neighbouring
+ * global on the same page detects a COW break that zeroes the page. */
+static volatile unsigned int g_cow_probe;
+static volatile unsigned int g_cow_guard;
+
+static void test_cow_frame_refcount(void)
+{
+    g_cow_guard = 0xC0FFEE00u;
+    g_cow_probe = 0x11111111u;
+
+    int pid = fork();
+    check_value(pid >= 0, pid, "fork for COW frame refcount succeeds");
+    if (pid == 0)
+    {
+        g_cow_probe = 0x33333333u;
+        exit(0);
+    }
+    if (pid < 0)
+        return;
+
+    int status = -1;
+    int reaped = waitpid(pid, &status, 0);
+    check_value(reaped == pid, reaped, "waitpid after COW frame refcount");
+
+    g_cow_probe = 0x44444444u;
+    check_value(g_cow_probe == 0x44444444u, (int)g_cow_probe,
+                "parent still writes its COW page after the child exits");
+    check_value(g_cow_guard == 0xC0FFEE00u, (int)g_cow_guard,
+                "COW break preserves the rest of the page (M42)");
+}
+
 /* A dead parent's children are reparented to PID 1 (init), so their zombies
  * stay reapable instead of leaking forever (M40). */
 static void test_orphan_reparent(void)
@@ -470,6 +505,7 @@ int main(int argc, char** argv)
     test_fault_signal();
     test_orphan_reparent();
     test_cow_copy_to_user();
+    test_cow_frame_refcount();
     test_sec_stat_bad_pointers();
     test_sec_fstat_bad_fd();
     test_sec_stat_uninitialised();

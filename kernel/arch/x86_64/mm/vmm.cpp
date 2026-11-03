@@ -406,8 +406,20 @@ uint32_t vmm_clone_user_directory(uint32_t src_directory)
          * lose the write bit, so the first write faults and duplicates it. */
         *src_pte = paddr | PTE_P | PTE_US;
         uint32_t* dst_pte = pte_for(*dst, page);
-        if (!(*dst_pte & PTE_P))
+        /* The new space is created with the image pre-mapped, so dst_pte can
+         * already be present for a code-image page the source has since made
+         * private. Account for the mapping we are about to replace instead of
+         * assuming "present" means "already shares paddr": skipping the
+         * reference let the child's exit free a frame the parent still mapped
+         * (M42). */
+        uint32_t previous = (*dst_pte & PTE_P) ? (*dst_pte & PTE_ADDRESS_MASK) :
+                                                 0;
+        if (previous != paddr)
+        {
+            if (previous)
+                frame_unref(previous);
             frame_ref(paddr);
+        }
         *dst_pte = paddr | PTE_P | PTE_US;
     }
     /* The source is the running space; its cached translations still allow

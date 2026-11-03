@@ -118,9 +118,9 @@ main() {
     STEP="userland self-test (brk, mmap, fork, execve, waitpid, stat, kill, security)"
     expect_after 0 '^\[selftest\] ok$'
     # The ok line alone is not trustworthy: the failures counter lives on a
-    # page fork() makes copy-on-write, and a kernel bug around COW can
-    # corrupt it back to 0 while FAIL lines were already printed (M42).
-    # Scan the log so a failing self-test can never pass this gate.
+    # page fork() makes copy-on-write, and a COW refcount bug once corrupted
+    # it back to 0 while FAIL lines were already printed (M42, fixed). Keep
+    # scanning the log so a failing self-test can never pass this gate.
     if tr -d '\r' < "$LOG" | grep -aq '^\[selftest\] FAIL'; then
         fail "self-test printed FAIL lines"
     fi
