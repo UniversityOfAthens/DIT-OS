@@ -33,6 +33,7 @@ read_sectors:
     ret
 .error_msg: db "Disk I/O Error!", 0
 ; Extended read (LBA)
+; AX = sector count, ES:BX = buffer, EDX = LBA (low 32 bits)
 GLOBAL read_lba
 read_lba:
     pusha
@@ -43,7 +44,7 @@ read_lba:
     mov byte [si+1], 0      ; Reserved
     mov word [si+2], ax     ; Sector count
     mov word [si+4], bx     ; Buffer offset
-    mov word [si+6], 0      ; Buffer segment
+    mov word [si+6], es     ; Buffer segment (caller's ES)
     mov dword [si+8], edx   ; LBA (low 32)
     mov dword [si+12], 0    ; LBA (high 32)
 

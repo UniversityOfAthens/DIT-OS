@@ -9,6 +9,8 @@ extern plot_pixel
 
 ; PNG constants
 PNG_SIGNATURE: db 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+PNG_SIGNATURE_LEN: equ $ - PNG_SIGNATURE
+PNG_CRC_LEN:       equ 4
 
 ; PNG chunk types
 PNG_CHUNK_IHDR: db 'IHDR'
@@ -32,22 +34,28 @@ global png_load_image
 png_load_image:
     pushad
 
-    ; Verify PNG signature
-    mov edi, esi
-    mov ebx, PNG_SIGNATURE
-    mov ecx, 8
-    rep cmpsb
+    ; Verify PNG signature (compare the input against the constant, not
+    ; against itself)
+    cld
+    mov edi, PNG_SIGNATURE
+    mov ecx, PNG_SIGNATURE_LEN
+    repe cmpsb
     jne .error
 
     ; Find IHDR chunk
+    mov eax, [PNG_CHUNK_IHDR]
+    mov [png_target_chunk], eax
     call png_find_chunk
     jc .error
 
     ; Parse IHDR
     call png_parse_ihdr
     jc .error
+    add esi, PNG_CRC_LEN    ; Skip the IHDR CRC to reach the next chunk
 
     ; Find IDAT chunk (image data)
+    mov eax, [PNG_CHUNK_IDAT]
+    mov [png_target_chunk], eax
     call png_find_chunk
     jc .error
 
@@ -128,7 +136,7 @@ png_find_chunk:
     ; Skip chunk data + CRC (4 bytes)
     movzx ecx, word [png_chunk_length]
     add esi, ecx
-    add esi, 4              ; Skip CRC
+    add esi, PNG_CRC_LEN    ; Skip CRC
 
     jmp .next_chunk
 
@@ -186,22 +194,12 @@ png_parse_ihdr:
 ; =============================================================================
 ; Simple zlib decompressor (inflate)
 ; Input: ESI = compressed data, ECX = size, EDI = output buffer
-; Output: EDI = bytes written
+; Output: CF = error
+; Inflate is not implemented (ISSUES.md M43): fail loudly so callers never
+; copy an undecoded buffer to the framebuffer as if it were an image.
 ; =============================================================================
 zlib_decompress:
-    pushad
-
-    ; Skip zlib header (2 bytes minimum)
-    lodsb
-    lodsb
-
-    ; Simple stored block decompression
-    ; In a full implementation, handle deflate blocks
-
-    ; For now, just copy data (assuming uncompressed)
-    ; This is a simplified version
-
-    popad
+    stc
     ret
 
 ; =============================================================================
