@@ -313,15 +313,6 @@ are not assembled, so their bugs cannot affect the current boot (see H18).
 | **Issue** | `task_exit()` reparents orphans to PID 1 and the shell drains them before each prompt, but while the shell is blocked in `read()` a process can keep forking and exiting orphans, accumulating zombies and kernel stacks until the next prompt. Normal use is bounded; a hostile workload is not. |
 | **Fix** | Deliver `SIGCHLD` and reap from a handler, or add a kernel reaper/cap for orphan zombies (with the signal work). |
 
-### M42. A self-test failure can be hidden: the failures counter reads back 0
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/arch/x86_64/mm/vmm.cpp` (`break_cow`, frame refcounts), `userland/bin/init.c` |
-| **Bump** | patch |
-| **Issue** | Reproduced with the M39 regression test on the pre-fix kernel: the parent printed two `[selftest] FAIL` lines and then still printed `[selftest] ok`, i.e. the `failures` counter (`0x40414c`) read back 0 after two increments, and the parent's `0xAA`-filled global read back dirty. Both live on the page fork() made copy-on-write; the parent broke COW (through a `printf` buffer write and the counter increments) only after `waitpid()` reaped the child that shared the frame. Disassembly confirms both increments and the final comparison are correct, so memory content changed underneath the parent: suspected `break_cow()` receiving a recycled frame whose copy did not take effect, or a refcount handing out a frame that is still mapped. Needs kernel-side instrumentation in `break_cow()`/`frame_acquire()` and a minimal reproducer. |
-| **Fix** | Audit `frame_acquire`/`frame_unref`/`break_cow` refcounts; make `break_cow()` never end up using a frame that is also on the free list, and keep the qemu-test FAIL-line scan that hides nothing. |
-
 ---
 
 ## LOW — Cleanup, style, and minor issues
@@ -509,7 +500,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
 | **Kernel (Sched)** | — | — | M1, M41 | L13, I2 |
 | **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
-| **Kernel (MM)** | — | — | M10, M42 | — |
+| **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
@@ -522,7 +513,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M42 — COW counter corruption**: a self-test failure can be masked
-   because the `failures` counter reads back 0 after a COW break.
-2. **M41 — orphan zombies while init blocks**: a hostile fork/exit loop
+1. **M41 — orphan zombies while init blocks**: a hostile fork/exit loop
    accumulates zombies until the next prompt (needs SIGCHLD).
+2. **M38 — `malloc()` size overflow**: an unchecked size can return a
+   pointer with no space behind it and overrun the userland heap.

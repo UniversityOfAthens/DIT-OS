@@ -7,19 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.12-alpha] - 2026-11-03
+
+**Version bump:** patch — string bounds, bootloader constants and a
+copy-on-write frame-reference fix.
+
 ### Fixed
 
 - String copy loops in ramfs seeding and the shell (prompt rendering,
   completion, path normalisation) check their destination bound before
   reading the source byte, so an unterminated source can no longer be read
   one byte past its buffer (M37). The matching cppcheck suppressions are
-  gone. Patch bump for `0.0.12-alpha`.
+  gone.
 - Bootloader constants now match the code: `STAGE2_LOAD` is `0x7E00`,
   stage1 includes `constants.inc` and reads `STAGE2_LOAD`/`STAGE2_SECTORS`
   instead of hardcoded literals (H9), and stage2 loads the full reserved
   loader region (`LOADER_SECTORS`, 26 sectors) with a build-time size
-  check instead of silently loading 2 sectors (H10). Patch bump for
-  `0.0.12-alpha`.
+  check instead of silently loading 2 sectors (H10).
+- `vmm_clone_user_directory()` now takes a frame reference for every page
+  it shares, including code-image pages the source has already made
+  private. The pre-mapped image PTE used to make the clone skip
+  `frame_ref()`, so a child's exit released a frame the parent still
+  mapped; the next COW break could allocate that frame, zero it and lose
+  the parent's writes, including the self-test failure counter, which
+  masked real failures (M42). Covered by `test_cow_frame_refcount`, which
+  fails on the old code.
 
 ## [0.0.11-alpha] - 2026-11-02
 
@@ -35,8 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not touched since `fork()` instead of returning `-EFAULT`; the parent's
   copy stays untouched (M39).
 - `scripts/qemu-test.sh` now fails when the serial log contains any
-  `[selftest] FAIL` line: the self-test's own failure counter can be
-  corrupted by the COW bug tracked as `ISSUES.md` M42, which let a failing
+  `[selftest] FAIL` line: the self-test's own failure counter could be
+  corrupted by a COW bug (M42, fixed in 0.0.12), which let a failing
   self-test still print `ok` (found by the M39 regression test).
 
 ### Removed

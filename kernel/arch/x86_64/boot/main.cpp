@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 // Kernel version
-const char* kernel_version = "DIT-OS 0.0.11-alpha";
+const char* kernel_version = "DIT-OS 0.0.12-alpha";
 
 // Simple VGA text buffer
 volatile uint16_t* vga_buffer = (uint16_t*)0xB8000;

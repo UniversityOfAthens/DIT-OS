@@ -9,7 +9,8 @@
 Semantic Versioning, interpreted for the pre-1.0 alpha series:
 
 - **patch** — a bug fix, a hardening change, or a small increment on the
-  existing tier (`stat`/`fstat` + `kill`, M36, M39, M40, M37, H9/H10).
+  existing tier (`stat`/`fstat` + `kill`, M36, M39, M40, M37, M42,
+  H9/H10).
 - **minor** — a tier a user can actually feel: several syscalls *and* the
   userland pieces that use them. `0.1.0` is the first usable release
   (signal handlers, `pipe`, `dup2`, `errno.h`, job control), not merely the
@@ -21,7 +22,7 @@ Semantic Versioning, interpreted for the pre-1.0 alpha series:
 |--------------|------|----------------|--------|
 | `stat`/`fstat`, `kill` + default signal delivery, cppcheck/agent tooling | patch | `0.0.10-alpha` | released 2026-11-02 |
 | M40 orphan reparenting + init reaper, M36 PID 1 exit panic, M39 COW-safe `copy_to_user` | patch | `0.0.11-alpha` | released 2026-11-02 |
-| M37 string bounds, H9/H10 boot constants, M42 COW failure-counter corruption | patch | `0.0.12-alpha` | in progress |
+| M37 string bounds, H9/H10 boot constants, M42 COW failure-counter corruption | patch | `0.0.12-alpha` | released 2026-11-03 |
 | Full POSIX signals (handlers, masks, `sigaction`, `SIGCHLD`, job control) incl. M41 orphan reaping, `pipe()`/`dup2()` + userland `errno.h`, `chdir`/`getcwd` (**first usable release**) | minor | `0.1.0-alpha` | planned |
 | POSIX timers + shared memory | minor | `0.2.0-alpha` | planned |
 | Stable ABI / breaking disk-format or syscall changes | major | `1.0.0` | future |
