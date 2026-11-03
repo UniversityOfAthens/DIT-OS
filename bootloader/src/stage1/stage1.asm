@@ -4,6 +4,8 @@
 BITS 16
 ORG 0x7C00
 
+%include "constants.inc"
+
 COM1_BASE equ 0x3F8
 COM_LSR   equ 5
 COM_DATA  equ 0
@@ -34,12 +36,13 @@ start:
     int 0x13
     jc disk_error
 
-    ; Read stage2 (9 sectors from LBA 2; CHS sector is 1-based so cl=3 = LBA 2)
+    ; Read stage2 (STAGE2_SECTORS from LBA 2; CHS sector is 1-based so
+    ; cl=3 = LBA 2)
     mov si, msg_read
     call print_both
-    mov bx, 0x7E00
+    mov bx, STAGE2_LOAD
     mov ah, 0x02
-    mov al, 9
+    mov al, STAGE2_SECTORS
     mov ch, 0
     mov cl, 3                 ; CHS sector 3 = LBA 2 (first sector of stage2)
     mov dh, 0
@@ -53,7 +56,7 @@ start:
     call print_both
 
     ; Far jump to stage2
-    jmp 0x0000:0x7E00
+    jmp 0x0000:STAGE2_LOAD
 
 disk_error:
     mov si, err_disk

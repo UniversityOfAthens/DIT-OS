@@ -9,6 +9,12 @@ ORG 0x7E00
 %ifndef KERNEL_SECTORS
 %error "KERNEL_SECTORS must be passed with -DKERNEL_SECTORS=N"
 %endif
+; Sectors reserved for the loader (disk 11-36); the Makefile checks that
+; loader.bin fits and passes the same value, so stage2 never truncates it
+; silently.
+%ifndef LOADER_SECTORS
+%error "LOADER_SECTORS must be passed with -DLOADER_SECTORS=N"
+%endif
 COM1_BASE equ 0x3F8
 COM_LSR   equ 5
 COM_DATA  equ 0
@@ -167,8 +173,8 @@ boot_selection:
 .boot_normal:
     mov si, msg_loading
     call print_both
-    ; Load loader (2 sectors from LBA 11) to 0x1000:0 = 0x10000
-    mov word [dap_count], 2
+    ; Load loader (LOADER_SECTORS from LBA 11) to 0x1000:0 = 0x10000
+    mov word [dap_count], LOADER_SECTORS
     mov word [dap_offset], 0x0000
     mov word [dap_segment], 0x1000
     mov dword [dap_lba], 11

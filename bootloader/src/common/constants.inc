@@ -3,7 +3,7 @@
 ; =============================================================================
 ; Memory addresses
 ORG_ADDR         equ 0x7C00      ; Stage1 load address
-STAGE2_LOAD      equ 0x1000     ; Stage2 load address
+STAGE2_LOAD      equ 0x7E00      ; Stage2 load address (stage1 jumps here)
 KERNEL_LOAD      equ 0x100000   ; Kernel load address (1MB)
 ; Disk
 SECTOR_SIZE      equ 512

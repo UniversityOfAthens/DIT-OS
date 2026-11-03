@@ -50,11 +50,18 @@ $(STAGE1_OUT): $(STAGE1_SRC)
 	$(NASM) $(NASM_BIN) -o $@ $<
 
 $(STAGE2_OUT): $(STAGE2_SRC) Makefile
-	$(NASM) $(NASM_BIN) -DKERNEL_SECTORS=$(KERNEL_SECTORS) -o $@ $<
+	$(NASM) $(NASM_BIN) -DKERNEL_SECTORS=$(KERNEL_SECTORS) \
+		-DLOADER_SECTORS=$(LOADER_SECTORS) -o $@ $<
 
 $(LOADER_OUT): dirs
 	$(MAKE) -C $(LOADER_DIR) all
 	cp $(LOADER_DIR)/loader.bin $@
+	@size=$$(wc -c < $@); max=$$(( $(LOADER_SECTORS) * $(SECTOR_SIZE) )); \
+	if [ "$$size" -gt "$$max" ]; then \
+		echo "ERROR: loader is $$size bytes, stage2 loads only $$max" \
+			"(LOADER_SECTORS=$(LOADER_SECTORS))" >&2; \
+		rm -f $@; exit 1; \
+	fi
 
 # Kernel ELF from kernel/Makefile
 $(KERNEL_OUT): FORCE
