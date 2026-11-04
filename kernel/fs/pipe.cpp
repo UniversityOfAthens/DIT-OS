@@ -12,6 +12,7 @@
 #include "sched/sched.hpp"
 #include "sched/signal.hpp"
 #include "arch/x86_64/irqflags.hpp"
+#include "core/kassert.hpp"
 #include "errno_defs.hpp"
 #include <stdint.h>
 
@@ -22,6 +23,17 @@ namespace
 {
 
 static_assert(PIPE_BUF <= PIPE_CAPACITY, "atomic writes must fit");
+
+/* A pipe is the largest variable kernel-heap user: the ring buffer alone is
+ * PIPE_CAPACITY bytes out of a 256 KiB heap. Without a cap one process can
+ * allocate pipes (and fork to get more fd tables) until fork/open/pipe fail
+ * for every process (M46). Eight pipes keep at most ~32 KiB tied up, leaving
+ * room for kernel stacks (8 KiB each) and execve images (up to 64 KiB). */
+constexpr uint32_t MAX_PIPES = 8;
+
+/* Pipes with at least one end open. Uniprocessor and cooperative, so a
+ * simple counter is enough; release runs with IRQs already off. */
+static uint32_t s_pipe_count;
 
 struct Pipe
 {
@@ -42,7 +54,11 @@ Pipe* pipe_of(file* f)
 void free_if_unused(Pipe* p)
 {
     if (!p->reader_open && !p->writer_open)
+    {
+        KASSERT(s_pipe_count > 0);
         mm::kfree(p);
+        s_pipe_count--;
+    }
 }
 
 int pipe_read(file* f, void* buf, uint32_t size)
@@ -188,6 +204,8 @@ int pipe_create(file** read_end, file** write_end)
 {
     if (!read_end || !write_end)
         return -EINVAL;
+    if (s_pipe_count >= MAX_PIPES)
+        return -ENOMEM;
     Pipe* p = static_cast<Pipe*>(mm::kmalloc(sizeof(Pipe)));
     if (!p)
         return -ENOMEM;
@@ -208,6 +226,7 @@ int pipe_create(file** read_end, file** write_end)
     }
     *read_end = r;
     *write_end = w;
+    s_pipe_count++;
     return 0;
 }
 

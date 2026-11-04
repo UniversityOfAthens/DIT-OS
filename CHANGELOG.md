@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `pipe()` is now subject to a global cap of eight live pipes: each buffer is
+  4 KiB of the 256 KiB kernel heap, and an uncapped process could tie up
+  nearly all of it with pipes (and forks for more fd tables), after which
+  `fork`, `open` and `pipe` failed for every process (M46). The ninth pipe
+  returns `-ENOMEM`; closing both ends releases the slot. Covered by
+  `test_sec_pipe_heap_cap`, which opens pipes until the cap, forks and reaps
+  under that pressure, and fails if the cap ever stops biting before the
+  fd-table limit does. Patch bump for `0.1.1-alpha`.
+- Stage2's kernel read recovers from transient floppy failures: a failed
+  sector read now resets the disk system (`int 13h AH=00h`) and retries the
+  same sector up to three times instead of dropping straight to the boot
+  menu, and the LBA-to-CHS math uses named constants for the 1.44 MB floppy
+  geometry it depends on. The read was already one sector per BIOS call, so
+  the 127-sector EDD request limit in the original write-up never applied to
+  this path; the multi-sector EDD code lives in the unassembled `disk.asm`
+  (dead code, H18) (L24). Patch bump for `0.1.1-alpha`.
+- The canonical line buffer moved into the TTY (`tty_read_line`), like
+  Linux's line discipline: a caught signal interrupts the read with
+  `-EINTR` without dropping what was typed so far, and a retry continues
+  the same line; a read shorter than a completed line consumes what fits
+  and leaves the rest for the next read. ISIG characters (`^C`, `^\`, `^Z`)
+  flush the partial line as POSIX requires. A new `greeter ttyline` mode
+  and a `qemu-test.sh` step prove a signal interrupts a console read with
+  `-EINTR` and the console keeps working across it (L25). Patch bump for
+  `0.1.1-alpha`.
+
 ## [0.1.0-alpha] - 2026-11-03
 
 **Version bump:** minor — the first usable release: POSIX signals with

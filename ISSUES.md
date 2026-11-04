@@ -303,14 +303,6 @@ None open.
 | **Fix** | Take the LBA in another register (or memory) and load DL from the boot drive. |
 
 
-### M46. Pipes and open files draw on a small, unaccounted kernel heap
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/fs/pipe.cpp`, `kernel/arch/x86_64/mm/heap.cpp` |
-| **Bump** | patch |
-| **Issue** | Each pipe takes ~4 KiB from the 256 KiB kernel heap, which also holds kernel stacks and every open file, and nothing limits it per process. A process filling its 32 fds with pipes (and forking to use more tables) can exhaust the heap, after which `fork`, `open` and `pipe` fail with `-ENOMEM` for everyone. It cannot crash the kernel. |
-| **Fix** | Back pipe buffers with page frames, and add a global or per-process pipe/file limit. |
 ---
 
 ## LOW — Cleanup, style, and minor issues
@@ -459,21 +451,6 @@ None open.
 | **Issue** | POSIX (XSI) says children of a parent with `SIGCHLD` set to `SIG_IGN` (or `SA_NOCLDWAIT`) are reaped automatically. DIT-OS still leaves zombies until `waitpid`; `SA_NOCLDWAIT` is rejected with `-EINVAL`. |
 | **Fix** | Free such zombies in `task_exit()` once the kernel stack is no longer in use (e.g. a deferred reaper). |
 
-### L24. Stage2 reads the kernel in one 240-sector EDD request
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/stage2.asm` (`read_lba` with `KERNEL_SECTORS`) |
-| **Issue** | The Enhanced Disk Drive spec allows at most 127 sectors per `int 13h AH=42h` request on some BIOSes. QEMU accepts 240, real firmware may not. |
-| **Fix** | Read the kernel in chunks of at most 127 sectors, advancing the buffer segment. |
-
-### L25. A signal during a canonical-mode read drops the typed line
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/syscall/tty.cpp` (`tty_read_line`) |
-| **Issue** | The line being edited lives in the reader's kernel buffer, so a caught signal (or SA_RESTART restart) loses what was typed so far. Linux keeps it in the TTY line buffer. |
-| **Fix** | Keep the canonical line buffer in the TTY, not on the reader's stack. |
 ---
 
 ## INFO — Known design decisions, planned features, or documentation gaps
@@ -524,11 +501,11 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 | Area | Critical | High | Medium | Low/Info |
 |------|----------|------|--------|----------|
-| **Bootloader (ASM)** | — | H11, H20 | M20, M21, M22, M23, M24, M25, M26, M43, M44, M45 | L14, L19, L24 |
+| **Bootloader (ASM)** | — | H11, H20 | M20, M21, M22, M23, M24, M25, M26, M43, M44, M45 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
 | **Kernel (Sched)** | — | — | M1 | L13, L22, L23, I2 |
-| **Kernel (FS)** | — | — | M4, M9, M31, M46 | L12, L21, L25 |
+| **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
 | **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
@@ -542,7 +519,10 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M46 — unaccounted kernel heap**: pipes and open files from one process
-   can starve every other process of kernel memory (`-ENOMEM`).
-2. **L24 / H20 — boot on real hardware**: the 240-sector EDD read and the
-   hardcoded CHS geometry only work because QEMU is lenient.
+1. **H20 — boot on real hardware**: the CHS geometry (18 sectors/track,
+   2 heads, now named constants in `stage2.asm`) matches the 1.44 MB floppy
+   image, but nothing probes the drive; real firmware with different
+   translation would read garbage.
+2. **L23 — ignoring `SIGCHLD` does not auto-reap children**: zombies pile up
+   for a parent that sets `SIG_IGN`/`SA_NOCLDWAIT` (currently rejected with
+   `-EINVAL`).

@@ -24,6 +24,7 @@ Semantic Versioning, interpreted for the pre-1.0 alpha series:
 | M40 orphan reparenting + init reaper, M36 PID 1 exit panic, M39 COW-safe `copy_to_user` | patch | `0.0.11-alpha` | released 2026-11-02 |
 | M37 string bounds, H9/H10 boot constants, M42 COW failure-counter corruption | patch | `0.0.12-alpha` | released 2026-11-03 |
 | Full POSIX signals (handlers, masks, `sigaction`, `SIGCHLD`, job control) incl. M41 orphan reaping, `pipe()`/`dup2()` + userland `errno.h`, `chdir`/`getcwd`, M38 (**first usable release**) | minor | `0.1.0-alpha` | released 2026-11-03 |
+| M46 pipe heap cap, L24 floppy read retry, L25 TTY line buffer | patch | `0.1.1-alpha` | in progress |
 | POSIX timers + shared memory | minor | `0.2.0-alpha` | planned |
 | Stable ABI / breaking disk-format or syscall changes | major | `1.0.0` | future |
 

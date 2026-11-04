@@ -1528,6 +1528,62 @@ static void test_sec_pipe_dup(void)
     close(p[1]);
 }
 
+/* Pipes are the largest variable kernel-heap allocation. A process must not
+ * be able to drain the 256 KiB heap with them: once the cap is reached the
+ * kernel returns -ENOMEM, and fork() must still succeed because the cap
+ * leaves headroom for task stacks (M46). */
+static void test_sec_pipe_heap_cap(void)
+{
+    enum
+    {
+        MAX_TEST_PIPES = 16
+    };
+    int fds[MAX_TEST_PIPES][2];
+    int made = 0;
+    int r = 0;
+
+    while (made < MAX_TEST_PIPES)
+    {
+        r = pipe(fds[made]);
+        if (r != 0)
+            break;
+        made++;
+    }
+
+    /* The fd table alone would fail the 15th pipe with -EMFILE; the heap cap
+     * has to bite first, and with room to spare for normal pipelines. */
+    check_value(r == -ENOMEM, r, "security: the pipe cap returns -ENOMEM");
+    check_value(made >= 4, made, "security: the pipe cap allows normal use");
+    printf("[selftest] pipe cap: %d pipes then %d\n", made, r);
+
+    /* The cap exists so memory pressure cannot break unrelated syscalls. */
+    int pid = fork();
+    check_value(pid >= 0, pid, "security: fork works at the pipe cap");
+    if (pid == 0)
+        exit(0);
+    if (pid > 0)
+    {
+        int status = 0;
+        int reaped = waitpid(pid, &status, 0);
+        check_value(reaped == pid, reaped, "security: waitpid at the pipe cap");
+    }
+
+    for (int i = 0; i < made; i++)
+    {
+        close(fds[i][0]);
+        close(fds[i][1]);
+    }
+
+    int again[2];
+    r = pipe(again);
+    check_value(r == 0, r, "security: closing pipes releases the cap");
+    if (r == 0)
+    {
+        close(again[0]);
+        close(again[1]);
+    }
+}
+
 static void test_sec_paths(void)
 {
     char buf[64];
@@ -1596,6 +1652,7 @@ int main(int argc, char** argv)
     test_cwd();
     test_tty_job_control();
     test_sec_pipe_dup();
+    test_sec_pipe_heap_cap();
     test_sec_paths();
     test_orphan_sigchld();
     test_malloc_overflow();

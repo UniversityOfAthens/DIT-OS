@@ -189,6 +189,21 @@ main() {
     run_expect 'typed-line\r' '^greeter got: typed-line$'
     pass
 
+    # A caught signal interrupts a canonical console read: the job's parent
+    # signals the reader as soon as it blocks (before any input is typed),
+    # read() returns -EINTR, and the retry completes a fresh line normally.
+    # The TTY line buffer itself (L25) is not reachable from a serial-driven
+    # signal: INTR/QUIT/SUSP flush it per POSIX (covered by review).
+    STEP="signal interrupts a console read"
+    run_expect 'greeter ttyline\r' '^greeter: ttyline-1$'
+    local offset
+    offset="$(log_size)"
+    send 'ab'
+    send 'cd\r'
+    expect_after "$offset" 'greeter got: abcd'
+    expect_after "$offset" 'greeter: ttyline-ok'
+    pass
+
     STEP="Ctrl+C ends the foreground job"
     run_expect 'greeter read\r' '^greeter: reading$'
     run_expect '\003' '^\^C$'

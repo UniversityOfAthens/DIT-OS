@@ -22,6 +22,15 @@ COM_LCR   equ 3
 COM_DLL   equ 0
 COM_DLH   equ 1
 
+; Floppy geometry: the image is a 1.44 MB floppy (2880 sectors), so BIOS
+; CHS translation is 18 sectors/track, 2 heads. Real-BIOS safety (L24/H20):
+; the kernel is read one sector per BIOS call, so no 127-sector EDD limit
+; can bite, and a failed read is reset and retried (floppy motors make
+; first accesses fail transiently). H20 tracks probing the geometry.
+FLOPPY_SECTORS_PER_TRACK equ 18
+FLOPPY_HEADS             equ 2
+READ_RETRIES             equ 3
+
 _start:
     mov [boot_drive], dl
 
@@ -417,8 +426,10 @@ read_key:
     ret
 
 ; =============================================================================
-; read_lba - Read sectors from LBA using CHS, one sector at a time
-; Uses dap_* variables for parameters. Sets CF on error.
+; read_lba - Read dap_count sectors from dap_lba into dap_segment:dap_offset
+; One sector per BIOS call, so no 127-sector EDD request limit applies; a
+; failed read resets the disk system and retries the same sector (L24).
+; Sets CF on error.
 ; =============================================================================
 read_lba:
     pusha
@@ -427,15 +438,17 @@ read_lba:
     test cx, cx
     jz .rl_done
     push cx
-    ; LBA -> CHS  (18 sectors/track, 2 heads/cylinder)
+    mov si, READ_RETRIES
+.rl_attempt:
+    ; LBA -> CHS  (FLOPPY_SECTORS_PER_TRACK, FLOPPY_HEADS)
     mov eax, [dap_lba]
     xor edx, edx
-    mov ebx, 18
+    mov ebx, FLOPPY_SECTORS_PER_TRACK
     div ebx                   ; eax = track, edx = sector-in-track
     inc dx                    ; sectors are 1-based
     mov cl, dl                ; CL = sector
     xor edx, edx
-    mov ebx, 2
+    mov ebx, FLOPPY_HEADS
     div ebx                   ; eax = cylinder, edx = head
     mov ch, al                ; CH = cylinder
     mov dh, dl                ; DH = head
@@ -447,7 +460,16 @@ read_lba:
     mov al, 1
     mov dl, [boot_drive]
     int 0x13
-    jc .rl_err
+    jnc .rl_next
+    ; Floppy reads fail transiently (motor spin-up): reset the controller
+    ; (AH=00h with DL = drive) and retry the same sector.
+    dec si
+    jz .rl_err
+    xor ah, ah
+    mov dl, [boot_drive]
+    int 0x13
+    jmp .rl_attempt
+.rl_next:
     ; Advance LBA and buffer offset
     inc dword [dap_lba]
     add word [dap_offset], 512

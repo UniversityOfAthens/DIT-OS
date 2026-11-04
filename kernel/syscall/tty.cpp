@@ -36,6 +36,18 @@ uint32_t s_mode = TTY_MODE_DEFAULT;
 uint32_t s_fg_pgrp = INIT_PGRP;
 sched::WaitQueue s_rx_wait; // readers waiting for console input
 
+/* Canonical line buffer, owned by the TTY like Linux's line discipline: a
+ * caught signal (SIGCHLD, SIGWINCH, ...) must not lose what was typed, so
+ * the interrupted read returns -EINTR and the retry continues the same
+ * line (L25). ISIG characters are the exception: POSIX flushes the input
+ * queue (NOFLSH is not supported), so ^C/^\/^Z discard the partial line.
+ * One buffer for the console: only the foreground group may read, and two
+ * foreground readers would split lines between them. */
+constexpr uint32_t TTY_LINE_MAX = 256;
+static char s_line[TTY_LINE_MAX];
+static uint32_t s_line_len;
+static bool s_line_complete;
+
 // COM1 IRQ context: new bytes are buffered, wake any blocked reader.
 void tty_rx_ready()
 {
@@ -84,6 +96,11 @@ bool tty_rx_filter(uint8_t byte)
         return false;
     }
     echo_control(letter);
+    /* POSIX flushes the pending input on an ISIG character (NOFLSH is not
+     * implemented): the partial line dies with the ^C, not with every
+     * caught signal. Runs in IRQ context with interrupts already off. */
+    s_line_len = 0;
+    s_line_complete = false;
     sched::signal_send_group(s_fg_pgrp, sig);
     return true;
 }
@@ -158,37 +175,77 @@ int tty_wait_byte()
 }
 
 // Canonical mode: edit one line (backspace), return it with a trailing '\n'.
+// The partial line lives in the TTY, not the reader's stack, so a caught
+// signal returns -EINTR without dropping it; the retry continues the same
+// line (L25).
 int tty_read_line(char* buf, uint32_t count)
 {
-    uint32_t n = 0;
-    while (n < count)
+    if (count == 0)
+        return 0;
+    for (;;)
     {
+        uint32_t flags = arch::irq_save();
+        if (s_line_complete)
+        {
+            /* Hand out a completed line: a read shorter than the line
+             * consumes what fits and the rest waits for the next read. */
+            uint32_t n = s_line_len < count ? s_line_len : count;
+            for (uint32_t i = 0; i < n; i++)
+                buf[i] = s_line[i];
+            uint32_t rest = s_line_len - n;
+            for (uint32_t i = 0; i < rest; i++)
+                s_line[i] = s_line[n + i];
+            s_line_len = rest;
+            if (rest == 0)
+                s_line_complete = false;
+            arch::irq_restore(flags);
+            return static_cast<int>(n);
+        }
+        arch::irq_restore(flags);
+
         int got = tty_wait_byte();
         if (got < 0)
-            return got; // the partial line is dropped, like a ^C
+            return got; /* -EINTR: the partial line stays buffered (L25) */
         char ch = static_cast<char>(got);
         if (ch == KEY_BACKSPACE || ch == KEY_DELETE)
         {
-            if (n > 0)
+            flags = arch::irq_save();
+            bool erased = s_line_len > 0;
+            if (erased)
+                s_line_len--;
+            arch::irq_restore(flags);
+            if (erased)
             {
-                n--;
                 tty_echo('\b');
                 tty_echo(' ');
                 tty_echo('\b');
             }
             continue;
         }
-        if (ch == '\r' || ch == '\n')
+        bool newline = ch == '\r' || ch == '\n';
+        flags = arch::irq_save();
+        /* Keep one byte free so the '\n' always fits; a full line drops
+         * further input until it is completed or erased. */
+        bool room = s_line_len < (newline ? TTY_LINE_MAX : TTY_LINE_MAX - 1);
+        if (room)
         {
-            buf[n++] = '\n';
+            s_line[s_line_len++] = newline ? '\n' : ch;
+            if (newline)
+                s_line_complete = true;
+        }
+        arch::irq_restore(flags);
+        if (!room)
+            continue;
+        if (newline)
+        {
             tty_echo('\r');
             tty_echo('\n');
-            break;
         }
-        buf[n++] = ch;
-        tty_echo(ch);
+        else
+        {
+            tty_echo(ch);
+        }
     }
-    return static_cast<int>(n);
 }
 
 // Raw mode: block for the first byte, then take whatever else is already
