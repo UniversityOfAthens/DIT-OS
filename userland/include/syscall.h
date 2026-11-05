@@ -32,6 +32,8 @@
 #define SYS_dup2 26
 #define SYS_chdir 27
 #define SYS_getcwd 28
+#define SYS_setsid 29
+#define SYS_getsid 30
 
 #define TTY_IOC_GETMODE 0x5401
 #define TTY_IOC_SETMODE 0x5402
@@ -225,6 +227,19 @@ static inline int chdir(const char* path)
 static inline int getcwd(char* buf, unsigned size)
 {
     return dit_syscall(SYS_getcwd, (unsigned int)buf, size, 0, 0, 0);
+}
+
+/* Create a new session: the caller becomes its session and process group
+ * leader. Fails with -EPERM when the caller already leads a process group. */
+static inline int setsid(void)
+{
+    return dit_syscall(SYS_setsid, 0, 0, 0, 0, 0);
+}
+
+/* Session of @pid (0 = the caller), or -ESRCH for an unknown pid. */
+static inline int getsid(int pid)
+{
+    return dit_syscall(SYS_getsid, (unsigned int)pid, 0, 0, 0, 0);
 }
 
 /* Foreground process group of the console on @fd. */

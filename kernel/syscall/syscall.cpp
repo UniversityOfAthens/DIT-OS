@@ -40,6 +40,8 @@ extern SyscallResult sys_sigpending_impl(const SyscallArgs* args);
 extern SyscallResult sys_sigsuspend_impl(const SyscallArgs* args);
 extern SyscallResult sys_setpgid_impl(const SyscallArgs* args);
 extern SyscallResult sys_getpgid_impl(const SyscallArgs* args);
+extern SyscallResult sys_setsid_impl(const SyscallArgs* args);
+extern SyscallResult sys_getsid_impl(const SyscallArgs* args);
 extern SyscallResult sys_pipe_impl(const SyscallArgs* args);
 extern SyscallResult sys_dup_impl(const SyscallArgs* args);
 extern SyscallResult sys_dup2_impl(const SyscallArgs* args);
@@ -73,6 +75,8 @@ void init()
     syscall_set_handler(SYS_sigsuspend, sys_sigsuspend_impl);
     syscall_set_handler(SYS_setpgid, sys_setpgid_impl);
     syscall_set_handler(SYS_getpgid, sys_getpgid_impl);
+    syscall_set_handler(SYS_setsid, sys_setsid_impl);
+    syscall_set_handler(SYS_getsid, sys_getsid_impl);
     syscall_set_handler(SYS_pipe, sys_pipe_impl);
     syscall_set_handler(SYS_dup, sys_dup_impl);
     syscall_set_handler(SYS_dup2, sys_dup2_impl);

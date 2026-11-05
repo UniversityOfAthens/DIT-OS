@@ -1341,6 +1341,154 @@ static void test_fd_leaks(void)
     check_value(failed < 0, failed, "pipe/close does not leak pipes");
 }
 
+/* Sessions (L22): setsid() makes a non-group-leader its own session and
+ * group leader, a group leader cannot setsid, and neither setpgid nor
+ * tcsetpgrp may cross the session boundary — the console belongs to its
+ * controlling session. The grandchild checks the leader rule (it can become
+ * one without breaking the child's setsid) and reports over its own pipe;
+ * the child then checks its new session and the cross-session rejections,
+ * and the parent checks that the child is untouchable across the boundary
+ * while it is still alive. */
+static void test_sessions(void)
+{
+    int results[2]; /* child -> parent: its new sid and verdict */
+    int ack[2]; /* parent -> child: checks done, may exit */
+    int gc[2]; /* grandchild -> child: its verdict */
+    if (pipe(results) != 0 || pipe(ack) != 0 || pipe(gc) != 0)
+    {
+        check(0, "pipes for sessions");
+        return;
+    }
+
+    int pid = fork();
+    check_value(pid >= 0, pid, "fork for sessions");
+    if (pid == 0)
+    {
+        close(results[0]);
+        close(ack[1]);
+        /* gc[1] stays open here: the grandchild below inherits it, and the
+         * read end would see EOF as soon as the last write end closes. */
+
+        int mypid = getpid();
+        int code = 0;
+
+        /* Leave the boot session: a non-leader may setsid. */
+        if (setsid() != 0)
+            code = 2;
+        else if (getsid(0) != mypid || getpgid(0) != mypid)
+            code = 3;
+
+        /* The grandchild becomes a group leader, then must not setsid. It
+         * runs while this process blocks on its verdict. */
+        int gcpid = fork();
+        if (gcpid == 0)
+        {
+            close(results[1]);
+            close(ack[0]);
+            close(ack[1]);
+            close(gc[0]);
+            int verdict = 0;
+            if (setpgid(0, 0) != 0)
+                verdict = 4;
+            else if (setsid() != -EPERM)
+                verdict = 5;
+            (void)write(gc[1], &verdict, sizeof(verdict));
+            exit(0);
+        }
+        int gc_verdict = 0;
+        if (read(gc[0], &gc_verdict, sizeof(gc_verdict)) !=
+            (int)sizeof(gc_verdict))
+            code = code ? code : 4;
+        else if (gc_verdict != 0)
+            code = gc_verdict;
+        close(gc[0]);
+        close(gc[1]);
+        /* Reap the grandchild: it exited right after its verdict, and a
+         * zombie reparented to init on this process's exit would send a
+         * stray SIGCHLD that derails the orphan test later. */
+        if (gcpid > 0)
+        {
+            int gc_status = 0;
+            if (waitpid(gcpid, &gc_status, 0) != gcpid || gc_status != 0)
+                code = code ? code : 10;
+        }
+
+        /* The console cannot be handed across the session boundary, even
+         * with SIGTTOU ignored. */
+        install(SIGTTOU, SIG_IGN, 0);
+        int setpgrp_r = ioctl(1, TTY_IOC_SETPGRP, 1);
+        if (code == 0 && setpgrp_r != -EPERM)
+            code = 7;
+        /* Joining the boot session's group is out of bounds, too. */
+        int join_r = setpgid(0, 1);
+        if (code == 0 && join_r != -EPERM)
+            code = 8;
+
+        (void)write(results[1], &mypid, sizeof(mypid));
+        (void)write(results[1], &code, sizeof(code));
+        /* Stay alive until the parent has tried its cross-session moves. */
+        char b;
+        if (read(ack[0], &b, 1) != 1)
+            code = code ? code : 9;
+        exit(code);
+    }
+    if (pid < 0)
+    {
+        close(results[0]);
+        close(results[1]);
+        close(ack[0]);
+        close(ack[1]);
+        close(gc[0]);
+        close(gc[1]);
+        return;
+    }
+
+    close(results[1]);
+    close(ack[0]);
+    close(gc[0]);
+    close(gc[1]);
+
+    int sid = 0;
+    int code = 0;
+    if (read(results[0], &sid, sizeof(sid)) != (int)sizeof(sid) ||
+        read(results[0], &code, sizeof(code)) != (int)sizeof(code))
+        check(0, "session child reported");
+    else
+    {
+        check_value(code == 0, code, "child session checks pass");
+        check_value(getsid(pid) == sid, getsid(pid),
+                    "getsid reports the child's new session");
+        check_value(getpgid(pid) == pid, getpgid(pid),
+                    "setsid made the child a group leader");
+
+        /* The child moved to another session: the parent cannot move it
+         * again, neither into an existing group nor into a new one. */
+        int join_r = setpgid(pid, 1);
+        check_value(join_r == -EPERM, join_r,
+                    "setpgid cannot cross the session boundary");
+        int new_r = setpgid(pid, 0);
+        check_value(new_r == -EPERM, new_r,
+                    "setpgid cannot create a group in another session");
+
+        /* Within the controlling session the handover still works. */
+        int fg = ioctl(1, TTY_IOC_GETPGRP, 0);
+        check_value(fg == 1, fg, "the console starts in the boot session");
+        int handover = ioctl(1, TTY_IOC_SETPGRP, fg);
+        check_value(handover == 0, handover,
+                    "tcsetpgrp within the session works");
+    }
+
+    char b = 'x';
+    (void)write(ack[1], &b, 1);
+    int status = wait_status(pid, 0);
+    check(WIFEXITED(status) && WEXITSTATUS(status) == 0,
+          "session child exits cleanly");
+    close(results[0]);
+    close(ack[1]);
+    install(SIGTTOU, SIG_DFL, 0);
+    printf("[selftest] sessions: setsid/boundary ok\n");
+}
+
 /* chdir/getcwd and relative paths resolve against the working directory. */
 static void test_cwd(void)
 {
@@ -1736,6 +1884,7 @@ int main(int argc, char** argv)
     test_signal_spinning_child();
     test_stop_continue();
     test_process_groups();
+    test_sessions();
     test_sec_sigaction();
     test_sec_sigreturn_forged();
     test_sec_job_control();

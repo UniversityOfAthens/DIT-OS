@@ -426,15 +426,6 @@ None open.
 | **Fix** | Rename the locals (e.g. `WHENCE_SET`), or move named constants to `fs/vfs.hpp` and use them in `sys_execve.cpp` too; drop the suppression. |
 
 
-### L22. No sessions: job control trusts every process in the system
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/syscall/sys_proc.cpp`, `kernel/syscall/tty.cpp` |
-| **Issue** | There is no `setsid`/session, so the system behaves like one Linux session: any process may `setpgid` into any existing group (including init's) and a background process that ignores `SIGTTOU` may `tcsetpgrp` the console. Orphaned process groups are approximated per process (a stopped orphan gets `SIGHUP` + `SIGCONT` when reparented). |
-| **Fix** | Add sessions (`setsid`, `getsid`, controlling terminal) and restrict `setpgid`/`tcsetpgrp` to the caller's session. |
-
-
 ---
 
 ## INFO — Known design decisions, planned features, or documentation gaps
@@ -488,7 +479,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Bootloader (ASM)** | — | H11 | M20, M21, M22, M23, M24, M25, M26, M43, M44, M45 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
-| **Kernel (Sched)** | — | — | M1 | L13, L22, I2 |
+| **Kernel (Sched)** | — | — | M1 | L13, I2 |
 | **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
 | **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
@@ -503,10 +494,8 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **L22 — no sessions: job control trusts every process**: any process may
-   `setpgid` into any existing group and a `SIGTTOU`-ignoring background
-   process may `tcsetpgrp` the console. Add `setsid`/`getsid` and a
-   controlling terminal.
-2. **H18 + the dead-code cluster**: the C++ stage2, `disk.asm` and the PNG
+1. **H18 + the dead-code cluster**: the C++ stage2, `disk.asm` and the PNG
    path are never built, yet they carry tracked bugs (M20-M26, M43-M45).
    Delete them or wire them up so the tracked bugs stop being noise.
+2. **M35 — userland `malloc` never frees**: every program leaks everything
+   it allocates, so any longer-running process grows without bound.

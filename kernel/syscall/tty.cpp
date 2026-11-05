@@ -26,6 +26,9 @@ constexpr uint8_t KEY_QUIT = 0x1C; // ^backslash
 constexpr uint8_t KEY_SUSP = 0x1A; // ^Z
 /* The first process (init) leads group 1 and owns the console at boot. */
 constexpr uint32_t INIT_PGRP = 1;
+/* The console's controlling session: the first process's session. Only it
+ * may hand the console around with tcsetpgrp (L22). */
+constexpr uint32_t INIT_SESSION = 1;
 /* QEMU's ACPI PM1a control port and the S5 (soft-off) value. */
 constexpr uint16_t QEMU_ACPI_PM1A_CNT = 0x604;
 constexpr uint16_t QEMU_ACPI_SLP_EN_S5 = 0x2000;
@@ -34,6 +37,9 @@ uint32_t s_mode = TTY_MODE_DEFAULT;
 /* Foreground process group: the one ^C reaches and that may read. Written
  * by tasks, read by the COM1 IRQ, so accesses happen with IRQs off. */
 uint32_t s_fg_pgrp = INIT_PGRP;
+/* Session that owns the console. There is no TIOCSCTTY yet, so this never
+ * changes after boot; setsid() moves a caller to a session without one. */
+uint32_t s_ctty_sid = INIT_SESSION;
 sched::WaitQueue s_rx_wait; // readers waiting for console input
 
 /* Canonical line buffer, owned by the TTY like Linux's line discipline: a
@@ -105,11 +111,14 @@ bool tty_rx_filter(uint8_t byte)
     return true;
 }
 
-bool group_exists(uint32_t pgid)
+/* Does any live task belong to group @pgid in @sid? Groups are
+ * session-homogeneous (L22), so one member decides for the group. */
+bool group_exists_in(uint32_t pgid, uint32_t sid)
 {
     for (sched::Task* t = sched::task_list_head(); t; t = t->all_next)
     {
-        if (t->pgid == pgid && t->state != sched::TaskState::Exited)
+        if (t->pgid == pgid && t->sid == sid &&
+            t->state != sched::TaskState::Exited)
             return true;
     }
     return false;
@@ -353,15 +362,20 @@ int tty_ioctl(uint32_t request, uint32_t arg)
     }
     if (request == TTY_IOC_SETPGRP)
     {
-        /* Group ids are positive 32-bit values naming a live group: the
-         * terminal cannot be handed to a group nobody is in. */
+        /* Group ids are positive 32-bit values naming a live group in the
+         * caller's session: the terminal cannot be handed to a group nobody
+         * is in, nor across a session boundary (L22) — the console belongs
+         * to its controlling session. */
         if (arg == 0 || arg > static_cast<uint32_t>(INT32_MAX))
             return -EINVAL;
+        sched::Task* caller = sched::current_task;
+        if (!caller || caller->sid != s_ctty_sid)
+            return -EPERM;
         int access = job_control_check(sched::SIGTTOU);
         if (access < 0)
             return access;
         uint32_t flags = arch::irq_save();
-        if (!group_exists(arg))
+        if (!group_exists_in(arg, caller->sid))
         {
             arch::irq_restore(flags);
             return -EPERM;

@@ -64,8 +64,10 @@ struct Task
      *  (valid while restore_mask is set). */
     sigset_t saved_mask;
     bool restore_mask;
-    /** Process group (job control). Inherited across fork(). */
+    /** Process group and session (job control). Both are inherited across
+     *  fork(); the first process leads group and session 1. */
     uint32_t pgid;
+    uint32_t sid;
     /** Unreported stop/continue for waitpid(), and the stopping signal. */
     JobEvent job_event;
     int stop_signal;

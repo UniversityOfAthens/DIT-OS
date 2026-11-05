@@ -8,7 +8,7 @@ KERNEL_LOAD      equ 0x100000   ; Kernel load address (1MB)
 ; Disk
 SECTOR_SIZE      equ 512
 STAGE2_SECTORS   equ 9           ; Actual: 9 sectors (matches Makefile)
-KERNEL_SECTORS   equ 240         ; Actual: ~212 sectors (0.1.0), 240 with headroom
+KERNEL_SECTORS   equ 248         ; Actual: ~240 sectors (0.1.2), 248 with headroom
 ; Video
 VIDEO_MEM        equ 0xB8000     ; Text mode video memory
 VIDEO_COLS       equ 80

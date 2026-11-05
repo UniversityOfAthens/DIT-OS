@@ -48,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reject the probe (H20). Verified by booting with a deliberately wrong
   fallback: the probe overrides it, and every boot exercises the probed
   geometry on the loader and kernel reads. Patch bump for `0.1.2-alpha`.
+- Sessions bound job control: `setsid` (syscalls 29–30 with `getsid`) makes
+  a non-group-leader the leader of its own session and group, a group
+  leader cannot `setsid`, and `setpgid` can neither move a process into
+  another session's group nor create a group there; `tcsetpgrp` only hands
+  the console to groups of the controlling session (the boot session at
+  first) (L22). Covered by `test_sessions`: a child leaves the boot
+  session, a grandchild proves a leader cannot `setsid`, and the parent
+  proves the boundary holds while the child is still alive. Patch bump for
+  `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 

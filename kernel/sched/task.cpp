@@ -193,8 +193,10 @@ Task* task_create_user(uint32_t entry)
     t->user_mode = true;
     t->ppid = 0;
     t->exit_code = 0;
-    /* The first process leads process group 1 and starts at the root. */
+    /* The first process leads process group 1, in session 1, and starts at
+     * the root. */
     t->pgid = t->pid;
+    t->sid = t->pid;
     t->cwd[0] = '/';
     t->cwd[1] = '\0';
 
@@ -243,8 +245,9 @@ Task* task_create_fork_child(Task* parent, const uint32_t* user_regs)
     t->blocked_signals = parent->blocked_signals;
     for (int sig = 0; sig < NSIG; sig++)
         t->actions[sig] = parent->actions[sig];
-    /* The child joins its parent's process group and directory. */
+    /* The child joins its parent's process group, session and directory. */
     t->pgid = parent->pgid;
+    t->sid = parent->sid;
     for (uint32_t i = 0; i < TASK_CWD_MAX; i++)
         t->cwd[i] = parent->cwd[i];
 

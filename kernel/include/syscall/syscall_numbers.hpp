@@ -42,8 +42,10 @@ enum SyscallNumber : uint32_t
     SYS_dup2 = 26,
     SYS_chdir = 27,
     SYS_getcwd = 28,
+    SYS_setsid = 29,
+    SYS_getsid = 30,
 
-    SYS_MAX = 29
+    SYS_MAX = 31
 };
 
 } // namespace syscall

@@ -16,7 +16,7 @@ constexpr u32 SECTOR_SIZE = 512;
 
 // Sector counts
 constexpr u32 STAGE2_SECTOR_COUNT = 9;
-constexpr u32 KERNEL_SECTOR_COUNT = 240;
+constexpr u32 KERNEL_SECTOR_COUNT = 248;
 
 // Boot drive (set by stage1, passed in DL)
 extern u8 boot_drive;
