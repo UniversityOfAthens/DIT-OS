@@ -13,5 +13,4 @@ Content lives in the skill; this file only points to it.
 
 Never forget:
 - Disk layout numbers must change in every file listed in the skill.
-- C++ files in src/stage2/ and src/uefi/ are dead code (ISSUES.md H18).
 - Check the BIOS carry flag after every int 0x13; bound every ELF field.

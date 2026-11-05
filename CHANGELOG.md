@@ -7,8 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- The dead bootloader cluster: the never-assembled C++ stage2 (ELF-linked
+  path), the UEFI stub, and the unused FAT32/ISO9660/PNG/BMP/A20/menu/font
+  modules, their headers (`bootloader/include/*.hpp`) and `macros.inc`
+  (H18). The tracked bugs in those files (H11, H12, M20-M26, M43-M45, L5)
+  are gone with them; the visual-bootloader plan grows from `stage2.asm`
+  instead. Nothing on the boot path changed.
+
 ### Fixed
 
+- `M22` is closed by documentation rather than code: stage2 stays entirely
+  below 1 MiB (menu at `0x7E00`, loader loaded to `0x10000`, kernel staged
+  at `0x20000`), and `loader.asm` enables A20 via port `0x92` before its
+  first access above 1 MiB, so stage2 has no need to touch the gate.
 - `pipe()` is now subject to a global cap of eight live pipes: each buffer is
   4 KiB of the 256 KiB kernel heap, and an uncapped process could tie up
   nearly all of it with pipes (and forks for more fd tables), after which

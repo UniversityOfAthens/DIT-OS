@@ -61,24 +61,24 @@ See `ISSUES.md` for full details. These are the blockers:
 
 ### Stage2 — flat binary build (ACTIVE)
 - [x] `bootloader/src/stage2/stage2.asm` — Real mode entry, menu, kernel load
-- [x] `bootloader/src/stage2/a20.asm` — Fast A20 (port 0x92 only — missing keyboard/BIOS fallback)
+- [x] ~~`bootloader/src/stage2/a20.asm`~~ — removed with the dead-code cluster (H18)
 - [x] `bootloader/src/stage2/disk.asm` — INT 13h CHS + LBA (has retry counter bug)
-- [x] `bootloader/src/stage2/fat32.asm` — FAT32 reader (has inverted branch bug)
+- [x] ~~`bootloader/src/stage2/fat32.asm`~~ — removed with the dead-code cluster (H18)
 - [x] `bootloader/src/stage2/font.asm`
 - [x] `bootloader/src/stage2/gdt.asm`
 - [x] `bootloader/src/stage2/graphics.asm` — VESA/VBE modes
 - [x] `bootloader/src/stage2/memory.asm` — E820 (has uninitialized EBX bug)
 - [x] `bootloader/src/stage2/menu.asm`
-- [x] `bootloader/src/stage2/mouse.asm`
+- [x] ~~`bootloader/src/stage2/mouse.asm`~~ — removed with the dead-code cluster (H18); the visual bootloader will grow its own
 - [x] `bootloader/src/stage2/multiboot.asm`
 - [x] `bootloader/src/stage2/pf2.asm`
 - [x] `bootloader/src/stage2/pmode.asm`
-- [x] `bootloader/src/stage2/png.asm` — STUB (zlib does nothing)
+- [x] ~~`bootloader/src/stage2/png.asm`~~ — removed with the dead-code cluster (H18)
 - [x] `bootloader/src/stage2/bmp.asm`
 - [x] `bootloader/src/stage2/theme.asm`
 - [x] `bootloader/src/stage2/video.asm`
 - [x] `bootloader/src/stage2/stage2_core.asm`
-- [x] `bootloader/src/stage2/stage2_main.asm` — Alternate entry
+- [x] ~~`bootloader/src/stage2/stage2_main.asm`~~ — removed with the dead-code cluster (H18)
 - [x] `bootloader/src/stage2/long_mode.asm` — Unused (32-bit only)
 - [x] `bootloader/src/stage2/Makefile`
 
@@ -130,7 +130,7 @@ Marked as `[x]` because files exist, but **none are compiled into the flat binar
       `LOADER_SECTORS` region with a Makefile size check (H9, H10)
 
 ### UEFI bootloader
-- [x] `bootloader/src/uefi/uefi.asm` — STUB (section count mismatch, raw sizes = 0)
+- [x] ~~`bootloader/src/uefi/uefi.asm`~~ — removed with the dead-code cluster (H18)
 
 ### Visual bootloader (custom, no GRUB)
 
@@ -144,7 +144,7 @@ natural home is with or after the `0.1.0-alpha` usable milestone.
 - [ ] Per-entry icons, kernel path, cmdline and theme override
 - [ ] Countdown bar any key interrupts; arrows/Enter/Esc/number keys; serial
       VT100 parity with the current text menu
-- [ ] Splash screen + boot progress, mouse pointer (stage2 has `mouse.asm`)
+- [ ] Splash screen + boot progress, mouse pointer (new work, built on `stage2.asm`)
 - [ ] Recovery / safe-mode entry that passes a flag on the kernel cmdline
 - [ ] Strict theme parsing: reject a malformed config loudly instead of
       half-drawing (config parsing is in the CVE catalog)

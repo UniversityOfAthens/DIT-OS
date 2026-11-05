@@ -68,11 +68,9 @@ Verify with `grep` before relying on any API; do not invent one.
   signal is pending and the syscall must return `-EINTR`. There is no
   preemption: signals act at syscall exit and at IRQ return to ring 3.
 - **Disk layout** (sectors): 0 stage1, 2–10 stage2, 11–36 loader, 37+ stripped
-  `kernel.img` (`KERNEL_SECTORS` = 240). Owned by `bootloader/Makefile`; keep
-  `stage1.asm`, `stage2.asm`, `common/constants.inc` and
-  `bootloader/include/boot.hpp` in sync.
-- **Dead code**: `bootloader/src/uefi/` and the C++ files in
-  `bootloader/src/stage2/` are not built (`ISSUES.md` H18).
+  `kernel.img` (`KERNEL_SECTORS` = 248). Owned by `bootloader/Makefile`; keep
+  `stage1.asm`, `stage2.asm` and `bootloader/src/common/constants.inc` in
+  sync (there is no `boot.hpp` anymore; CI checks the disk image layout).
 - **Branches**: `main` (stable) and `develop` (integration). Not `dev`.
 - **`tests/` is empty.** Integration testing is `scripts/qemu-test.sh` plus the
   userland self-test in `userland/bin/init.c`.

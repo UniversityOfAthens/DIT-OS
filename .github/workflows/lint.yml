@@ -80,8 +80,7 @@ jobs:
       - name: NASM files declare BITS
         run: |
           set -euo pipefail
-          # Only files the build assembles; the other bootloader/src/stage2
-          # and uefi modules are dead code (ISSUES.md H18).
+          # Only files the build assembles.
           mapfile -t files < <(git ls-files 'kernel/*.asm' \
             bootloader/src/stage1/stage1.asm \
             bootloader/src/stage2/stage2.asm \

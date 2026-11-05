@@ -41,71 +41,27 @@ DIT-OS/
 ├── flake.nix                # Nix dev shells: default (host GCC), .#cross (i686-elf)
 │
 ├── bootloader/
-│   ├── Makefile             # Top-level: builds disk.img, runs QEMU
+│   ├── Makefile             # Top-level: builds disk.img, runs QEMU; owns the
+│   │                        #   disk layout and KERNEL_SECTORS (248)
 │   ├── build/               # Build output (disk.img, stage*.bin, kernel.bin, kernel.img)
 │   ├── config/
-│   │   └── boot.cfg         # Bootloader configuration
-│   ├── include/             # Shared C++ headers
-│   │   ├── boot.hpp         #   Load addresses, sector counts
-│   │   ├── config.hpp       #   Boot config parser
-│   │   ├── disk.hpp         #   Disk I/O declarations
-│   │   ├── elf.hpp          #   ELF loader declarations
-│   │   ├── fs.hpp           #   Filesystem declarations
-│   │   ├── memory.hpp       #   Memory map declarations
-│   │   ├── types.hpp        #   Type aliases (boot:: namespace)
-│   │   └── video.hpp        #   Video mode declarations
+│   │   └── boot.cfg         # Bootloader configuration (visual-bootloader plan)
 │   ├── scripts/
 │   │   ├── build.sh         #   Build bootloader
 │   │   └── sign.sh          #   Sign MBR with 0xAA55
-│   ├── src/
-│   │   ├── common/          # Shared assembly include files
-│   │   │   ├── constants.inc  # CAUTION: STAGE2_LOAD=0x1000 wrong (should be 0x7E00)
-│   │   │   └── macros.inc
-│   │   ├── stage1/          # MBR stage1 (flat binary, 512 bytes)
-│   │   │   ├── stage1.asm   #   Loads stage2 from disk via INT 13h
-│   │   │   ├── boot.hpp     #   Stage1 constants
-│   │   │   └── Makefile
-│   │   ├── stage2/          # Stage2 — real mode menu + kernel loader
-│   │   │   ├── stage2.asm   #   PRIMARY: flat binary entry point (active build path)
-│   │   │   ├── a20.asm      #   A20 gate (fast method only)
-│   │   │   ├── disk.asm     #   Disk read routines (INT 13h CHS + LBA)
-│   │   │   ├── fat32.asm    #   FAT32 reader — BRANCH INVERTED BUG at line 198
-│   │   │   ├── font.asm     #   Bitmap font rendering
-│   │   │   ├── gdt.asm      #   GDT for protected mode
-│   │   │   ├── graphics.asm #   VESA/VBE graphics mode
-│   │   │   ├── memory.asm   #   E820 memory map — UNINITIALIZED EBX BUG
-│   │   │   ├── menu.asm     #   Boot menu UI
-│   │   │   ├── mouse.asm    #   PS/2 mouse (unused in flat build)
-│   │   │   ├── multiboot.asm#   Multiboot info (unused)
-│   │   │   ├── pf2.asm      #   PF2 font loader
-│   │   │   ├── pmode.asm    #   Protected mode switch
-│   │   │   ├── png.asm      #   PNG decoder — no inflate yet (M43)
-│   │   │   ├── bmp.asm      #   BMP loader
-│   │   │   ├── theme.asm    #   Theme loader
-│   │   │   ├── video.asm    #   VGA/VESA helpers
-│   │   │   ├── stage2_core.asm   # Core routines (ELF-linked build)
-│   │   │   ├── stage2_main.asm   # Alternate entry (ELF-linked build)
-│   │   │   ├── long_mode.asm     # x86-64 long mode (unused, 32-bit only)
-│   │   │   ├── stage2.cpp        # C++ stage2 entry (UNUSED, not in flat build)
-│   │   │   ├── console.cpp       # C++ console (UNUSED)
-│   │   │   ├── disk.cpp          # C++ disk (UNUSED)
-│   │   │   ├── elf.cpp           # C++ ELF loader (UNUSED)
-│   │   │   ├── ext2.cpp          # C++ ext2 reader (UNUSED)
-│   │   │   ├── fat.cpp           # C++ FAT reader (UNUSED)
-│   │   │   ├── fs.cpp            # C++ FS abstraction (UNUSED)
-│   │   │   ├── gdt.cpp           # C++ GDT (UNUSED, broken include path)
-│   │   │   ├── iso9660.cpp       # C++ ISO9660 reader (UNUSED)
-│   │   │   ├── memory.cpp        # C++ memory map (UNUSED)
-│   │   │   ├── paging.cpp        # C++ paging (UNUSED, broken include path)
-│   │   │   ├── video.cpp         # C++ video (UNUSED)
-│   │   │   ├── stage2.ld         # Linker script for ELF-linked build (UNUSED)
-│   │   │   └── Makefile          # Builds stage2.asm flat binary
-│   │   ├── loader/          # Loader — protected mode, loads kernel ELF
-│   │   │   ├── loader.asm   #   ELF parsing, kernel jump (ACTIVE)
-│   │   │   ├── loader.bin   #   Pre-built binary in source
-│   │   │   └── Makefile
-│   │   └── uefi/
-│   │       └── uefi.asm     # UEFI PE bootloader (STUB, section count wrong)
+│   └── src/
+│       ├── common/
+│       │   └── constants.inc  # Shared assembly constants (STAGE2_LOAD=0x7E00)
+│       ├── stage1/          # MBR stage1 (flat binary, 512 bytes)
+│       │   ├── stage1.asm   #   Loads stage2 from disk via INT 13h
+│       │   └── Makefile
+│       ├── stage2/          # Stage2 — real mode menu + kernel loader
+│       │   ├── stage2.asm   #   The whole stage2: menu, geometry probe (H20),
+│       │   │                #   retrying reads (L24), loader + kernel loads
+│       │   └── Makefile     #   Builds stage2.asm flat binary
+│       └── loader/          # Loader — protected mode, loads kernel ELF
+│           ├── loader.asm   #   A20, GDT, ELF parsing, kernel jump (ACTIVE)
+│           └── Makefile
 │
 ├── config/                  # No Kconfig system yet
 │   └── cppcheck-suppressions.txt  # cppcheck false positives + tracked baseline

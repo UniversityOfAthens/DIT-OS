@@ -1,4 +1,4 @@
-# Loader: ELF load + multiboot launcher (runs at 0x10000)
+# Loader: enters protected mode, loads the kernel ELF (runs at 0x10000)
 # Output: flat binary for disk sector 10+
 
 NASM = nasm

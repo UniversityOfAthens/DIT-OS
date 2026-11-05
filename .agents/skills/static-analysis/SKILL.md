@@ -25,8 +25,8 @@ The script:
   `// cppcheck-suppress <id>` comments;
 - exits non-zero on any finding at the gated severities.
 
-`bootloader/src/stage2/*.cpp` and `bootloader/src/uefi/` are not built and
-are not checked. If you revive them, add them to the script.
+The script checks the kernel and userland only; the bootloader is plain
+NASM plus shell scripts (shellcheck covers those).
 
 The CI image is Ubuntu 24.04 (`cppcheck` 2.13 from apt). Newer local
 versions may report more; fix those too or note them.

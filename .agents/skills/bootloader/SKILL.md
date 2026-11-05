@@ -23,26 +23,24 @@ description: The DIT-OS custom boot chain (stage1 MBR, stage2 menu, loader, kern
 | 0 | stage1.bin | 0x7C00 |
 | 2–10 | stage2.bin (9 sectors) | 0x7E00 |
 | 11–36 | loader.bin (26 reserved) | 0x10000 |
-| 37+ | kernel.img, `KERNEL_SECTORS` (240) | raw at 0x20000, segments to 0x100000 |
+| 37+ | kernel.img, `KERNEL_SECTORS` (248) | raw at 0x20000, segments to 0x100000 |
 
 - `kernel.img` is the stripped `kernel.bin`. The build fails if it exceeds
   `KERNEL_SECTORS * 512`.
 - `KERNEL_SECTORS` is passed to `stage2.asm` with `-D`.
 - When any of these numbers change, update **all** of: `bootloader/Makefile`,
   `stage1.asm` (stage2 CHS read), `stage2.asm` (loader/kernel LBAs),
-  `src/common/constants.inc`, `bootloader/include/boot.hpp`, the disk-layout
-  check in `.github/workflows/ci.yml`, and the tables in `AGENTS.md` and
-  this skill.
+  `src/common/constants.inc`, the disk-layout check in
+  `.github/workflows/ci.yml`, and the tables in `AGENTS.md` and this skill.
 
 ## What is built
 
-- Built: `stage1.asm`, `stage2.asm`, `loader.asm` (NASM only).
-- **Not built (dead code):** the C++ files in `src/stage2/`, `src/uefi/`
-  (`ISSUES.md` H18). Do not "fix" them as part of other work, and do not
-  break `make -C bootloader all` by wiring them in half-way.
+- Built: `stage1.asm`, `stage2.asm`, `loader.asm` (NASM only). Everything
+  else from the old multi-file stage2 (C++/ELF-linked path, UEFI stub,
+  FAT32/ISO9660/PNG, A20 helpers) was deleted in 2026-11 with H18; the
+  visual-bootloader plan starts fresh from `stage2.asm`.
 - `tools/build-iso/` is for the optional ISO path, not the main boot. There
   is no GRUB: `stage1` → `stage2` → `loader` is the only boot path.
-- From `src/stage2/*.cpp`, includes are `#include "../../include/foo.hpp"`.
 
 ## Make targets
 

@@ -4,11 +4,6 @@ This file catalogs all known issues across the codebase, organized by severity.
 Generated from a comprehensive audit of kernel, bootloader, userland, build system, and configuration.
 Fixed issues are removed from this file; see `CHANGELOG.md` for what was fixed and when.
 
-**Note on bootloader modules**: the active build assembles only `stage1.asm`,
-`stage2.asm` and `loader.asm`. The other files in `bootloader/src/stage2/`
-(`a20.asm`, `disk.asm`, `png.asm`, `memory.asm`, ...) and `bootloader/src/uefi/`
-are not assembled, so their bugs cannot affect the current boot (see H18).
-
 ---
 
 ## CRITICAL — Will cause boot failure, crashes, or compile errors
@@ -18,22 +13,6 @@ None open.
 ---
 
 ## HIGH — Will cause build failures, incorrect behavior, or significant confusion
-
-### H11. 20+ duplicate global symbols in bootloader ELF build path
-
-| Field | Value |
-|-------|-------|
-| **Files** | `bootloader/src/stage2/stage2_core.asm` + many individual `.asm` files |
-| **Issue** | Symbols like `print_string`, `clear_screen`, `font_color`, `draw_char`, `plot_pixel`, `check_vesa`, `load_theme`, etc. are defined in both `stage2_core.asm` and their respective module `.asm` files. Any attempt to link the ELF build will fail with duplicate symbol errors. |
-| **Fix** | Consolidate symbol definitions: each symbol should be defined in exactly one place. |
-
-### H12. C++ bootloader source files have broken include paths
-
-| Field | Value |
-|-------|-------|
-| **Files** | `bootloader/src/stage2/gdt.cpp:5`, `src/stage2/paging.cpp:5` |
-| **Issue** | `#include "../include/types.hpp"` resolves relative to `src/stage2/`, producing `src/include/types.hpp` which doesn't exist. Should be `../../include/types.hpp`. |
-| **Fix** | Fix the include paths, or remove the files if the C++ build path is not used. |
 
 ### H13. AHCI driver uses port I/O instead of MMIO
 
@@ -52,13 +31,6 @@ None open.
 | **Issue** | These files return `-1` from their init functions immediately. No actual driver logic is implemented. |
 | **Fix** | Implement proper drivers or remove the stubs and add `-ENODEV` returns. |
 
-### H18. Dead C++ stage2 build path not invoked by any Makefile
-
-| Field | Value |
-|-------|-------|
-| **Files** | All `.cpp` and `.hpp` files in `bootloader/src/stage2/` |
-| **Issue** | `bootloader/src/stage2/Makefile` only builds the flat binary from `stage2.asm`. The C++ files (`gdt.cpp`, `paging.cpp`, `stage2.cpp`, etc.) are never compiled or linked. The `stage2.ld` linker script exists but is unused. This is misleading dead code. |
-| **Fix** | Either wire up the ELF-linked C++ build path or remove the unused files. |
 
 ---
 
@@ -183,67 +155,6 @@ None open.
 | **Issue** | `_exit(code)` calls `exit(code)`, which is a static inline function from `syscall.h`. If `syscall.h` is not included or the inline is removed, `_exit` silently breaks. |
 | **Fix** | Have `_exit` call `dit_sys_exit()` directly instead of going through the inline wrapper. |
 
-### M20. PNG decoder truncates 32-bit chunk length to 16 bits
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/png.asm` |
-| **Lines** | 129, 136 |
-| **Issue** | `movzx ecx, word [png_chunk_length]` truncates 32-bit chunk lengths to 16 bits. Chunks larger than 64 KB (IHDR, IDAT) will overflow and cause incorrect reads. |
-| **Fix** | Use full 32-bit `mov ecx, [png_chunk_length]` instead of `movzx` from 16 bits. |
-
-### M21. A20 gate uses only "fast method" — no fallback
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/a20.asm` |
-| **Lines** | 7-9 |
-| **Issue** | Only port 0x92 (fast A20) is used. No fallback to keyboard controller (method 1) or BIOS int 0x15 AX=0x2401. Some systems do not support the fast A20 method. |
-| **Fix** | Add fallback paths for keyboard controller and BIOS A20 methods. |
-
-### M22. Stage2 never enables A20 before passing control to loader
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/stage2.asm` |
-| **Issue** | Stage2 stays in real mode and jumps to the loader which enables A20. However, if stage2 needed to access memory above 1MB for any reason (e.g., loading large files with FAT32), A20 would need to be enabled earlier. |
-| **Fix** | Enable A20 in stage2 (before the menu code) or document why it's not needed. |
-
-### M23. `uefi.asm` section count mismatch in PE header
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/uefi/uefi.asm` |
-| **Line** | 22 |
-| **Issue** | COFF header says `dw 2` (2 sections), but there are 3 section headers (.text, .data, .reloc). A PE loader may skip the .reloc section, causing relocation failures. |
-| **Fix** | Change `dw 2` to `dw 3` to match the actual number of sections. |
-
-### M24. All UEFI PE section raw data sizes are 0
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/uefi/uefi.asm` |
-| **Lines** | 84-106 |
-| **Issue** | All section headers have `RawSize = 0` and `VirtualSize = 0`. No actual code or data is produced. The PE file is structurally incomplete. |
-| **Fix** | Set proper sizes in the section headers. |
-
-### M25. `memory.asm` C/ASM calling convention mismatch
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/memory.asm` (ASM) vs `bootloader/include/memory.hpp:25` (C++) |
-| **Issue** | ASM function expects a FAR pointer (segment:offset) passed via registers `di` (offset) and `bx` (segment). The C declaration `int memory_map_e820(E820Entry *entries, int max_count)` passes a NEAR pointer. The calling conventions don't match. |
-| **Fix** | Standardize on one calling convention (preferably NEAR with the flat binary's segment setup). |
-
-### M26. `stage2_main.asm` loads kernel from wrong CHS address
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/stage2_main.asm` |
-| **Lines** | 217-219 |
-| **Issue** | The ELF build path reads the kernel from CHS sector 6, head 1 (≈ LBA 23), but the Makefile places the kernel at LBA 37. The ELF-linked build path would read the wrong data. |
-| **Fix** | Update CHS address or use LBA addressing consistent with the Makefile. |
-
 ### M28. `cmd_cat()` uses small 256-byte read buffer
 
 | Field | Value |
@@ -268,30 +179,6 @@ None open.
 | **File** | `userland/libc/src/stdlib/malloc.c` |
 | **Issue** | A 64 KB bump allocator whose `free()` is a no-op, the same bug the kernel heap had. Nothing calls it yet, but any userland program that allocates in a loop will run out. |
 | **Fix** | Reuse the kernel heap's free-list design, or implement `brk`/`mmap` and a real allocator. |
-
-### M43. PNG inflate is not implemented
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/png.asm` (not assembled) |
-| **Issue** | `zlib_decompress` has no inflate; it now returns CF=1, so `png_load_image` fails cleanly instead of copying an undecoded buffer. PNG images still cannot be shown. |
-| **Fix** | Implement inflate (stored/fixed/dynamic blocks) and filter reconstruction, or remove `png.asm`. |
-
-### M44. `png_find_chunk` is not bounded by the input size
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/png.asm` (not assembled) |
-| **Issue** | The chunk walk ignores the caller's ECX size, so a file without the wanted chunk (or a crafted chunk length) walks past the buffer. Untrusted disk data. |
-| **Fix** | Keep an end pointer; reject a chunk whose header or `length + CRC` does not fit before reading or skipping it (together with M20). |
-
-### M45. `read_lba` passes the LBA in EDX, overwriting the drive in DL
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/disk.asm` (not assembled) |
-| **Issue** | INT 13h AH=42h takes the drive in DL, but `read_lba` takes the LBA in EDX, so the low LBA byte is used as the drive number. |
-| **Fix** | Take the LBA in another register (or memory) and load DL from the boot drive. |
 
 
 ---
@@ -328,13 +215,6 @@ None open.
 | **File** | `userland/libc/src/stdio/printf.c` |
 | **Lines** | 21-32 |
 | **Issue** | `utoa()` writes to `out` without knowing buffer capacity. Currently safe (callers pass `num_buf[16]`), but would overflow with a base-2 conversion of `uint32_t` (needs 32 chars) or a smaller output buffer. |
-
-### L5. `boot.hpp` and other bootloader headers sometimes mix `<stdint.h>` and `"types.hpp"`
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/include/config.hpp:4` |
-| **Issue** | Uses `#include <stdint.h>` (angle brackets, system header) while other bootloader headers use `#include "types.hpp"`. Inconsistency. |
 
 ### L7. No compile-time assertion for userland/kernel struct layout compatibility
 
@@ -476,8 +356,8 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 | Area | Critical | High | Medium | Low/Info |
 |------|----------|------|--------|----------|
-| **Bootloader (ASM)** | — | H11 | M20, M21, M22, M23, M24, M25, M26, M43, M44, M45 | L14, L19 |
-| **Bootloader (C++)** | — | H12, H18 | — | L5 |
+| **Bootloader (ASM)** | — | — | — | L14, L19 |
+| **Bootloader (C++)** | — | — | — | — |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
 | **Kernel (Sched)** | — | — | M1 | L13, I2 |
 | **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
@@ -494,8 +374,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **H18 + the dead-code cluster**: the C++ stage2, `disk.asm` and the PNG
-   path are never built, yet they carry tracked bugs (M20-M26, M43-M45).
-   Delete them or wire them up so the tracked bugs stop being noise.
-2. **M35 — userland `malloc` never frees**: every program leaks everything
+1. **M35 — userland `malloc` never frees**: every program leaks everything
    it allocates, so any longer-running process grows without bound.
+2. **M18 — the shell swallows read/getdents errors**: failures look like
+   empty listings; report them instead of treating them as EOF.
