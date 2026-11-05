@@ -79,11 +79,12 @@ constexpr uint32_t SIG_IGN = 1;
 /* sigaction flags (Linux values). Only the ones the kernel implements are
  * accepted; anything else is -EINVAL. */
 constexpr uint32_t SA_NOCLDSTOP = 1u << 0;
+constexpr uint32_t SA_NOCLDWAIT = 1u << 1;
 constexpr uint32_t SA_RESTART = 1u << 28;
 constexpr uint32_t SA_NODEFER = 1u << 30;
 constexpr uint32_t SA_RESETHAND = 1u << 31;
-constexpr uint32_t SA_FLAG_MASK = SA_NOCLDSTOP | SA_RESTART | SA_NODEFER |
-                                  SA_RESETHAND;
+constexpr uint32_t SA_FLAG_MASK = SA_NOCLDSTOP | SA_NOCLDWAIT | SA_RESTART |
+                                  SA_NODEFER | SA_RESETHAND;
 
 /* sigprocmask() operations. */
 constexpr int SIG_BLOCK = 0;

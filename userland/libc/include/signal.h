@@ -49,6 +49,7 @@ typedef void (*sighandler_t)(int);
 #define SIG_ERR ((sighandler_t) - 1)
 
 #define SA_NOCLDSTOP 0x00000001u
+#define SA_NOCLDWAIT 0x00000002u
 #define SA_RESTART 0x10000000u
 #define SA_NODEFER 0x40000000u
 #define SA_RESETHAND 0x80000000u

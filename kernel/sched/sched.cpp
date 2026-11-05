@@ -234,6 +234,44 @@ int wait_child(int32_t pid, int32_t* status, int options)
     }
 }
 
+/* Does the parent of this exited task discard it instead of waiting for it?
+ * SIGCHLD set to SIG_IGN, or SA_NOCLDWAIT on the SIGCHLD action, both mean
+ * POSIX (XSI) auto-reaping (L23). An exited parent's children were already
+ * reparented to PID 1, whose disposition decides for them. */
+static bool parent_discards_children(const Task* zombie)
+{
+    if (!zombie)
+        return false;
+    Task* parent = task_find(static_cast<int32_t>(zombie->ppid));
+    if (!parent || parent->state == TaskState::Exited)
+        return false;
+    const SignalAction& action = parent->actions[SIGCHLD];
+    return action.handler == SIG_IGN || (action.flags & SA_NOCLDWAIT) != 0;
+}
+
+void reap_ignored_zombies()
+{
+    /* The reaper runs in a live task's context, so it may free a dead
+     * task's kernel stack — unlike task_exit(), which is still executing on
+     * it. IRQs stay off across the scan, the unregister and the frees: the
+     * task list and the heap are shared with wait_child()'s own reaping,
+     * and both run with IRQs off, so neither can double-free. */
+    uint32_t flags = arch::irq_save();
+    Task* t = task_list_head();
+    while (t)
+    {
+        Task* next = t->all_next;
+        if (t->state == TaskState::Exited && parent_discards_children(t))
+        {
+            task_unregister(t);
+            mm::kfree(reinterpret_cast<void*>(t->stack_top));
+            mm::kfree(t);
+        }
+        t = next;
+    }
+    arch::irq_restore(flags);
+}
+
 void run_queue_add(Task* t)
 {
     t->next = run_queue_head;

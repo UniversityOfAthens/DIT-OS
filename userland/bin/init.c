@@ -726,6 +726,99 @@ static void test_sigchld(void)
     install(SIGCHLD, SIG_DFL, 0);
 }
 
+/* A parent that ignores SIGCHLD (or sets SA_NOCLDWAIT) must not accumulate
+ * zombies: POSIX (XSI) has the kernel reap such children itself, so a later
+ * waitpid reports -ECHILD instead of the child's status (L23). The child
+ * runs and exits while the parent is blocked on the sync pipe, and the
+ * deferred reaper frees it at the next syscall exit. */
+static void test_sigchld_autoreap(void)
+{
+    int sync[2];
+    if (pipe(sync) != 0)
+    {
+        check(0, "pipe for SIGCHLD auto-reap");
+        return;
+    }
+
+    install(SIGCHLD, SIG_IGN, 0);
+    int pid = fork();
+    check_value(pid >= 0, pid, "fork for ignored SIGCHLD");
+    if (pid == 0)
+    {
+        close(sync[0]);
+        char c = 'r';
+        (void)write(sync[1], &c, 1);
+        exit(0);
+    }
+    if (pid > 0)
+    {
+        sync_wait(sync[0]);
+        getpid(); /* the deferred reaper runs on syscall exit */
+        int status = 0;
+        int r = waitpid(pid, &status, 0);
+        check_value(r == -ECHILD, r, "an ignored SIGCHLD child is auto-reaped");
+    }
+
+    /* SA_NOCLDWAIT is accepted and reaps the same way. */
+    struct sigaction act;
+    act.sa_handler = SIG_DFL;
+    act.sa_mask = 0;
+    act.sa_flags = SA_NOCLDWAIT;
+    act.sa_restorer = 0;
+    int r = sigaction(SIGCHLD, &act, 0);
+    check_value(r == 0, r, "sigaction accepts SA_NOCLDWAIT");
+    pid = fork();
+    check_value(pid >= 0, pid, "fork for SA_NOCLDWAIT");
+    if (pid == 0)
+    {
+        close(sync[0]);
+        char c = 'r';
+        (void)write(sync[1], &c, 1);
+        exit(0);
+    }
+    if (pid > 0)
+    {
+        sync_wait(sync[0]);
+        getpid();
+        int status = 0;
+        int w = waitpid(pid, &status, 0);
+        check_value(w == -ECHILD, w, "an SA_NOCLDWAIT child is auto-reaped");
+    }
+
+    /* Ten rounds of fork/exit under an ignoring parent, then fork again:
+     * auto-reaping must keep task bookkeeping from piling up. */
+    for (int i = 0; i < 10; i++)
+    {
+        int cpid = fork();
+        if (cpid == 0)
+        {
+            close(sync[0]);
+            char c = 'r';
+            (void)write(sync[1], &c, 1);
+            exit(0);
+        }
+        check_value(cpid >= 0, cpid, "fork round under ignored SIGCHLD");
+        if (cpid < 0)
+            break;
+        sync_wait(sync[0]);
+    }
+    int probe = fork();
+    check_value(probe >= 0, probe, "fork still works after auto-reaps");
+    if (probe == 0)
+    {
+        close(sync[0]);
+        char c = 'r';
+        (void)write(sync[1], &c, 1);
+        exit(0);
+    }
+    if (probe > 0)
+        sync_wait(sync[0]);
+    close(sync[0]);
+    close(sync[1]);
+    install(SIGCHLD, SIG_DFL, 0);
+    printf("[selftest] sigchld: auto-reap ok\n");
+}
+
 static void exit_42(int sig)
 {
     (void)sig;
@@ -1638,6 +1731,7 @@ int main(int argc, char** argv)
     test_signal_eintr();
     test_sa_restart();
     test_sigchld();
+    test_sigchld_autoreap();
     test_fault_signals();
     test_signal_spinning_child();
     test_stop_continue();

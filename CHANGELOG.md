@@ -34,6 +34,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and a `qemu-test.sh` step prove a signal interrupts a console read with
   `-EINTR` and the console keeps working across it (L25). Patch bump for
   `0.1.1-alpha`.
+- Children of a parent that ignores `SIGCHLD` (or sets `SA_NOCLDWAIT`) are
+  reaped by the kernel instead of piling up as zombies: the exiting task
+  cannot free its own kernel stack, so they are freed by a deferred reaper
+  that runs at syscall exit in a live task's context, and a later
+  `waitpid` reports `-ECHILD` (L23). `sigaction` now accepts `SA_NOCLDWAIT`
+  (Linux value 2). Covered by `test_sigchld_autoreap`, which reaps an
+  ignored child, an `SA_NOCLDWAIT` child, and ten fork/exit rounds before
+  forking again. Patch bump for `0.1.2-alpha`.
+- Stage2 probes the boot drive's CHS translation (`int 13h AH=08h`) instead
+  of assuming the 1.44 MB floppy geometry: sectors/track and heads now come
+  from the BIOS, with the floppy constants as fallback for BIOSes that
+  reject the probe (H20). Verified by booting with a deliberately wrong
+  fallback: the probe overrides it, and every boot exercises the probed
+  geometry on the loader and kernel reads. Patch bump for `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 

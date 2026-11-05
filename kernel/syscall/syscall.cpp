@@ -111,6 +111,7 @@ extern "C" void syscall_entry(uint32_t* regs)
             sched::task_exit(sched::make_wait_status_signal(sched::SIGSEGV));
         s_syscall_regs = nullptr;
         (void)sched::signal_handle_pending(regs);
+        sched::reap_ignored_zombies();
         return;
     }
 
@@ -138,6 +139,10 @@ extern "C" void syscall_entry(uint32_t* regs)
     /* Signals act on the way back to user mode; a task that killed itself
      * does not get to run another instruction. */
     (void)sched::signal_handle_pending(regs);
+    /* POSIX auto-reaping (L23): children of parents that ignore SIGCHLD or
+     * set SA_NOCLDWAIT are freed here, in a live task's context, because
+     * task_exit() cannot free the kernel stack it is running on. */
+    sched::reap_ignored_zombies();
 }
 
 } // namespace syscall

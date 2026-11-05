@@ -270,9 +270,10 @@ int signal_action_set(int sig, const SignalAction* act, SignalAction* old)
         SignalAction stored = *act;
         if (stored.handler == SIG_DFL || stored.handler == SIG_IGN)
         {
-            /* SA_NOCLDSTOP is the one flag meaningful without a handler. */
+            /* SA_NOCLDSTOP and SA_NOCLDWAIT stay meaningful without a
+             * handler; the rest only shape handler delivery. */
             stored.mask = 0;
-            stored.flags &= SA_NOCLDSTOP;
+            stored.flags &= (SA_NOCLDSTOP | SA_NOCLDWAIT);
             stored.restorer = 0;
         }
         else

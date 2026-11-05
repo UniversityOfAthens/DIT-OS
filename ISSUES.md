@@ -60,15 +60,6 @@ None open.
 | **Issue** | `bootloader/src/stage2/Makefile` only builds the flat binary from `stage2.asm`. The C++ files (`gdt.cpp`, `paging.cpp`, `stage2.cpp`, etc.) are never compiled or linked. The `stage2.ld` linker script exists but is unused. This is misleading dead code. |
 | **Fix** | Either wire up the ELF-linked C++ build path or remove the unused files. |
 
-### H20. `loader.asm` hardcodes 18 sectors/track, 2 heads (CHS geometry)
-
-| Field | Value |
-|-------|-------|
-| **File** | `bootloader/src/stage2/stage2.asm` (and `loader.asm`) |
-| **Lines** | 422-428 |
-| **Issue** | CHS geometry is hardcoded to 18 sectors/track and 2 heads. Works for 1.44 MB floppy images but will fail for hard disks or USB drives with different geometry. No LBA fallback is implemented. |
-| **Fix** | Use LBA for all disk access, or detect CHS geometry from the BIOS (int 0x13, AH=8) before attempting CHS addressing. |
-
 ---
 
 ## MEDIUM — Important but not blocking
@@ -443,13 +434,6 @@ None open.
 | **Issue** | There is no `setsid`/session, so the system behaves like one Linux session: any process may `setpgid` into any existing group (including init's) and a background process that ignores `SIGTTOU` may `tcsetpgrp` the console. Orphaned process groups are approximated per process (a stopped orphan gets `SIGHUP` + `SIGCONT` when reparented). |
 | **Fix** | Add sessions (`setsid`, `getsid`, controlling terminal) and restrict `setpgid`/`tcsetpgrp` to the caller's session. |
 
-### L23. Ignoring `SIGCHLD` does not auto-reap children
-
-| Field | Value |
-|-------|-------|
-| **File** | `kernel/sched/exit.cpp` |
-| **Issue** | POSIX (XSI) says children of a parent with `SIGCHLD` set to `SIG_IGN` (or `SA_NOCLDWAIT`) are reaped automatically. DIT-OS still leaves zombies until `waitpid`; `SA_NOCLDWAIT` is rejected with `-EINVAL`. |
-| **Fix** | Free such zombies in `task_exit()` once the kernel stack is no longer in use (e.g. a deferred reaper). |
 
 ---
 
@@ -501,10 +485,10 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 | Area | Critical | High | Medium | Low/Info |
 |------|----------|------|--------|----------|
-| **Bootloader (ASM)** | — | H11, H20 | M20, M21, M22, M23, M24, M25, M26, M43, M44, M45 | L14, L19 |
+| **Bootloader (ASM)** | — | H11 | M20, M21, M22, M23, M24, M25, M26, M43, M44, M45 | L14, L19 |
 | **Bootloader (C++)** | — | H12, H18 | — | L5 |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
-| **Kernel (Sched)** | — | — | M1 | L13, L22, L23, I2 |
+| **Kernel (Sched)** | — | — | M1 | L13, L22, I2 |
 | **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
 | **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
@@ -519,10 +503,10 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **H20 — boot on real hardware**: the CHS geometry (18 sectors/track,
-   2 heads, now named constants in `stage2.asm`) matches the 1.44 MB floppy
-   image, but nothing probes the drive; real firmware with different
-   translation would read garbage.
-2. **L23 — ignoring `SIGCHLD` does not auto-reap children**: zombies pile up
-   for a parent that sets `SIG_IGN`/`SA_NOCLDWAIT` (currently rejected with
-   `-EINVAL`).
+1. **L22 — no sessions: job control trusts every process**: any process may
+   `setpgid` into any existing group and a `SIGTTOU`-ignoring background
+   process may `tcsetpgrp` the console. Add `setsid`/`getsid` and a
+   controlling terminal.
+2. **H18 + the dead-code cluster**: the C++ stage2, `disk.asm` and the PNG
+   path are never built, yet they carry tracked bugs (M20-M26, M43-M45).
+   Delete them or wire them up so the tracked bugs stop being noise.

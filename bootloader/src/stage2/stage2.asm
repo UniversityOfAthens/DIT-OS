@@ -22,11 +22,11 @@ COM_LCR   equ 3
 COM_DLL   equ 0
 COM_DLH   equ 1
 
-; Floppy geometry: the image is a 1.44 MB floppy (2880 sectors), so BIOS
-; CHS translation is 18 sectors/track, 2 heads. Real-BIOS safety (L24/H20):
-; the kernel is read one sector per BIOS call, so no 127-sector EDD limit
-; can bite, and a failed read is reset and retried (floppy motors make
-; first accesses fail transiently). H20 tracks probing the geometry.
+; Floppy geometry defaults: the image is a 1.44 MB floppy (2880 sectors),
+; whose BIOS CHS translation is 18 sectors/track, 2 heads. Real-BIOS safety
+; (H20): probe_geometry() asks the BIOS for the real translation
+; (int 13h AH=08h) before any read and these constants are only the
+; fallback for BIOSes that reject the probe.
 FLOPPY_SECTORS_PER_TRACK equ 18
 FLOPPY_HEADS             equ 2
 READ_RETRIES             equ 3
@@ -41,6 +41,10 @@ _start:
     mov ss, ax
     mov sp, 0x9000
     sti
+
+    ; The LBA->CHS math needs the drive's translation: ask the BIOS
+    ; (geom_spt/geom_heads already hold the floppy defaults; H20).
+    call probe_geometry
 
     call serial_init
     call clear_screen
@@ -426,6 +430,32 @@ read_key:
     ret
 
 ; =============================================================================
+; probe_geometry - ask the BIOS for the boot drive's CHS translation
+; (int 13h AH=08h). Stores sectors/track and heads for read_lba. On carry
+; or a nonsensical answer the 1.44 MB floppy defaults stay (H20).
+; =============================================================================
+probe_geometry:
+    pusha
+    push es                  ; AH=08h returns the fd parameter table in ES:DI
+    mov dl, [boot_drive]
+    mov ah, 0x08
+    int 0x13
+    pop es
+    jc .pg_default
+    ; CL bits 0-5 hold the sectors per track; 0 is not a usable answer.
+    movzx ax, cl
+    and ax, 0x3F
+    jz .pg_default
+    mov [geom_spt], ax
+    ; DH is the maximum head index, so the head count is one higher.
+    movzx ax, dh
+    inc ax
+    mov [geom_heads], ax
+.pg_default:
+    popa
+    ret
+
+; =============================================================================
 ; read_lba - Read dap_count sectors from dap_lba into dap_segment:dap_offset
 ; One sector per BIOS call, so no 127-sector EDD request limit applies; a
 ; failed read resets the disk system and retries the same sector (L24).
@@ -440,15 +470,15 @@ read_lba:
     push cx
     mov si, READ_RETRIES
 .rl_attempt:
-    ; LBA -> CHS  (FLOPPY_SECTORS_PER_TRACK, FLOPPY_HEADS)
+    ; LBA -> CHS  (probed geometry; H20)
     mov eax, [dap_lba]
     xor edx, edx
-    mov ebx, FLOPPY_SECTORS_PER_TRACK
+    movzx ebx, word [geom_spt]
     div ebx                   ; eax = track, edx = sector-in-track
     inc dx                    ; sectors are 1-based
     mov cl, dl                ; CL = sector
     xor edx, edx
-    mov ebx, FLOPPY_HEADS
+    movzx ebx, word [geom_heads]
     div ebx                   ; eax = cylinder, edx = head
     mov ch, al                ; CH = cylinder
     mov dh, dl                ; DH = head
@@ -495,6 +525,11 @@ dap_count:   dw 0
 dap_offset:  dw 0
 dap_segment: dw 0
 dap_lba:     dd 0
+
+; Probed drive geometry for read_lba (H20): the defaults cover BIOSes that
+; reject the AH=08h probe; probe_geometry() overwrites them on success.
+geom_spt:    dw FLOPPY_SECTORS_PER_TRACK
+geom_heads:  dw FLOPPY_HEADS
 
 boot_drive: db 0
 selection: db 0

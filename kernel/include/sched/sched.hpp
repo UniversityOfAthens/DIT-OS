@@ -126,6 +126,14 @@ void task_exit(int status);
  * (-ECHILD with no matching child, -EINTR when a caught signal arrives). */
 int wait_child(int32_t pid, int32_t* status, int options);
 
+/** Reap exited children whose parent discards them (SIGCHLD set to SIG_IGN,
+ *  or the SIGCHLD action carries SA_NOCLDWAIT): POSIX (XSI) says such
+ *  children never become zombies. The exiting task cannot free its own
+ *  kernel stack, so task_exit() leaves them in the task list and this runs
+ *  from another task's context (called at syscall exit). Safe to call with
+ *  tasks pending or none. */
+void reap_ignored_zombies();
+
 void task_activate(Task* task);
 
 /** Idle task (runs when nothing else runnable) */
