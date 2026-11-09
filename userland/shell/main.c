@@ -595,7 +595,7 @@ static void cmd_ls(const char* path)
 /* Copy @fd to stdout until EOF; @prog prefixes a read error on stderr. */
 static void copy_fd(int fd, const char* prog)
 {
-    char chunk[256];
+    char chunk[DIT_SYSCALL_BOUNCE_SIZE];
     for (;;)
     {
         int n = read(fd, chunk, sizeof(chunk));

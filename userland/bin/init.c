@@ -1250,6 +1250,42 @@ static void test_pipe(void)
     printf("[selftest] pipe: %d bytes through a pipe\n", got);
 }
 
+/* M28: one read() moves a full kernel bounce chunk, not a fixed 256 bytes;
+ * cat uses the same buffer size. A pipe with one chunk queued must hand it
+ * all back in a single call, unchanged. */
+static void test_bounce_buffer(void)
+{
+    int before = failures;
+    int p[2];
+    int r = pipe(p);
+    check_value(r == 0, r, "pipe for the bounce-buffer test");
+    if (r != 0)
+        return;
+
+    char out[DIT_SYSCALL_BOUNCE_SIZE];
+    char in[DIT_SYSCALL_BOUNCE_SIZE];
+    for (int i = 0; i < (int)sizeof(out); i++)
+        out[i] = (char)(i * 7 + 1);
+
+    r = write(p[1], out, (unsigned)sizeof(out));
+    check_value(r == (int)sizeof(out), r, "one write moves a bounce chunk");
+
+    r = read(p[0], in, (unsigned)sizeof(in));
+    check_value(r == (int)sizeof(in), r,
+                "one read returns the whole bounce chunk");
+
+    int same = (r == (int)sizeof(in));
+    for (int i = 0; same && i < (int)sizeof(in); i++)
+        if (in[i] != out[i])
+            same = 0;
+    check(same, "the bounce chunk arrives intact");
+
+    close(p[1]);
+    close(p[0]);
+    if (failures == before)
+        printf("[selftest] bounce: %d bytes per read\n", (int)sizeof(in));
+}
+
 /* Writing to a pipe nobody reads is SIGPIPE, or -EPIPE when ignored. */
 static void test_pipe_epipe(void)
 {
@@ -1964,6 +2000,7 @@ int main(int argc, char** argv)
     test_sec_sigreturn_forged();
     test_sec_job_control();
     test_pipe();
+    test_bounce_buffer();
     test_pipe_epipe();
     test_dup();
     test_fd_leaks();

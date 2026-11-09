@@ -76,6 +76,11 @@ struct dit_dirent
 };
 #define DIT_DT_DIR 4
 
+/* The kernel moves at most this many bytes per read()/write() chunk (its
+ * bounce buffer; SYSCALL_BOUNCE_SIZE in kernel/include/syscall/
+ * syscall_defs.hpp). read() may still return less; loop until 0. */
+#define DIT_SYSCALL_BOUNCE_SIZE 1024
+
 static inline int dit_syscall(int number, unsigned int arg0, unsigned int arg1,
                               unsigned int arg2, unsigned int arg3,
                               unsigned int arg4)

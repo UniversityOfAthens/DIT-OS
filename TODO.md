@@ -25,7 +25,7 @@ Semantic Versioning, interpreted for the pre-1.0 alpha series:
 | M37 string bounds, H9/H10 boot constants, M42 COW failure-counter corruption | patch | `0.0.12-alpha` | released 2026-11-03 |
 | Full POSIX signals (handlers, masks, `sigaction`, `SIGCHLD`, job control) incl. M41 orphan reaping, `pipe()`/`dup2()` + userland `errno.h`, `chdir`/`getcwd`, M38 (**first usable release**) | minor | `0.1.0-alpha` | released 2026-11-03 |
 | M46 pipe heap cap, L24 floppy read retry, L25 TTY line buffer | patch | `0.1.1-alpha` | in progress |
-| H20 BIOS geometry probe, L23 SIGCHLD auto-reap + SA_NOCLDWAIT, L22 sessions (setsid/getsid + job-control boundaries), M35 malloc free list, M18 shell read errors, M17 userland errno + execve .bss mapping | patch | `0.1.2-alpha` | in progress |
+| H20 BIOS geometry probe, L23 SIGCHLD auto-reap + SA_NOCLDWAIT, L22 sessions (setsid/getsid + job-control boundaries), M35 malloc free list, M18 shell read errors, M17 userland errno + execve .bss mapping, M28 1 KiB bounce buffer | patch | `0.1.2-alpha` | in progress |
 | POSIX timers + shared memory | minor | `0.2.0-alpha` | planned |
 | Stable ABI / breaking disk-format or syscall changes | major | `1.0.0` | future |
 
@@ -436,7 +436,7 @@ The file `ISSUES.md` is the open-issue catalog, grouped by severity. Key categor
 - **Kernel**: Task stack init order wrong, duplicate outb(), UB in interrupt dispatch, kernel_stack_top as value not address, heap_free no-op, Mutex not exported, conflicting serial_init declarations
 - **Syscall**: every syscall in `syscall_numbers.hpp` has a handler, including signal handlers, job control, pipes and the working directory. User pointers are validated through `mm::copy_*_user` / `mm::user_range_ok`
 - **Build system**: CMake uses host compiler, flake.nix missing cross-compiler, .clang-format wrong brace style, shell scripts missing set -euo pipefail, missing scripts referenced in docs
-- **Userland**: `_exit()` calls inline `exit()`, `cat` uses a 256-byte read buffer, ABI structs have no layout assertion
+- **Userland**: `_exit()` calls inline `exit()`, ABI structs have no layout assertion
 
 ---
 

@@ -22,8 +22,10 @@ struct SyscallArgs
 using SyscallResult = int64_t;
 
 /** Kernel bounce buffer size for read/write: user data is copied through it
- * so drivers and filesystems never touch user pointers. */
-constexpr uint32_t SYSCALL_BOUNCE_SIZE = 256;
+ * so drivers and filesystems never touch user pointers. 1 KiB moves a ramfs
+ * or pipe chunk per call while leaving the 8 KiB kernel stack room for the
+ * VFS call chain. sys_read services one chunk per call by design. */
+constexpr uint32_t SYSCALL_BOUNCE_SIZE = 1024;
 
 } // namespace syscall
 

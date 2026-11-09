@@ -105,6 +105,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from real failing calls and that a successful call preserves the
   variable. A wrapper set that returns `-1` with `errno` set remains part of
   the full-libc work. Patch bump for `0.1.2-alpha`.
+- `read()`/`write()` move up to 1 KiB per syscall instead of 256 bytes: the
+  kernel bounce buffer grew to 1 KiB, which leaves the 8 KiB kernel stack
+  room for the VFS call chain, and `cat` now asks for a full chunk. Userland
+  exposes the size as `DIT_SYSCALL_BOUNCE_SIZE` (M28). A new
+  `test_bounce_buffer` fills a pipe with one chunk and fails unless a single
+  `read()` returns all 1024 bytes intact; with the old 256-byte bounce it
+  reports 256 and fails. Patch bump for `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 

@@ -62,6 +62,9 @@ are resolved against the task's working directory by `path_from_user`.
   extern SyscallResult sys_foo_impl(const SyscallArgs* args);
   ```
   `args->args[i]` are `uint64_t`; narrow them explicitly and validate.
+- `sys_read`/`sys_write` copy through a `SYSCALL_BOUNCE_SIZE` (1 KiB)
+  stack buffer. A read services one chunk per call (a short read is valid);
+  a write loops until `count` is done or the file short-writes.
 - Canonical handler shape (see `sys_read.cpp`):
   ```cpp
   uintptr_t buf = static_cast<uintptr_t>(args->args[1]);

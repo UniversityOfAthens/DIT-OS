@@ -138,15 +138,6 @@ None open.
 | **Issue** | `_exit(code)` calls `exit(code)`, which is a static inline function from `syscall.h`. If `syscall.h` is not included or the inline is removed, `_exit` silently breaks. |
 | **Fix** | Have `_exit` call `dit_sys_exit()` directly instead of going through the inline wrapper. |
 
-### M28. `cmd_cat()` uses small 256-byte read buffer
-
-| Field | Value |
-|-------|-------|
-| **File** | `userland/shell/main.c` |
-| **Line** | `copy_fd()` |
-| **Issue** | `char chunk[256]` — adequate for ramfs but would cause many read syscalls for larger files. |
-| **Fix** | Increase buffer size or make it a configurable constant. |
-
 ### M31. Missing `KERNEL_PACKED` on ABI-boundary structs
 
 | Field | Value |
@@ -333,7 +324,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M19, M28 | L2, L3, L4, L7 |
+| **Userland** | — | — | M19 | L2, L3, L4, L7 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
@@ -342,8 +333,9 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M28 — `cmd_cat()` uses a 256-byte read buffer**: correct but many
-   syscalls per file; size the buffer from the syscall bounce limit.
-2. **M31/L7 — ABI struct layout is not enforced**: `dirent` and `stat`
+1. **M31/L7 — ABI struct layout is not enforced**: `dirent` and `stat`
    cross the user/kernel boundary without packing, and userland has no
    compile-time assertion that its copies match the kernel's.
+2. **M47 — `open()` ignores its flags**: every opened file is writable,
+   including the seeded executables; pass open modes through and enforce
+   them in the file operations.

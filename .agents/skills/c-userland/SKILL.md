@@ -44,6 +44,9 @@ userland/
   every return value, and retry a blocking call that returns `-EINTR`
   unless the handler used `SA_RESTART`. The `-1`-returning POSIX shim is
   full-libc work, not part of the in-tree ABI.
+- `read()` may return less than requested: the kernel services at most
+  `DIT_SYSCALL_BOUNCE_SIZE` (1 KiB) per call, so loop until 0. Size bulk
+  buffers from that constant instead of hard-coding 256.
 - Signals: `libc/include/signal.h` (`sigaction` fills in the
   `__dit_sig_restorer` trampoline from `crt0.asm`).
 - Inline assembly only inside the syscall wrappers.
