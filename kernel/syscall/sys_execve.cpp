@@ -244,7 +244,7 @@ SyscallResult sys_execve_impl(const SyscallArgs* args)
             goto out;
         }
 
-        /* Pages beyond p_filesz (.bss) are already zero. */
+        /* Copy the file-backed part of the segment. */
         for (uint32_t done = 0; done < ph->p_filesz;)
         {
             uint32_t vaddr = ph->p_vaddr + done;
@@ -263,6 +263,26 @@ SyscallResult sys_execve_impl(const SyscallArgs* args)
             uint8_t* dst = reinterpret_cast<uint8_t*>(frame + offset);
             for (uint32_t i = 0; i < chunk; i++)
                 dst[i] = src[i];
+            done += chunk;
+        }
+
+        /* p_memsz may exceed p_filesz: the tail is .bss. Map those pages too
+         * (frame_acquire zeroes new frames). Mapping a page that the file
+         * loop already mapped returns its existing frame, so the whole
+         * memory range can be walked without a special case. */
+        for (uint32_t done = 0; done < ph->p_memsz;)
+        {
+            uint32_t vaddr = ph->p_vaddr + done;
+            uint32_t page = vaddr & ~(uint32_t)(arch::PAGE_SIZE - 1);
+            uint32_t offset = vaddr - page;
+            uint32_t chunk = arch::PAGE_SIZE - offset;
+            if (chunk > ph->p_memsz - done)
+                chunk = ph->p_memsz - done;
+            if (!mm::vmm_map_user_page(directory, page))
+            {
+                result = -ENOMEM;
+                goto out;
+            }
             done += chunk;
         }
     }

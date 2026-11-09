@@ -167,13 +167,6 @@ None open.
 
 ## LOW — Cleanup, style, and minor issues
 
-### L1. `userland/crt0.asm` does not clear BSS
-
-| Field | Value |
-|-------|-------|
-| **File** | `userland/crt0.asm` |
-| **Issue** | AGENTS.md says crt0 must clear BSS, set up stack, call main(), then exit(). The current implementation skips BSS clearing entirely. Currently unused, but will cause uninitialized globals when activated. |
-
 ### L2. `userland/include/syscall.h` uses `int` instead of `ssize_t` for return types
 
 | Field | Value |
@@ -347,7 +340,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M17, M19, M28 | L1, L2, L3, L4, L7, L17 |
+| **Userland** | — | — | M17, M19, M28 | L2, L3, L4, L7, L17 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |

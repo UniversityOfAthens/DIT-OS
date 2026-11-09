@@ -85,6 +85,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cat /`) prints `<program>: read error`; both go to fd 2 so a future
   stdout redirection cannot hide them (M18). A new qemu-test step drives
   both failures. Patch bump for `0.1.2-alpha`.
+- `execve` maps every page a `PT_LOAD` segment's `p_memsz` covers, not just
+  its file-backed pages: `.bss` can land on a page of its own and fault on
+  first write. The greeter now has a four-byte `.bss` for `errno`, so its
+  `crt0` BSS clear hit an unmapped page at `0x00401000` and the execve
+  self-test failed before `main`. New frames are zeroed by the allocator,
+  and pages mapped for the file copy are returned unchanged, so the walk is
+  idempotent. Patch bump for `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 
