@@ -8,6 +8,7 @@ BUILD_DIR = build
 LIBC_SOURCES = \
 	libc/src/stdlib/malloc.c \
 	libc/src/stdlib/exit.c \
+	libc/src/stdlib/errno.c \
 	libc/src/stdio/printf.c
 # init is the boot image (it also carries the shell); greeter is execve'd by
 # the init self-test and needs no shell.
@@ -18,7 +19,8 @@ C_OBJECTS = $(addprefix $(BUILD_DIR)/,$(C_SOURCES:.c=.o))
 # starts at the lowest linked address, so it must be the image entry.
 ASM_OBJECTS = $(BUILD_DIR)/crt0.o
 COMMON_OBJECTS = $(ASM_OBJECTS) \
-	$(BUILD_DIR)/libc/src/stdio/printf.o $(BUILD_DIR)/libc/src/stdlib/exit.o
+	$(BUILD_DIR)/libc/src/stdio/printf.o $(BUILD_DIR)/libc/src/stdlib/exit.o \
+	$(BUILD_DIR)/libc/src/stdlib/errno.o
 INIT_OBJECTS = $(COMMON_OBJECTS) $(BUILD_DIR)/bin/init.o \
 	$(BUILD_DIR)/shell/main.o $(BUILD_DIR)/shell/readline.o \
 	$(BUILD_DIR)/libc/src/stdlib/malloc.o

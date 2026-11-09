@@ -92,6 +92,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   self-test failed before `main`. New frames are zeroed by the allocator,
   and pages mapped for the file copy are returned unchanged, so the walk is
   idempotent. Patch bump for `0.1.2-alpha`.
+- Userland now has the POSIX `errno` variable: `dit_syscall()` still returns
+  the raw negative errno (the in-tree ABI) and, on failure, also stores its
+  absolute value in a per-process `errno`. Success leaves it untouched, as
+  POSIX specifies (M17). `test_errno` checks `ENOENT`, `EBADF` and `EFAULT`
+  from real failing calls and that a successful call preserves the
+  variable. A wrapper set that returns `-1` with `errno` set remains part of
+  the full-libc work. Patch bump for `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 

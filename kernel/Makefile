@@ -82,11 +82,13 @@ USERLAND_SOURCES = \
 	../userland/shell/readline.c \
 	../userland/shell/readline.h \
 	../userland/include/syscall.h \
+	../userland/libc/include/errno.h \
 	../userland/libc/include/stdio.h \
 	../userland/libc/include/stdlib.h \
 	../userland/libc/include/sys/stat.h \
 	../userland/libc/src/stdlib/malloc.c \
 	../userland/libc/src/stdlib/exit.c \
+	../userland/libc/src/stdlib/errno.c \
 	../userland/libc/src/stdio/printf.c
 
 # Flags

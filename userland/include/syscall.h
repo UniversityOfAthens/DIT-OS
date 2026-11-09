@@ -90,7 +90,12 @@ static inline int dit_syscall(int number, unsigned int arg0, unsigned int arg1,
                      : "+a"(rax)
                      : "b"(rbx), "c"(rcx), "d"(rdx), "S"(rsi), "D"(rdi)
                      : "memory");
-    return (int)rax;
+    int result = (int)rax;
+    /* Keep the in-tree ABI (negative errno return) and mirror the failure
+     * into errno for code that expects the POSIX variable (M17). */
+    if (result < 0)
+        errno = -result;
+    return result;
 }
 
 static inline int read(int fd, void* buf, unsigned count)

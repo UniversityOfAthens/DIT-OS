@@ -129,14 +129,6 @@ None open.
 | **Issue** | The entire kernel compiles with `-m32`, uses 32-bit paging, 32-bit GDT/IDT entries, and links as `elf32-i386`. The directory is named `x86_64` which is misleading. AGENTS.md acknowledges this as a known misnomer. |
 | **Fix** | Rename `arch/x86_64/` to `arch/i386/` or `arch/x86/` throughout the project. |
 
-### M17. No userland `errno` variable
-
-| Field | Value |
-|-------|-------|
-| **Directory** | `userland/` |
-| **Issue** | `userland/libc/include/errno.h` now provides the constants, but there is no `errno` variable: wrappers return the raw `-errno`. Code ported from POSIX that tests `errno` after a `-1` return will not work. |
-| **Fix** | Add a libc layer (`int errno`, wrappers returning `-1`) when a real libc is introduced; keep the raw wrappers for in-tree code. |
-
 ### M19. `_exit()` calls inline `exit()` — fragile coupling
 
 | Field | Value |
@@ -250,13 +242,6 @@ None open.
 | **File** | `flake.nix` |
 | **Issue** | No `formatter` output (for `nix fmt`) and no `checks` (for `nix flake check`, e.g. build the disk image and boot it in QEMU). |
 
-### L17. No `ENOSYS` in userland errno
-
-| Field | Value |
-|-------|-------|
-| **Files** | Userland `errno.h` (doesn't exist) |
-| **Issue** | Until userland has an errno.h, users cannot programmatically check syscall errors. |
-
 ### L19. Stage1 stores the boot drive before setting `DS`
 
 | Field | Value |
@@ -340,7 +325,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M17, M19, M28 | L2, L3, L4, L7, L17 |
+| **Userland** | — | — | M19, M28 | L2, L3, L4, L7 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
@@ -349,8 +334,8 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M17 — userland has no `errno` variable**: syscall wrappers return raw
-   negative values, so error reporting has to hard-code numbers and shell
-   error paths drift from the kernel's errno values.
-2. **M28 — `cmd_cat()` uses a 256-byte read buffer**: correct but many
+1. **M28 — `cmd_cat()` uses a 256-byte read buffer**: correct but many
    syscalls per file; size the buffer from the syscall bounce limit.
+2. **M31/L7 — ABI struct layout is not enforced**: `dirent` and `stat`
+   cross the user/kernel boundary without packing, and userland has no
+   compile-time assertion that its copies match the kernel's.

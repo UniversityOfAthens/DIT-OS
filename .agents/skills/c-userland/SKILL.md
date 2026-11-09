@@ -29,7 +29,7 @@ userland/
 ├── linker.ld
 ├── include/syscall.h   numbers, dit_syscall(), inline wrappers
 ├── libc/include/       stdio.h, stdlib.h, sys/*.h
-├── libc/src/           printf.c, malloc.c, exit.c
+├── libc/src/           printf.c, malloc.c, exit.c, errno.c
 ├── bin/init.c          PID 1: self-test, then the shell
 ├── bin/greeter.c       execve target used by the self-test
 └── shell/              main.c, readline.c
@@ -39,10 +39,11 @@ userland/
 
 - Never include kernel headers or call kernel functions. The only interface
   is syscalls through `userland/include/syscall.h` / `libc/include/sys/`.
-- Wrappers return the raw `-errno` (there is no `errno` variable; the
-  constants are in `libc/include/errno.h`). Check every return value, and
-  retry a blocking call that returns `-EINTR` unless the handler used
-  `SA_RESTART`.
+- Wrappers return the raw `-errno` and set the libc `errno` variable to its
+  absolute value on failure (constants in `libc/include/errno.h`). Check
+  every return value, and retry a blocking call that returns `-EINTR`
+  unless the handler used `SA_RESTART`. The `-1`-returning POSIX shim is
+  full-libc work, not part of the in-tree ABI.
 - Signals: `libc/include/signal.h` (`sigaction` fills in the
   `__dit_sig_restorer` trampoline from `crt0.asm`).
 - Inline assembly only inside the syscall wrappers.
@@ -51,13 +52,14 @@ userland/
 
 - Small and freestanding: `printf` (to fd 1), a static 64 KiB free-list
   allocator behind `malloc`/`free` (first-fit with coalescing, mirroring the
-  kernel heap; it does not use `brk` yet, and misuse ends the process), and
-  `exit`. Add functions only when needed, with POSIX-compatible prototypes.
+  kernel heap; it does not use `brk` yet, and misuse ends the process),
+  `exit`, and the per-process `errno` variable. Add functions only when
+  needed, with POSIX-compatible prototypes.
 - Size arithmetic checks overflow (`n * size`), allocation failure returns
   NULL.
 - `printf` bounds every conversion; never pass user/data text as the
   format.
-- No hidden global state beyond what the function needs.
+- No hidden global state beyond `errno` and what the function needs.
 
 ## Shell
 

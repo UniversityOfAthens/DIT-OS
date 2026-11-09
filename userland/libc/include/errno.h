@@ -1,8 +1,14 @@
+/* Error numbers, identical to kernel/include/errno_defs.hpp.
+ *
+ * The raw wrappers keep returning the negative value (the in-tree ABI), but
+ * set errno to its absolute value on failure, so code written against the
+ * POSIX variable can inspect the reason. A wrapper set that returns -1 is
+ * part of the full-POSIX-libc work, not this header. */
+
 #ifndef USERLAND_LIBC_ERRNO_H
 #define USERLAND_LIBC_ERRNO_H
 
-/* Error numbers, identical to kernel/include/errno_defs.hpp. Syscall
- * wrappers return the negative value directly (no global errno). */
+extern int errno;
 
 #define EPERM 1
 #define ENOENT 2

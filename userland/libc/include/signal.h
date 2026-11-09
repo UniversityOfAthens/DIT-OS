@@ -3,7 +3,7 @@
 
 /* POSIX signals for DIT-OS userland. Numbers, flags and struct sigaction
  * match kernel/include/sched/signal.hpp (the kernel ABI). Wrappers return
- * 0 or the raw negative errno. */
+ * 0 or the raw negative errno; failures also set errno. */
 
 #include "errno.h"
 #include "syscall.h"

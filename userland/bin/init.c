@@ -1756,6 +1756,37 @@ static void test_malloc_reuse(void)
         printf("[selftest] malloc: reuse/coalesce ok\n");
 }
 
+/* M17: the raw wrappers keep returning -errno (the in-tree ABI), and the
+ * POSIX errno variable mirrors the failure's absolute value. */
+static void test_errno(void)
+{
+    int before = failures;
+
+    errno = 0;
+    int r = open("/no-such-errno-file", 0);
+    check_value(r == -ENOENT, r, "open failure still returns -errno");
+    check_value(errno == ENOENT, errno, "errno is ENOENT");
+
+    errno = 0;
+    r = read(-1, 0, 0);
+    check_value(r == -EBADF, r, "read(-1) still returns -EBADF");
+    check_value(errno == EBADF, errno, "errno is EBADF");
+
+    errno = 0;
+    r = read(0, (void*)0x00100000, 4);
+    check_value(r == -EFAULT, r, "bad read buffer still returns -EFAULT");
+    check_value(errno == EFAULT, errno, "errno is EFAULT");
+
+    /* POSIX does not clear errno on success; only failures set it. */
+    errno = 12345;
+    r = getpid();
+    check(r > 0, "getpid succeeds");
+    check_value(errno == 12345, errno, "success leaves errno alone");
+
+    if (failures == before)
+        printf("[selftest] errno: raw -errno and errno agree\n");
+}
+
 /* ---- Descriptor and path security probes -------------------------------- */
 
 static void test_sec_pipe_dup(void)
@@ -1944,6 +1975,7 @@ int main(int argc, char** argv)
     test_orphan_sigchld();
     test_malloc_overflow();
     test_malloc_reuse();
+    test_errno();
 
     if (failures == 0)
         printf("[selftest] ok\n");

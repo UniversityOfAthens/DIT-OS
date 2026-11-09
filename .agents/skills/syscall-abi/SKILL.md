@@ -85,7 +85,8 @@ are resolved against the task's working directory by `path_from_user`.
 
 - Wrappers are `static inline` functions over `dit_syscall(...)` in
   `userland/include/syscall.h` (and `libc/include/sys/*.h` for grouped
-  APIs). They return the raw `-errno`.
+  APIs). They return the raw `-errno`; on failure `errno` also gets the
+  absolute value.
 - Application code never writes `int $0x80` itself.
 
 ## Adding a syscall

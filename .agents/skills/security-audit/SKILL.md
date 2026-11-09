@@ -162,8 +162,9 @@ functions called from `main` before the `[selftest] ok` line. Report through
 the existing `check(ok, what)` / `check_value(ok, value, what)` helpers: they
 count failures, and any failure makes `scripts/qemu-test.sh` fail.
 
-The wrappers in `userland/include/syscall.h` return the raw `-errno`.
-The errno constants live in `userland/libc/include/errno.h` (same values as
+The wrappers in `userland/include/syscall.h` return the raw `-errno` and
+set the libc `errno` variable to its absolute value on failure. The errno
+constants live in `userland/libc/include/errno.h` (same values as
 `kernel/include/errno_defs.hpp`); use them rather than hard-coding numbers.
 
 Typical probe (adapt to the change):

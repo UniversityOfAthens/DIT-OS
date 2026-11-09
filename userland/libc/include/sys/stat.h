@@ -8,7 +8,7 @@
 // layout is the same on both sides of the syscall boundary.
 //
 // Like the other wrappers in syscall.h these return 0 on success or a negative
-// errno, not -1 with errno set (there is no userland errno yet).
+// errno, not -1; failures also set the errno variable to the absolute value.
 
 #include <syscall.h>
 
