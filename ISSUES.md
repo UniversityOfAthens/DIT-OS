@@ -155,6 +155,14 @@ None open.
 | **Issue** | Structs that cross the user/kernel boundary (dirent, stat) lack `__attribute__((packed))` / `KERNEL_PACKED`. If compiler padding differs between kernel and userland, data will be misaligned. |
 | **Fix** | Add `KERNEL_PACKED` to all ABI structs. |
 
+### M47. `open()` ignores its flags, so every file is writable
+
+| Field | Value |
+|-------|-------|
+| **Files** | `kernel/syscall/sys_open.cpp`, `kernel/fs/vfs.cpp`, `kernel/fs/ramfs/ramfs.cpp` |
+| **Issue** | `sys_open_impl()` passes flags 0 to `vfs_open()`, which ignores them, and `file_write()` checks only that the inode is a regular file. A process can therefore open any file and write it even though the API implies read-only access; userland can overwrite the seeded `/greeter` image. |
+| **Fix** | Define `O_RDONLY`/`O_WRONLY`/`O_RDWR` (and `O_CREAT`/`O_TRUNC` when creation is wanted), pass the user's flags through, store them on `fs::file`, and reject a write (or read) that the open mode does not allow. Per-inode permissions wait for a UID model. |
+
 ---
 
 ## LOW — Cleanup, style, and minor issues
@@ -320,7 +328,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Bootloader (C++)** | — | — | — | — |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
 | **Kernel (Sched)** | — | — | M1 | L13, I2 |
-| **Kernel (FS)** | — | — | M4, M9, M31 | L12, L21 |
+| **Kernel (FS)** | — | — | M4, M9, M31, M47 | L12, L21 |
 | **Kernel (MM)** | — | — | M10 | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
