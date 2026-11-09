@@ -1712,6 +1712,50 @@ static void test_malloc_overflow(void)
     free(p);
 }
 
+/* free() must recycle blocks instead of leaking them (M35). Before the
+ * free list, 64 KiB of arena lasted only 16 rounds of malloc(4096). */
+static void test_malloc_reuse(void)
+{
+    int before = failures;
+    int ok = 1;
+    for (int i = 0; i < 4096; i++)
+    {
+        void* p = malloc(4096);
+        if (!p)
+        {
+            ok = 0;
+            break;
+        }
+        free(p);
+    }
+    check(ok, "malloc/free in a loop does not leak (M35)");
+
+    /* First-fit: a just-freed block is the first one large enough. */
+    void* a = malloc(64);
+    void* b = malloc(64);
+    check(a != 0 && b != 0 && a != b, "two live allocations are distinct");
+    free(a);
+    void* reused = malloc(64);
+    check(reused == a, "a freed block is reused");
+    free(reused);
+    free(b);
+
+    /* Free two neighbours back to back, then request both at once. Only
+     * free-time coalescing can serve it from the start of the heap. */
+    void* c = malloc(64);
+    void* d = malloc(64);
+    check(c != 0 && d != 0, "three allocations before coalescing");
+    free(d);
+    free(c);
+    void* merged = malloc(128);
+    check(merged == c, "adjacent free blocks coalesce");
+
+    free(merged);
+    free(NULL); /* must stay a no-op */
+    if (failures == before)
+        printf("[selftest] malloc: reuse/coalesce ok\n");
+}
+
 /* ---- Descriptor and path security probes -------------------------------- */
 
 static void test_sec_pipe_dup(void)
@@ -1899,6 +1943,7 @@ int main(int argc, char** argv)
     test_sec_paths();
     test_orphan_sigchld();
     test_malloc_overflow();
+    test_malloc_reuse();
 
     if (failures == 0)
         printf("[selftest] ok\n");

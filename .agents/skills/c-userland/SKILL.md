@@ -49,10 +49,10 @@ userland/
 
 ## libc
 
-- Small and freestanding: `printf` (to fd 1), a static 64 KiB bump
-  allocator behind `malloc`/`free` (`free` is a no-op; it does not use
-  `brk` yet, see `TODO.md`), and `exit`. Add functions only when needed,
-  with POSIX-compatible prototypes.
+- Small and freestanding: `printf` (to fd 1), a static 64 KiB free-list
+  allocator behind `malloc`/`free` (first-fit with coalescing, mirroring the
+  kernel heap; it does not use `brk` yet, and misuse ends the process), and
+  `exit`. Add functions only when needed, with POSIX-compatible prototypes.
 - Size arithmetic checks overflow (`n * size`), allocation failure returns
   NULL.
 - `printf` bounds every conversion; never pass user/data text as the

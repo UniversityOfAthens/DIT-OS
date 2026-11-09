@@ -25,7 +25,7 @@ Semantic Versioning, interpreted for the pre-1.0 alpha series:
 | M37 string bounds, H9/H10 boot constants, M42 COW failure-counter corruption | patch | `0.0.12-alpha` | released 2026-11-03 |
 | Full POSIX signals (handlers, masks, `sigaction`, `SIGCHLD`, job control) incl. M41 orphan reaping, `pipe()`/`dup2()` + userland `errno.h`, `chdir`/`getcwd`, M38 (**first usable release**) | minor | `0.1.0-alpha` | released 2026-11-03 |
 | M46 pipe heap cap, L24 floppy read retry, L25 TTY line buffer | patch | `0.1.1-alpha` | in progress |
-| H20 BIOS geometry probe, L23 SIGCHLD auto-reap + SA_NOCLDWAIT, L22 sessions (setsid/getsid + job-control boundaries) | patch | `0.1.2-alpha` | in progress |
+| H20 BIOS geometry probe, L23 SIGCHLD auto-reap + SA_NOCLDWAIT, L22 sessions (setsid/getsid + job-control boundaries), M35 malloc free list | patch | `0.1.2-alpha` | in progress |
 | POSIX timers + shared memory | minor | `0.2.0-alpha` | planned |
 | Stable ABI / breaking disk-format or syscall changes | major | `1.0.0` | future |
 

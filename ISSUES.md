@@ -172,15 +172,6 @@ None open.
 | **Issue** | Structs that cross the user/kernel boundary (dirent, stat) lack `__attribute__((packed))` / `KERNEL_PACKED`. If compiler padding differs between kernel and userland, data will be misaligned. |
 | **Fix** | Add `KERNEL_PACKED` to all ABI structs. |
 
-### M35. Userland `malloc` never frees memory
-
-| Field | Value |
-|-------|-------|
-| **File** | `userland/libc/src/stdlib/malloc.c` |
-| **Issue** | A 64 KB bump allocator whose `free()` is a no-op, the same bug the kernel heap had. Nothing calls it yet, but any userland program that allocates in a loop will run out. |
-| **Fix** | Reuse the kernel heap's free-list design, or implement `brk`/`mmap` and a real allocator. |
-
-
 ---
 
 ## LOW — Cleanup, style, and minor issues
@@ -365,7 +356,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M17, M18, M19, M28, M35 | L1, L2, L3, L4, L7, L17 |
+| **Userland** | — | — | M17, M18, M19, M28 | L1, L2, L3, L4, L7, L17 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
@@ -374,7 +365,8 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M35 — userland `malloc` never frees**: every program leaks everything
-   it allocates, so any longer-running process grows without bound.
-2. **M18 — the shell swallows read/getdents errors**: failures look like
+1. **M18 — the shell swallows read/getdents errors**: failures look like
    empty listings; report them instead of treating them as EOF.
+2. **M17 — userland has no `errno` variable**: syscall wrappers return raw
+   negative values, so error reporting has to hard-code numbers and shell
+   error paths drift from the kernel's errno values.

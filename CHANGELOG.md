@@ -70,6 +70,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   session, a grandchild proves a leader cannot `setsid`, and the parent
   proves the boundary holds while the child is still alive. Patch bump for
   `0.1.2-alpha`.
+- Userland `malloc` is now a first-fit free list with coalescing over the
+  same static 64 KiB arena: `free()` reclaims blocks instead of leaking
+  them, adjacent free blocks merge, and a corrupted arena or a foreign /
+  double free ends the process rather than continuing with a damaged heap
+  (M35). The size bound is still applied before alignment (M38), so a
+  wrapping request returns NULL. Covered by `test_malloc_reuse`, which
+  allocates and frees 4096-byte blocks 4096 times, checks first-fit reuse
+  and neighbouring-block coalescing; against the old bump allocator it
+  fails after the first 16 rounds. Patch bump for `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 
