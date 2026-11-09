@@ -92,6 +92,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   self-test failed before `main`. New frames are zeroed by the allocator,
   and pages mapped for the file copy are returned unchanged, so the walk is
   idempotent. Patch bump for `0.1.2-alpha`.
+- `execve` confines every `PT_LOAD` segment to the image window
+  (`0x00400000`-`0x00500000`) instead of the whole user address space, so a
+  segment, including its `.bss` tail, can never be mapped over the stack,
+  brk or mmap regions (CVE-2017-1000253 class). A malformed image is
+  rejected with `-ENOEXEC` before the offending segment is mapped. Patch
+  bump for `0.1.2-alpha`.
 - Userland now has the POSIX `errno` variable: `dit_syscall()` still returns
   the raw negative errno (the in-tree ABI) and, on failure, also stores its
   absolute value in a per-process `errno`. Success leaves it untouched, as

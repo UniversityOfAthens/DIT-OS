@@ -35,6 +35,9 @@ namespace
 
 /* A file has to fit in the kernel heap, which bounds what can be exec'd. */
 constexpr uint32_t MAX_IMAGE_BYTES = 64 * 1024;
+/* Segments are confined to the image window: the stack, brk and mmap regions
+ * start above it, so a segment can never overlap them. */
+constexpr uint32_t IMAGE_END = mm::USER_IMAGE_BASE + mm::USER_IMAGE_SIZE;
 /* Limits on the argument and environment vectors. */
 constexpr uint32_t MAX_ARGS = 32;
 constexpr uint32_t MAX_ARG_BYTES = 256;
@@ -232,10 +235,11 @@ SyscallResult sys_execve_impl(const SyscallArgs* args)
          * nothing and can carry any address. */
         if (ph->p_memsz == 0)
             continue;
-        /* Otherwise the whole segment has to land inside the user window, and
-         * its file part has to be inside the file. */
-        if (ph->p_vaddr < mm::VMM_USER_START ||
-            ph->p_memsz > mm::VMM_USER_END - ph->p_vaddr ||
+        /* Otherwise the whole segment has to land inside the image window, so
+         * it cannot overlap the stack, brk or mmap regions (CVE-2017-1000253
+         * class), and its file part has to be inside the file. */
+        if (ph->p_vaddr < mm::USER_IMAGE_BASE || ph->p_vaddr >= IMAGE_END ||
+            ph->p_memsz > IMAGE_END - ph->p_vaddr ||
             ph->p_filesz > ph->p_memsz ||
             ph->p_offset > static_cast<uint32_t>(size) ||
             ph->p_filesz > static_cast<uint32_t>(size) - ph->p_offset)
