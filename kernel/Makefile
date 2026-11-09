@@ -53,7 +53,7 @@ CPP_SOURCES = $(BOOT_DIR)/init.cpp $(BOOT_DIR)/main.cpp \
 	$(SYSCALL_DIR)/sys_pipe.cpp $(SYSCALL_DIR)/sys_cwd.cpp $(SYSCALL_DIR)/path.cpp \
 	$(SYSCALL_DIR)/sys_waitpid.cpp $(SYSCALL_DIR)/sys_execve.cpp $(SYSCALL_DIR)/sys_mem.cpp \
 	$(SYSCALL_DIR)/sys_ioctl.cpp $(SYSCALL_DIR)/tty.cpp \
-	$(SYSCALL_DIR)/syscall_wrappers.cpp \
+	$(SYSCALL_DIR)/syscall_wrappers.cpp $(SYSCALL_DIR)/abi_layout.cpp \
 	$(FS_DIR)/vfs.cpp $(FS_DIR)/pipe.cpp $(FS_DIR)/ramfs/ramfs.cpp $(FS_DIR)/ramfs/inode.cpp \
 	$(SCHED_DIR)/sched.cpp $(SCHED_DIR)/task.cpp $(SCHED_DIR)/idle.cpp $(SCHED_DIR)/init_task.cpp \
 	$(SCHED_DIR)/pid.cpp $(SCHED_DIR)/exit.cpp $(SCHED_DIR)/fork.cpp $(SCHED_DIR)/mutex.cpp \
@@ -140,6 +140,12 @@ $(OBJDIR)/%.o: %.cpp Makefile
 	@mkdir -p $(dir $@)
 	@echo "Compiling $<..."
 	$(CXX) $(CXX_FLAGS) -c -o $@ $<
+
+# The ABI layout check is the only kernel TU that includes the userland copies
+# of the boundary structs; keep those include paths off every other object so
+# a userland header can never shadow a kernel one.
+$(OBJDIR)/$(SYSCALL_DIR)/abi_layout.o: CXX_FLAGS += \
+	-I../userland/include -I../userland/libc/include
 
 # Compile .c files
 $(OBJDIR)/userland/%.o: ../userland/%.c Makefile

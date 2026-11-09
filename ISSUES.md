@@ -138,14 +138,6 @@ None open.
 | **Issue** | `_exit(code)` calls `exit(code)`, which is a static inline function from `syscall.h`. If `syscall.h` is not included or the inline is removed, `_exit` silently breaks. |
 | **Fix** | Have `_exit` call `dit_sys_exit()` directly instead of going through the inline wrapper. |
 
-### M31. Missing `KERNEL_PACKED` on ABI-boundary structs
-
-| Field | Value |
-|-------|-------|
-| **Files** | `kernel/include/fs/dirent.hpp`, `kernel/include/fs/stat.hpp` |
-| **Issue** | Structs that cross the user/kernel boundary (dirent, stat) lack `__attribute__((packed))` / `KERNEL_PACKED`. If compiler padding differs between kernel and userland, data will be misaligned. |
-| **Fix** | Add `KERNEL_PACKED` to all ABI structs. |
-
 ### M47. `open()` ignores its flags, so every file is writable
 
 | Field | Value |
@@ -181,13 +173,6 @@ None open.
 | **File** | `userland/libc/src/stdio/printf.c` |
 | **Lines** | 21-32 |
 | **Issue** | `utoa()` writes to `out` without knowing buffer capacity. Currently safe (callers pass `num_buf[16]`), but would overflow with a base-2 conversion of `uint32_t` (needs 32 chars) or a smaller output buffer. |
-
-### L7. No compile-time assertion for userland/kernel struct layout compatibility
-
-| Field | Value |
-|-------|-------|
-| **Files** | `userland/include/syscall.h:18-23` |
-| **Issue** | `dit_dirent` in userland must match `fs::dirent` in the kernel. There is no `static_assert` or compile-time check for layout compatibility. |
 
 ### L8. `pci_scan` uses `uint16_t bus` but limits loop to 256 (fits in `uint8_t`)
 
@@ -319,12 +304,12 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Bootloader (C++)** | — | — | — | — |
 | **Kernel (Core)** | — | — | M5, M6, M7, M8 | L12, L20 |
 | **Kernel (Sched)** | — | — | M1 | L13, I2 |
-| **Kernel (FS)** | — | — | M4, M9, M31, M47 | L12, L21 |
-| **Kernel (MM)** | — | — | M10 | — |
+| **Kernel (FS)** | — | — | M4, M9, M47 | L12, L21 |
+| **Kernel (MM)** | — | — | — | — |
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M19 | L2, L3, L4, L7 |
+| **Userland** | — | — | M19 | L2, L3, L4 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
@@ -333,9 +318,9 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M31/L7 — ABI struct layout is not enforced**: `dirent` and `stat`
-   cross the user/kernel boundary without packing, and userland has no
-   compile-time assertion that its copies match the kernel's.
-2. **M47 — `open()` ignores its flags**: every opened file is writable,
+1. **M47 — `open()` ignores its flags**: every opened file is writable,
    including the seeded executables; pass open modes through and enforce
    them in the file operations.
+2. **M10 — `ata_read_sectors` has no upper bound**: a request over the ATA
+   single-command limit of 255 sectors drives an oversized loop; reject it
+   with `-EINVAL` and handle the 0-means-256 convention explicitly.

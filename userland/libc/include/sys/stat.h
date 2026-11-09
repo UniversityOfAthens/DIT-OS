@@ -29,10 +29,19 @@ struct stat
     long long st_ctime;
 };
 
-/* Mirrors fs::stat in kernel/include/fs/stat.hpp; both sides pin the size so
- * ABI drift fails the build instead of corrupting a user buffer. */
-_Static_assert(sizeof(struct stat) == 76,
-               "struct stat is part of the syscall ABI");
+/* Mirrors fs::stat in kernel/include/fs/stat.hpp; kernel/syscall/
+ * abi_layout.cpp compares both layouts, and these offsets pin the ABI on
+ * this side too. */
+DIT_STATIC_ASSERT(sizeof(struct stat) == 76,
+                  "struct stat is part of the syscall ABI");
+DIT_STATIC_ASSERT(offsetof(struct stat, st_size) == 28,
+                  "struct stat st_size offset is part of the syscall ABI");
+DIT_STATIC_ASSERT(offsetof(struct stat, st_blksize) == 36,
+                  "struct stat st_blksize offset is part of the syscall ABI");
+DIT_STATIC_ASSERT(offsetof(struct stat, st_blocks) == 44,
+                  "struct stat st_blocks offset is part of the syscall ABI");
+DIT_STATIC_ASSERT(offsetof(struct stat, st_atime) == 52,
+                  "struct stat st_atime offset is part of the syscall ABI");
 
 /* File type and mode bits (same values as the kernel). */
 #define S_IFMT 0170000

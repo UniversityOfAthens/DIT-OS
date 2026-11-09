@@ -2,6 +2,21 @@
 #define USERLAND_SYSCALL_H
 
 #include "errno.h"
+#include <stddef.h>
+
+/* Assertions that work in both the C11 userland build and the C++17 kernel
+ * build that includes this header for the ABI layout checks. */
+#if defined(__cplusplus)
+#define DIT_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
+#else
+#define DIT_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
+#endif
+
+#if defined(__GNUC__)
+#define DIT_PACKED __attribute__((packed))
+#else
+#define DIT_PACKED
+#endif
 
 #define SYS_read 0
 #define SYS_write 1
@@ -73,7 +88,9 @@ struct dit_dirent
     unsigned char d_type;
     unsigned char d_pad[3];
     char d_name[256];
-};
+} DIT_PACKED;
+DIT_STATIC_ASSERT(sizeof(struct dit_dirent) == DIT_DIRENT_SIZE,
+                  "struct dit_dirent is part of the syscall ABI");
 #define DIT_DT_DIR 4
 
 /* The kernel moves at most this many bytes per read()/write() chunk (its

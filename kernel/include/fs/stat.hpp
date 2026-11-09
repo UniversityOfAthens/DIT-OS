@@ -1,6 +1,7 @@
 #ifndef KERNEL_FS_STAT_HPP
 #define KERNEL_FS_STAT_HPP
 
+#include "core/compiler.hpp"
 #include <stdint.h>
 
 namespace fs
@@ -46,11 +47,11 @@ struct stat
     int64_t st_atime;
     int64_t st_mtime;
     int64_t st_ctime;
-};
+} KERNEL_PACKED;
 
 /** Userland's struct stat (userland/libc/include/sys/stat.h) mirrors this
- *  layout byte for byte. Both sides pin the size so ABI drift fails the
- *  build instead of corrupting a user buffer at runtime. */
+ *  layout byte for byte; kernel/syscall/abi_layout.cpp compares every field
+ *  offset at compile time. */
 static_assert(sizeof(stat) == 76, "struct stat is part of the syscall ABI");
 
 } // namespace fs

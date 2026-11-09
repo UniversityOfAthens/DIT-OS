@@ -112,6 +112,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `test_bounce_buffer` fills a pipe with one chunk and fails unless a single
   `read()` returns all 1024 bytes intact; with the old 256-byte bounce it
   reports 256 and fails. Patch bump for `0.1.2-alpha`.
+- Structures shared across `int 0x80` are pinned on both sides: `fs::dirent`
+  and `fs::stat` are `KERNEL_PACKED` with fixed sizes, their userland mirrors
+  (`struct dit_dirent`, `struct stat`) assert the same size and field offsets,
+  and a new `kernel/syscall/abi_layout.cpp` includes both headers and compares
+  every offset at compile time (M31/L7). The userland include paths are scoped
+  to that one object so no other kernel file can see a userland header.
+  Reordering a `dit_dirent` field while keeping the size fails the build with
+  four `offset differs` errors. Patch bump for `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 

@@ -61,6 +61,11 @@ Verify with `grep` before relying on any API; do not invent one.
   EAX (`>= 0` or `-errno`). Numbers live in exactly two places that CI keeps
   in sync: `userland/include/syscall.h` and
   `kernel/include/syscall/syscall_numbers.hpp`.
+- **ABI structs are packed and cross-checked**: `fs::dirent` and `fs::stat`
+  are `KERNEL_PACKED` with pinned sizes; the userland mirrors assert the same
+  layout, and `kernel/syscall/abi_layout.cpp` includes both sides and compares
+  every field offset at compile time. Extend it when a boundary struct
+  changes.
 - **fds 0–2 are ordinary open files** (a refcounted console `fs::file` from
   `syscall::tty_open_console`), not special cases: any fd may be the
   console, a VFS file or a pipe, and `dup2` can redirect them.

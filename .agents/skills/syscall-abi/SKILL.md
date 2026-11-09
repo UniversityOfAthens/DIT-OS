@@ -92,6 +92,18 @@ are resolved against the task's working directory by `path_from_user`.
   absolute value.
 - Application code never writes `int $0x80` itself.
 
+## ABI structures
+
+`fs::dirent` (`kernel/include/fs/dirent.hpp`) and `fs::stat`
+(`kernel/include/fs/stat.hpp`) cross `int 0x80`, so both are `KERNEL_PACKED`
+with a pinned size. Their userland mirrors (`struct dit_dirent` in
+`userland/include/syscall.h`, `struct stat` in `userland/libc/include/sys/stat.h`)
+use `DIT_PACKED` and `DIT_STATIC_ASSERT` for the same size and offsets.
+`kernel/syscall/abi_layout.cpp` is the one translation unit that includes both
+sides and static-asserts every field offset; change a boundary struct there
+first. Its userland include paths are target-specific in `kernel/Makefile` so
+no other kernel object can pick up a userland header.
+
 ## Adding a syscall
 
 1. Pick the next free number; add it to **both** number files (before
