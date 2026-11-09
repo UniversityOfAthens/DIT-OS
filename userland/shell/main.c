@@ -66,6 +66,15 @@ static void write_str(const char* s)
         (void)write(1, s, (unsigned)n);
 }
 
+/* Diagnostics go to fd 2 so a redirection of stdout (planned) cannot hide
+ * them; fd 2 is the console like 0 and 1. */
+static void write_err(const char* s)
+{
+    int n = str_len(s);
+    if (n > 0)
+        (void)write(2, s, (unsigned)n);
+}
+
 static int str_eq(const char* a, const char* b)
 {
     while (*a && *b)
@@ -550,7 +559,8 @@ static void wait_foreground(struct job* job, int resume)
 
 static void cmd_ls(const char* path)
 {
-    int fd = open(path ? path : ".", 0);
+    const char* name = path ? path : ".";
+    int fd = open(name, 0);
     if (fd < 0)
     {
         write_str("ls: cannot open directory\r\n");
@@ -560,7 +570,15 @@ static void cmd_ls(const char* path)
     for (;;)
     {
         int n = getdents(fd, buf, sizeof(buf));
-        if (n <= 0)
+        if (n < 0)
+        {
+            /* -ENOTDIR when the operand is a file: an error, not EOF. */
+            write_err("ls: ");
+            write_err(name);
+            write_err(": cannot read directory\r\n");
+            break;
+        }
+        if (n == 0)
             break;
         int off = 0;
         while (off + (int)sizeof(struct dit_dirent) <= n)
@@ -574,8 +592,8 @@ static void cmd_ls(const char* path)
     (void)close(fd);
 }
 
-/* Copy @fd to stdout until EOF. */
-static void copy_fd(int fd)
+/* Copy @fd to stdout until EOF; @prog prefixes a read error on stderr. */
+static void copy_fd(int fd, const char* prog)
 {
     char chunk[256];
     for (;;)
@@ -583,7 +601,13 @@ static void copy_fd(int fd)
         int n = read(fd, chunk, sizeof(chunk));
         if (n == -EINTR)
             continue;
-        if (n <= 0)
+        if (n < 0)
+        {
+            write_err(prog);
+            write_err(": read error\r\n");
+            break;
+        }
+        if (n == 0)
             break;
         (void)write(1, chunk, (unsigned)n);
     }
@@ -597,7 +621,7 @@ static void cmd_cat(const char* path)
         write_str("cat: cannot open file\r\n");
         return;
     }
-    copy_fd(fd);
+    copy_fd(fd, "cat");
     (void)close(fd);
 }
 
@@ -688,7 +712,7 @@ static int run_child_builtin(char* const* argv, int in_child)
         if (argv[1])
             cmd_cat(argv[1]);
         else if (in_child)
-            copy_fd(0);
+            copy_fd(0, "cat");
         else
             write_str("cat: missing operand\r\n");
     }

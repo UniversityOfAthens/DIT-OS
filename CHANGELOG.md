@@ -79,6 +79,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   allocates and frees 4096-byte blocks 4096 times, checks first-fit reuse
   and neighbouring-block coalescing; against the old bump allocator it
   fails after the first 16 rounds. Patch bump for `0.1.2-alpha`.
+- The shell no longer treats a failed read as end of file: `getdents()`
+  returning `-ENOTDIR` (for example `ls hello.txt`) now prints
+  `ls: <path>: cannot read directory`, and a failed `read()` (for example
+  `cat /`) prints `<program>: read error`; both go to fd 2 so a future
+  stdout redirection cannot hide them (M18). A new qemu-test step drives
+  both failures. Patch bump for `0.1.2-alpha`.
 
 ## [0.1.0-alpha] - 2026-11-03
 

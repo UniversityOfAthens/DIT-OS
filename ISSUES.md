@@ -137,15 +137,6 @@ None open.
 | **Issue** | `userland/libc/include/errno.h` now provides the constants, but there is no `errno` variable: wrappers return the raw `-errno`. Code ported from POSIX that tests `errno` after a `-1` return will not work. |
 | **Fix** | Add a libc layer (`int errno`, wrappers returning `-1`) when a real libc is introduced; keep the raw wrappers for in-tree code. |
 
-### M18. Userland error returns silently swallowed in shell
-
-| Field | Value |
-|-------|-------|
-| **File** | `userland/shell/main.c` |
-| **Lines** | `cmd_ls()`, `copy_fd()` |
-| **Issue** | `getdents()` and `read()` error returns (negative values) are treated identically to "end of data" (0). Errors are silently swallowed — the user has no way to know a read failed. |
-| **Fix** | Check for negative return values and report errors to stderr. |
-
 ### M19. `_exit()` calls inline `exit()` — fragile coupling
 
 | Field | Value |
@@ -356,7 +347,7 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 | **Kernel (Dev)** | — | H13, H14 | M7, M10 | L8, L9 |
 | **Kernel (Syscall)** | — | — | M1 | — |
 | **Kernel (Arch)** | — | — | M1 | — |
-| **Userland** | — | — | M17, M18, M19, M28 | L1, L2, L3, L4, L7, L17 |
+| **Userland** | — | — | M17, M19, M28 | L1, L2, L3, L4, L7, L17 |
 | **Build System** | — | — | M13, M15 | L10, L16 |
 | **Config/Tests/Tools** | — | — | — | I4, I5, I6, I7 |
 | **Docs/Conventions** | — | — | M16 | I3, I9, I10 |
@@ -365,8 +356,8 @@ The TODO list documents extensive planned work including SMP, APIC, proper VFS, 
 
 ## Top 2 Most Important Fixes (remaining)
 
-1. **M18 — the shell swallows read/getdents errors**: failures look like
-   empty listings; report them instead of treating them as EOF.
-2. **M17 — userland has no `errno` variable**: syscall wrappers return raw
+1. **M17 — userland has no `errno` variable**: syscall wrappers return raw
    negative values, so error reporting has to hard-code numbers and shell
    error paths drift from the kernel's errno values.
+2. **M28 — `cmd_cat()` uses a 256-byte read buffer**: correct but many
+   syscalls per file; size the buffer from the syscall bounce limit.

@@ -146,6 +146,14 @@ main() {
     run_expect 'cat no-such-file\r' '^cat: cannot open file$'
     pass
 
+    STEP="read and getdents errors are reported"
+    # getdents() on a regular file (-ENOTDIR) and read() on a directory
+    # (-EISDIR) return errors; treating them as EOF would silently print
+    # nothing. Both messages go to fd 2.
+    run_expect 'ls hello.txt\r' '^ls: hello\.txt: cannot read directory$'
+    run_expect 'cat /\r' '^cat: read error$'
+    pass
+
     STEP="tab completes command and file"
     run_expect 'ca\thel\t\r' "^$HELLO_TEXT\$"
     pass

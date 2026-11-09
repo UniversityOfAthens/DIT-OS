@@ -68,6 +68,8 @@ userland/
   `jobs`/`fg`/`bg`, `cd`/`pwd`. Foreground jobs get the console in cooked
   mode (`TTY_MODE_DEFAULT`, ISIG on) via `tcsetpgrp`; the prompt is raw.
   A `SIGCHLD` handler (SA_RESTART) records job state and reaps orphans.
+  A 0 return from `read`/`getdents` is EOF; a negative return is an error
+  and is reported on fd 2, never swallowed.
 - Line editing (`readline.c`) and argument splitting must stay within
   their fixed buffers; check the index **before** reading the element.
 - Builtins and commands are covered by `scripts/qemu-test.sh`; add a step
